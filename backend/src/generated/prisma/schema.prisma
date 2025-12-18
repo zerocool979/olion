@@ -1,0 +1,386 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+////////////////////
+/// ENUM
+////////////////////
+
+enum UserRole {
+  ADMIN
+  MODERATOR
+  USER
+  PAKAR
+}
+
+enum PublishStatus {
+  Draft
+  Published
+  Archived
+}
+
+enum ModerationStatus {
+  Pending
+  Approved
+  Rejected
+}
+
+enum VoteType {
+  Up
+  Down
+}
+
+enum ReportPriority {
+  Low
+  Medium
+  High
+  Critical
+}
+
+enum ReportStatus {
+  Pending
+  Reviewed
+  Resolved
+}
+
+enum ModerationAction {
+  Ignore
+  Warning
+  Hide
+  Delete
+}
+
+enum VerificationStatus {
+  Pending
+  Approved
+  Rejected
+}
+
+enum NotificationChannel {
+  Email
+  InApp
+  Popup
+}
+
+////////////////////
+/// USER & AUTH
+////////////////////
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  role         UserRole  @default(USER)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  lastLogin    DateTime?
+
+  profile       AnonymousProfile?
+  sessions      Session[]
+  discussions   Discussion[]
+  answers       Answer[]
+  comments      Comment[]
+  reputation    Reputation?
+  reputationLog ReputationHistory[]
+  notifications Notification[]
+  preferences   UserChannelPreference[]
+  pakar         Pakar?
+
+  // RELATION FIX
+  adminCategories Category[]
+  discussionVotes DiscussionVote[]
+  answerVotes     AnswerVote[]
+
+  discussionReports DiscussionReport[]
+  answerReports     AnswerReport[]
+  commentReports    CommentReport[]
+
+  moderations Moderation[]
+
+  @@map("users")
+}
+
+model AnonymousProfile {
+  id        String  @id @default(uuid())
+  userId    String  @unique
+  pseudonym String
+  interests String?
+  bio       String?
+  avatarUrl String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("anonymous_profiles")
+}
+
+model Session {
+  id        String    @id @default(uuid())
+  userId    String
+  token     String
+  ipAddress String?
+  device    Json?
+  startAt   DateTime  @default(now())
+  endAt     DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+////////////////////
+/// DISCUSSION
+////////////////////
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  adminId     String
+  createdAt   DateTime @default(now())
+
+  admin       User         @relation(fields: [adminId], references: [id])
+  discussions Discussion[]
+
+  @@map("categories")
+}
+
+model Discussion {
+  id         String           @id @default(uuid())
+  userId     String?
+  categoryId String
+  title      String
+  content    String
+  status     PublishStatus    @default(Published)
+  isFlagged  Boolean          @default(false)
+  isDeleted  Boolean          @default(false)
+  moderation ModerationStatus @default(Pending)
+  createdAt  DateTime         @default(now())
+
+  user     User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+  category Category           @relation(fields: [categoryId], references: [id])
+  answers  Answer[]
+  comments Comment[]
+  votes    DiscussionVote[]
+  reports  DiscussionReport[]
+
+  @@map("discussions")
+}
+
+model Answer {
+  id           String           @id @default(uuid())
+  discussionId String
+  userId       String?
+  content      String
+  isVerified   Boolean          @default(false)
+  isFlagged    Boolean          @default(false)
+  isDeleted    Boolean          @default(false)
+  moderation   ModerationStatus @default(Pending)
+  createdAt    DateTime         @default(now())
+
+  discussion Discussion     @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+  user       User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  votes      AnswerVote[]
+  reports    AnswerReport[]
+
+  @@map("answers")
+}
+
+model Comment {
+  id           String           @id @default(uuid())
+  discussionId String
+  userId       String?
+  content      String
+  isFlagged    Boolean          @default(false)
+  isDeleted    Boolean          @default(false)
+  moderation   ModerationStatus @default(Pending)
+  createdAt    DateTime         @default(now())
+
+  discussion Discussion      @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+  user       User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  reports    CommentReport[]
+
+  @@map("comments")
+}
+
+////////////////////
+/// VOTING & REPUTATION
+////////////////////
+
+model DiscussionVote {
+  id           String   @id @default(uuid())
+  userId       String
+  discussionId String
+  type         VoteType
+  createdAt    DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  discussion Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, discussionId])
+  @@map("discussion_votes")
+}
+
+model AnswerVote {
+  id        String   @id @default(uuid())
+  userId    String
+  answerId  String
+  type      VoteType
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answer Answer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, answerId])
+  @@map("answer_votes")
+}
+
+model Reputation {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  score     Int      @default(0)
+  level     String?
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("reputations")
+}
+
+model ReputationHistory {
+  id        String   @id @default(uuid())
+  userId    String
+  delta     Int
+  reason    String
+  sourceId  String?
+  source    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("reputation_history")
+}
+
+////////////////////
+/// REPORT & MODERATION
+////////////////////
+
+model DiscussionReport {
+  id           String         @id @default(uuid())
+  reporterId   String
+  discussionId String
+  reason       String
+  aiScore      Int?
+  priority     ReportPriority
+  status       ReportStatus   @default(Pending)
+  createdAt    DateTime       @default(now())
+
+  discussion Discussion  @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+  reporter   User        @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  moderation Moderation?
+
+  @@map("discussion_reports")
+}
+
+model AnswerReport {
+  id         String         @id @default(uuid())
+  reporterId String
+  answerId   String
+  reason     String
+  aiScore    Int?
+  priority   ReportPriority
+  status     ReportStatus   @default(Pending)
+  createdAt  DateTime       @default(now())
+
+  answer   Answer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  reporter User   @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@map("answer_reports")
+}
+
+model CommentReport {
+  id         String         @id @default(uuid())
+  reporterId String
+  commentId  String
+  reason     String
+  aiScore    Int?
+  priority   ReportPriority
+  status     ReportStatus   @default(Pending)
+  createdAt  DateTime       @default(now())
+
+  comment  Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  reporter User    @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@map("comment_reports")
+}
+
+model Moderation {
+  id          String           @id @default(uuid())
+  reportId    String           @unique
+  moderatorId String
+  action      ModerationAction
+  source      String
+  note        String?
+  createdAt   DateTime         @default(now())
+
+  report    DiscussionReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  moderator User             @relation(fields: [moderatorId], references: [id])
+
+  @@map("moderations")
+}
+
+////////////////////
+/// EXPERT
+////////////////////
+
+model Pakar {
+  id        String             @id @default(uuid())
+  userId    String             @unique
+  expertise String
+  document  String
+  status    VerificationStatus @default(Pending)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("pakar")
+}
+
+////////////////////
+/// NOTIFICATION
+////////////////////
+
+model Notification {
+  id        String              @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  channel   NotificationChannel
+  isSent    Boolean             @default(false)
+  createdAt DateTime            @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model UserChannelPreference {
+  id      String              @id @default(uuid())
+  userId  String
+  channel NotificationChannel
+  active  Boolean             @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, channel])
+  @@map("user_channel_preferences")
+}

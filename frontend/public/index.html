@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OLION Platform</title>
+  <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+  <!-- Tailwind CSS (opsional, jika pakai Tailwind) -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.2/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50 text-gray-800">
+  <div id="root"></div>
+
+  <!-- React & Bundled JS akan di-inject oleh build tools (CRA / Vite) -->
+  <!-- Contoh penggunaan Socket.IO -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" integrity="sha384-GmSe8Pzg8/njX3xLk6paIdgBVGXxZpBWTKgFZ3T02/kwkRRhxR3xG51vFZHzW2Zw" crossorigin="anonymous"></script>
+  <script>
+    // Koneksi Socket.IO
+    const socket = io('http://localhost:5000');
+
+    socket.on('connect', () => {
+      console.log('🔌 Connected to OLION backend via Socket.IO');
+    });
+
+    socket.on('notification', ({ title, message, channel }) => {
+      console.log(`📢 [${channel}] ${title}: ${message}`);
+      // Bisa tambah render InApp/Popup UI
+    });
+  </script>
+</body>
+</html>

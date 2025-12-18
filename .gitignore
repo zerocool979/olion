@@ -1,0 +1,24 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn.lock
+
+# Environment
+.env
+.env.*
+
+# Build
+dist/
+build/
+.next/
+
+# Logs
+logs/
+*.log
+
+# OS
+.DS_Store
+
+# Python (jika ada)
+__pycache__/
+*.pyc
