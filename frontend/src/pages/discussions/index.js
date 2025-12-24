@@ -7,8 +7,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import api from '../api/base';
-import ProtectedRoute from '../components/ProtectedRoute';
+import api from '../../api/base';
+import ProtectedRoute from '../../components/ProtectedRoute';
 
 export default function DiscussionsPage() {
   return (

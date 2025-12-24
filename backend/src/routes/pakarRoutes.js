@@ -13,11 +13,51 @@ const router = express.Router();
 
 /**
  * -----------------------------------------------------
- * USER mengajukan permohonan pakar
- * POST /api/pakar/apply
- * Body: { expertise, document }
+ * GET semua pakar
+ * GET /api/pakars
  * -----------------------------------------------------
  */
+router.get(
+  '/',
+  authenticate,
+  async (req, res, next) => {
+    try {
+      const data = await pakarService.findAllPakars();
+      res.json(data);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * -----------------------------------------------------
+ * GET detail pakar
+ * GET /api/pakars/:id
+ * -----------------------------------------------------
+ */
+router.get(
+  '/:id',
+  authenticate,
+  async (req, res, next) => {
+    try {
+      const data = await pakarService.findPakarById(
+        req.params.id
+      );
+      res.json(data);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * -----------------------------------------------------
+ * USER mengajukan permohonan pakar
+ * POST /api/pakars/apply
+ * -----------------------------------------------------
+ */
+// SEBELUM: /api/pakar/apply
 router.post(
   '/apply',
   authenticate,
@@ -28,10 +68,7 @@ router.post(
         req.body
       );
 
-      res.status(201).json({
-        success: true,
-        data,
-      });
+      res.status(201).json(data);
     } catch (error) {
       next(error);
     }
@@ -40,28 +77,47 @@ router.post(
 
 /**
  * -----------------------------------------------------
- * ADMIN memverifikasi pakar
- * PATCH /api/pakar/:id/verify
- * Body: { status: 'Approved' | 'Rejected' }
+ * ADMIN approve pakar
+ * PATCH /api/pakars/:id/approve
  * -----------------------------------------------------
  */
+// SEBELUM: /api/pakar/:id/verify
 router.patch(
-  '/:id/verify',
+  '/:id/approve',
   authenticate,
   authorize('ADMIN'),
   async (req, res, next) => {
     try {
-      const { status } = req.body;
-
       const data = await pakarService.verifyPakar(
         req.params.id,
-        status
+        'Approved'
       );
 
-      res.json({
-        success: true,
-        data,
-      });
+      res.json(data);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * -----------------------------------------------------
+ * ADMIN revoke pakar
+ * PATCH /api/pakars/:id/revoke
+ * -----------------------------------------------------
+ */
+router.patch(
+  '/:id/revoke',
+  authenticate,
+  authorize('ADMIN'),
+  async (req, res, next) => {
+    try {
+      const data = await pakarService.verifyPakar(
+        req.params.id,
+        'Rejected'
+      );
+
+      res.json(data);
     } catch (error) {
       next(error);
     }

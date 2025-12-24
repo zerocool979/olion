@@ -7,6 +7,21 @@ const controller = require('../controllers/discussionController');
 
 router.get('/', controller.findAll);
 
+/**
+ * ================================
+ * FIX: GET DISCUSSION BY ID
+ * GET /api/discussions/:id
+ * ================================
+ */
+router.get('/:id', async (req, res, next) => {
+  try {
+    const data = await service.findById(req.params.id);
+    res.json(data);
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.post('/', authenticate, async (req, res, next) => {
   try {
     const data = await service.create(req.user.id, req.body);

@@ -14,6 +14,7 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const reputationRoutes = require('./routes/reputationRoutes');
 const adminAnswerRoutes = require('./routes/adminAnswerRoutes');
 const errorHandler = require('./middlewares/errorHandler');
+const dashboardRoutes = require('./routes/dashboardRoutes');
 
 const app = express();
 
@@ -29,9 +30,10 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/answers', answerRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/pakar', pakarRoutes);
+app.use('/api/pakars', pakarRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reputation', reputationRoutes);
-
+app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/admin/answers', adminAnswerRoutes);
 app.use('/api/admin', require('./routes/adminUserRoutes'));
 

@@ -2,7 +2,57 @@ const prisma = require('../lib/prisma');
 const AppError = require('../utils/AppError');
 
 /**
+ * =====================================================
+ * GET semua pakar
+ * =====================================================
+ */
+exports.findAllPakars = async () => {
+  return prisma.pakar.findMany({
+    include: {
+      user: {
+        select: {
+          id: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: 'desc',
+    },
+  });
+};
+
+/**
+ * =====================================================
+ * GET detail pakar by ID
+ * =====================================================
+ */
+exports.findPakarById = async (pakarId) => {
+  const pakar = await prisma.pakar.findUnique({
+    where: { id: pakarId },
+    include: {
+      user: {
+        select: {
+          id: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
+  });
+
+  if (!pakar) {
+    throw new AppError('Pakar tidak ditemukan', 404);
+  }
+
+  return pakar;
+};
+
+/**
+ * =====================================================
  * USER apply pakar
+ * =====================================================
  */
 exports.applyPakar = async (userId, body) => {
   const { expertise, document } = body;
@@ -24,12 +74,15 @@ exports.applyPakar = async (userId, body) => {
       userId,
       expertise,
       document,
+      status: 'Pending',
     },
   });
 };
 
 /**
+ * =====================================================
  * ADMIN verify pakar
+ * =====================================================
  */
 exports.verifyPakar = async (pakarId, status) => {
   if (!['Approved', 'Rejected'].includes(status)) {
@@ -47,7 +100,6 @@ exports.verifyPakar = async (pakarId, status) => {
     data: { status },
   });
 
-  // Jika approved → upgrade role user
   if (status === 'Approved') {
     await prisma.user.update({
       where: { id: pakar.userId },

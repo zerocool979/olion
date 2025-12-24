@@ -10,7 +10,9 @@ import Link from 'next/link';
 
 const DiscussionCard = ({ discussion }) => {
   if (!discussion) return null;
-
+<Link href={`/discussions/${discussion.id}`}>
+  <a>View Detail</a>
+</Link>
   const {
     id,
     title,

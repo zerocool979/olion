@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import ProtectedRoute from '../components/ProtectedRoute';
-import { getNotifications } from '../api/notification';
+import ProtectedRoute from '../../components/ProtectedRoute'; // FIX PATH
+import { getNotifications } from '../../api/notification'; // FIX PATH
 
 /**
  * =====================================================

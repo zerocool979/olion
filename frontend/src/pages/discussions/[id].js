@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import ProtectedRoute from '../components/ProtectedRoute';
+import ProtectedRoute from '../../components/ProtectedRoute';
 
-import { getDiscussionById } from '../api/discussion';
-import { getAnswersByDiscussion } from '../api/answer';
+import { getDiscussionById } from '../../api/discussion';
+import { getAnswersByDiscussion } from '../../api/answer';
 
-import DiscussionCard from '../components/DiscussionCard';
-import AnswerCard from '../components/AnswerCard';
+import DiscussionCard from '../../components/DiscussionCard';
+import AnswerCard from '../../components/AnswerCard';
 
 /**
  * =====================================================

@@ -13,7 +13,8 @@ import api from './base';
  */
 export const getPakars = async (params = {}) => {
   try {
-    const res = await api.get('/pakars', { params });
+    // SEBELUM: '/pakar' ❌
+    const res = await api.get('/pakars', { params }); // ✅ FIX
     return res.data;
   } catch (error) {
     throw error;
@@ -29,7 +30,8 @@ export const getPakarById = async (pakarId) => {
   }
 
   try {
-    const res = await api.get(`/pakars/${pakarId}`);
+    // SEBELUM: `/pakar/${pakarId}` ❌
+    const res = await api.get(`/pakars/${pakarId}`); // ✅ FIX
     return res.data;
   } catch (error) {
     throw error;
@@ -45,7 +47,8 @@ export const applyAsPakar = async (payload) => {
   }
 
   try {
-    const res = await api.post('/pakars/apply', payload);
+    // SEBELUM: '/pakar/apply' ❌
+    const res = await api.post('/pakars/apply', payload); // ✅ FIX
     return res.data;
   } catch (error) {
     throw error;
@@ -61,8 +64,9 @@ export const approvePakar = async (pakarId) => {
   }
 
   try {
+    // SEBELUM: `/pakar/${pakarId}/approve` ❌
     const res = await api.patch(
-      `/pakars/${pakarId}/approve`
+      `/pakars/${pakarId}/approve` // ✅ FIX
     );
     return res.data;
   } catch (error) {
@@ -79,8 +83,9 @@ export const revokePakar = async (pakarId) => {
   }
 
   try {
+    // SEBELUM: `/pakar/${pakarId}/revoke` ❌
     const res = await api.patch(
-      `/pakars/${pakarId}/revoke`
+      `/pakars/${pakarId}/revoke` // ✅ FIX
     );
     return res.data;
   } catch (error) {

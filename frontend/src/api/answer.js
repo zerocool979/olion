@@ -10,6 +10,7 @@ import api from './base';
 
 /**
  * Ambil semua jawaban berdasarkan diskusi
+ * BACKEND: GET /api/answers/discussion/:id
  */
 export const getAnswersByDiscussion = async (discussionId) => {
   if (!discussionId) {
@@ -17,7 +18,14 @@ export const getAnswersByDiscussion = async (discussionId) => {
   }
 
   try {
-    const res = await api.get(`/discussions/${discussionId}/answers`);
+    // ❌ SALAH (tidak ada di backend)
+    // const res = await api.get(`/discussions/${discussionId}/answers`);
+
+    // ✅ BENAR (sesuai backend)
+    const res = await api.get(
+      `/answers/discussion/${discussionId}`
+    );
+
     return res.data;
   } catch (error) {
     throw error;
@@ -26,6 +34,7 @@ export const getAnswersByDiscussion = async (discussionId) => {
 
 /**
  * Buat jawaban baru
+ * BACKEND: POST /api/answers
  */
 export const createAnswer = async (discussionId, payload) => {
   if (!discussionId || !payload) {
@@ -33,10 +42,18 @@ export const createAnswer = async (discussionId, payload) => {
   }
 
   try {
-    const res = await api.post(
-      `/discussions/${discussionId}/answers`,
-      payload
-    );
+    // ❌ SALAH
+    // const res = await api.post(
+    //   `/discussions/${discussionId}/answers`,
+    //   payload
+    // );
+
+    // ✅ BENAR
+    const res = await api.post('/answers', {
+      discussionId,
+      ...payload,
+    });
+
     return res.data;
   } catch (error) {
     throw error;
@@ -45,6 +62,8 @@ export const createAnswer = async (discussionId, payload) => {
 
 /**
  * Update jawaban
+ * ❗ BELUM ADA ENDPOINT DI BACKEND
+ * Dibiarkan tapi ditandai
  */
 export const updateAnswer = async (answerId, payload) => {
   if (!answerId || !payload) {
@@ -52,8 +71,12 @@ export const updateAnswer = async (answerId, payload) => {
   }
 
   try {
-    const res = await api.put(`/answers/${answerId}`, payload);
-    return res.data;
+    // ❌ BACKEND BELUM MENYEDIAKAN ENDPOINT INI
+    // const res = await api.put(`/answers/${answerId}`, payload);
+
+    throw new Error(
+      'Update answer endpoint is not implemented in backend'
+    );
   } catch (error) {
     throw error;
   }
@@ -61,6 +84,7 @@ export const updateAnswer = async (answerId, payload) => {
 
 /**
  * Hapus jawaban
+ * BACKEND: DELETE /api/answers/:id
  */
 export const deleteAnswer = async (answerId) => {
   if (!answerId) {

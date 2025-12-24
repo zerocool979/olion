@@ -24,6 +24,34 @@ exports.findAll = () => {
   });
 };
 
+/**
+ * ================================
+ * FIX: FIND DISCUSSION BY ID
+ * ================================
+ */
+exports.findById = async (id) => {
+  const discussion = await prisma.discussion.findUnique({
+    where: { id },
+    include: {
+      user: {
+        select: {
+          id: true,
+          profile: {
+            select: { pseudonym: true },
+          },
+        },
+      },
+      category: true,
+    },
+  });
+
+  if (!discussion || discussion.isDeleted) {
+    throw new AppError('Discussion not found', 404);
+  }
+
+  return discussion;
+};
+
 exports.update = async (id, user, data) => {
   const discussion = await prisma.discussion.findUnique({ where: { id } });
   if (!discussion) throw new AppError('Not found', 404);

@@ -1,35 +1,35 @@
 import { useEffect, useState } from 'react';
-import ProtectedRoute from '../components/ProtectedRoute';
-import PakarCard from '../components/PakarCard';
-import { getPakars } from '../api/pakar';
+import ProtectedRoute from '../../components/ProtectedRoute';
+import { getReputation } from '../../api/reputation';
+import ReputationCard from '../../components/ReputationCard';
 
 /**
  * =====================================================
- * Pakar Page
+ * Reputation Page
  * -----------------------------------------------------
- * Menampilkan daftar pakar
+ * Menampilkan reputasi user
  * =====================================================
  */
 
-const PakarPage = () => {
-  const [pakars, setPakars] = useState([]);
+const ReputationPage = () => {
+  const [reputation, setReputation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     let isMounted = true;
 
-    const fetchPakars = async () => {
+    const fetchReputation = async () => {
       try {
-        const data = await getPakars();
+        const data = await getReputation();
         if (isMounted) {
-          setPakars(data);
+          setReputation(data);
         }
       } catch (err) {
         if (isMounted) {
           setError(
             err.response?.data?.message ||
-              'Failed to load pakars'
+              'Failed to load reputation'
           );
         }
       } finally {
@@ -39,7 +39,7 @@ const PakarPage = () => {
       }
     };
 
-    fetchPakars();
+    fetchReputation();
 
     return () => {
       isMounted = false;
@@ -47,35 +47,29 @@ const PakarPage = () => {
   }, []);
 
   if (loading) {
-    return <p>Loading pakars...</p>;
+    return <p>Loading reputation...</p>;
   }
 
   if (error) {
     return <p>{error}</p>;
   }
 
+  if (!reputation) {
+    return <p>No reputation data.</p>;
+  }
+
   return (
     <div>
-      <h1>Pakar</h1>
-
-      {pakars.length === 0 ? (
-        <p>No pakars found.</p>
-      ) : (
-        pakars.map((pakar) => (
-          <PakarCard
-            key={pakar.id}
-            pakar={pakar}
-          />
-        ))
-      )}
+      <h1>Reputation</h1>
+      <ReputationCard reputation={reputation} />
     </div>
   );
 };
 
-const WrappedPakarPage = () => (
+const WrappedReputationPage = () => (
   <ProtectedRoute>
-    <PakarPage />
+    <ReputationPage />
   </ProtectedRoute>
 );
 
-export default WrappedPakarPage;
+export default WrappedReputationPage;

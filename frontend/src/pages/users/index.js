@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import ProtectedRoute from '../components/ProtectedRoute';
-import { getUsers } from '../api/user';
-import UserTable from '../components/UserTable';
+import ProtectedRoute from '../../components/ProtectedRoute';
+import { getUsers, updateUserRole } from '../../api/user'; // FIX: import
+import UserTable from '../../components/UserTable';
 
 /**
  * =====================================================
@@ -46,6 +46,23 @@ const UsersPage = () => {
     };
   }, []);
 
+  /**
+   * =========================================
+   * FIX: handler untuk update role user
+   * =========================================
+   */
+  const onUpdateRole = async (userId, role) => {
+    try {
+      await updateUserRole(userId, role);
+      // refresh data
+      const data = await getUsers();
+      setUsers(data);
+    } catch (err) {
+      alert('Gagal mengubah role user');
+      console.error(err);
+    }
+  };
+
   if (loading) {
     return <p>Loading users...</p>;
   }
@@ -61,7 +78,10 @@ const UsersPage = () => {
       {users.length === 0 ? (
         <p>No users found.</p>
       ) : (
-        <UserTable users={users} />
+        <UserTable
+          users={users}
+          onUpdateRole={onUpdateRole} // ✅ FIX UTAMA
+        />
       )}
     </div>
   );
