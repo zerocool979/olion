@@ -11,11 +11,17 @@ const router = express.Router();
 router.post('/', authenticate, async (req, res, next) => {
   try {
     const { discussionId, content } = req.body;
+
+    /**
+     * FIX:
+     * - kirim req.user (object), bukan req.user.id
+     */
     const data = await answerService.create(
-      req.user.id,
+      req.user, // FIX
       discussionId,
       content
     );
+
     res.status(201).json(data);
   } catch (e) {
     next(e);

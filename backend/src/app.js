@@ -12,7 +12,7 @@ const commentRoutes = require('./routes/commentRoutes');
 const pakarRoutes = require('./routes/pakarRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const reputationRoutes = require('./routes/reputationRoutes');
-
+const adminAnswerRoutes = require('./routes/adminAnswerRoutes');
 const errorHandler = require('./middlewares/errorHandler');
 
 const app = express();
@@ -32,7 +32,9 @@ app.use('/api/pakar', pakarRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reputation', reputationRoutes);
 
+app.use('/api/admin/answers', adminAnswerRoutes);
 app.use('/api/admin', require('./routes/adminUserRoutes'));
+
 app.use('/api/users', require('./routes/userRoutes'));
 
 app.use(errorHandler);

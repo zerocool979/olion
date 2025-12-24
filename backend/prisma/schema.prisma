@@ -182,7 +182,7 @@ model Answer {
   discussionId String
   userId       String?
   content      String
-
+  isExpertAnswer Boolean @default(false)
   isVerified Boolean          @default(false)
   isFlagged  Boolean          @default(false)
   isDeleted  Boolean          @default(false)
