@@ -17,18 +17,17 @@ const router = express.Router();
  * GET /api/pakars
  * -----------------------------------------------------
  */
-router.get(
-  '/',
-  authenticate,
-  async (req, res, next) => {
-    try {
-      const data = await pakarService.findAllPakars();
-      res.json(data);
-    } catch (error) {
-      next(error);
-    }
+router.get('/', authenticate, async (req, res, next) => {
+  try {
+    const data = await pakarService.findAllPakars();
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 /**
  * -----------------------------------------------------
@@ -36,20 +35,17 @@ router.get(
  * GET /api/pakars/:id
  * -----------------------------------------------------
  */
-router.get(
-  '/:id',
-  authenticate,
-  async (req, res, next) => {
-    try {
-      const data = await pakarService.findPakarById(
-        req.params.id
-      );
-      res.json(data);
-    } catch (error) {
-      next(error);
-    }
+router.get('/:id', authenticate, async (req, res, next) => {
+  try {
+    const data = await pakarService.findPakarById(req.params.id);
+    res.json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 /**
  * -----------------------------------------------------
@@ -57,23 +53,17 @@ router.get(
  * POST /api/pakars/apply
  * -----------------------------------------------------
  */
-// SEBELUM: /api/pakar/apply
-router.post(
-  '/apply',
-  authenticate,
-  async (req, res, next) => {
-    try {
-      const data = await pakarService.applyPakar(
-        req.user.id,
-        req.body
-      );
-
-      res.status(201).json(data);
-    } catch (error) {
-      next(error);
-    }
+router.post('/apply', authenticate, async (req, res, next) => {
+  try {
+    const data = await pakarService.applyPakar(req.user.id, req.body);
+    res.status(201).json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    next(error);
   }
-);
+});
 
 /**
  * -----------------------------------------------------
@@ -81,7 +71,6 @@ router.post(
  * PATCH /api/pakars/:id/approve
  * -----------------------------------------------------
  */
-// SEBELUM: /api/pakar/:id/verify
 router.patch(
   '/:id/approve',
   authenticate,
@@ -92,8 +81,10 @@ router.patch(
         req.params.id,
         'Approved'
       );
-
-      res.json(data);
+      res.json({
+        success: true,
+        data,
+      });
     } catch (error) {
       next(error);
     }
@@ -116,8 +107,10 @@ router.patch(
         req.params.id,
         'Rejected'
       );
-
-      res.json(data);
+      res.json({
+        success: true,
+        data,
+      });
     } catch (error) {
       next(error);
     }

@@ -1,11 +1,7 @@
 const prisma = require('../lib/prisma');
 const AppError = require('../utils/AppError');
+const { sendNotification } = require('./notificationService'); // FIX
 
-/**
- * FIX:
- * - parameter pertama HARUS user object, bukan userId
- * - user.role dipakai untuk isExpertAnswer
- */
 exports.create = async (user, discussionId, content) => {
   const discussion = await prisma.discussion.findUnique({
     where: { id: discussionId },
@@ -15,14 +11,24 @@ exports.create = async (user, discussionId, content) => {
     throw new AppError('Discussion not found', 404);
   }
 
-  return prisma.answer.create({
+  const answer = await prisma.answer.create({
     data: {
       content,
       discussionId,
-      userId: user.id, // FIX
-      isExpertAnswer: user.role === 'PAKAR', // FIX
+      userId: user.id,
+      isExpertAnswer: user.role === 'PAKAR',
     },
   });
+
+  // 🔔 NOTIFICATION: ANSWER CREATED
+  await sendNotification({
+    userId: discussion.userId,
+    title: 'Jawaban baru',
+    message: 'Diskusi Anda mendapatkan jawaban baru',
+    channel: 'InApp',
+  });
+
+  return answer;
 };
 
 exports.findByDiscussion = async (discussionId) => {
@@ -33,9 +39,7 @@ exports.findByDiscussion = async (discussionId) => {
         select: {
           id: true,
           role: true,
-          profile: {
-            select: { pseudonym: true },
-          },
+          profile: { select: { pseudonym: true } },
         },
       },
       votes: true,
@@ -44,96 +48,42 @@ exports.findByDiscussion = async (discussionId) => {
   });
 };
 
-/**
- * SALAH / TIDAK DIPAKAI
- * Function createAnswer & getAnswersByDiscussion tidak ada implementasinya
- * Jangan dihapus sesuai instruksi, hanya dikomentari
- */
-// module.exports = {
-//   createAnswer,
-//   getAnswersByDiscussion,
-// };
-
-exports.remove = async (id, user) => {
+exports.approve = async (id, moderatorId) => {
   const answer = await prisma.answer.findUnique({ where: { id } });
   if (!answer) throw new AppError('Answer not found', 404);
 
-  if (answer.userId !== user.id && user.role !== 'ADMIN') {
-    throw new AppError('Forbidden', 403);
-  }
-
-  return prisma.answer.update({
+  const updated = await prisma.answer.update({
     where: { id },
-    data: { isDeleted: true },
-  });
-};
-/**
- * ADMIN / MODERATOR
- * Approve answer
- */
-exports.approve = async (id, moderatorId) => {
-  const answer = await prisma.answer.update({
-    where: { id },
-    data: {
-      moderation: 'Approved',
-      isFlagged: false,
-    },
-  });
-  await logModeration({
-    moderatorId,
-    action: 'Ignore', // atau Approved jika enum ditambah
+    data: { moderation: 'Approved', isFlagged: false },
   });
 
-  return answer;
+  // 🔔 NOTIFICATION: ANSWER APPROVED
+  await sendNotification({
+    userId: answer.userId,
+    title: 'Jawaban disetujui',
+    message: 'Jawaban Anda telah disetujui moderator',
+    channel: 'InApp',
+  });
+
+  return updated;
 };
 
-/**
- * ADMIN / MODERATOR
- * Reject answer
- */
 exports.reject = async (id, moderatorId) => {
-  const answer = await prisma.answer.update({
+  const answer = await prisma.answer.findUnique({ where: { id } });
+  if (!answer) throw new AppError('Answer not found', 404);
+
+  const updated = await prisma.answer.update({
     where: { id },
-    data: {
-      moderation: 'Rejected',
-      isFlagged: true,
-    },
-  });
-  await logModeration({
-    moderatorId,
-    action: 'Hide',
+    data: { moderation: 'Rejected', isFlagged: true },
   });
 
-  return answer;
-};
-
-
-/**
- * ADMIN / MODERATOR
- * Soft delete answer
- */
-exports.adminDelete = async (id, moderatorId) => {
-  const answer = await prisma.answer.update({
-    where: { id },
-    data: {
-      isDeleted: true,
-    },
-  });
-  await logModeration({
-    moderatorId,
-    action: 'Delete',
+  // 🔔 NOTIFICATION: ANSWER REJECTED
+  await sendNotification({
+    userId: answer.userId,
+    title: 'Jawaban ditolak',
+    message: 'Jawaban Anda ditolak moderator',
+    channel: 'InApp',
   });
 
-  return answer;
-};
-
-const logModeration = async ({ moderatorId, action, answerReportId = null }) => {
-  return prisma.moderation.create({
-    data: {
-      moderatorId,
-      action,
-      source: 'ANSWER',
-      answerReportId,
-    },
-  });
+  return updated;
 };

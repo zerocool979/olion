@@ -1,14 +1,6 @@
 import { useEffect, useState } from 'react';
-import ProtectedRoute from '../../components/ProtectedRoute'; // FIX PATH
-import { getNotifications } from '../../api/notification'; // FIX PATH
-
-/**
- * =====================================================
- * Notifications Page
- * -----------------------------------------------------
- * Menampilkan notifikasi user
- * =====================================================
- */
+import ProtectedRoute from '../../components/ProtectedRoute';
+import { getNotifications } from '../../api/notification';
 
 const NotificationsPage = () => {
   const [notifications, setNotifications] = useState([]);
@@ -16,42 +8,33 @@ const NotificationsPage = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    let isMounted = true;
+    let active = true;
 
     const fetchNotifications = async () => {
       try {
         const data = await getNotifications();
-        if (isMounted) {
-          setNotifications(data);
-        }
+        if (active) setNotifications(data);
       } catch (err) {
-        if (isMounted) {
+        if (active) {
           setError(
             err.response?.data?.message ||
-              'Failed to load notifications'
+            'Failed to load notifications'
           );
         }
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (active) setLoading(false);
       }
     };
 
     fetchNotifications();
 
     return () => {
-      isMounted = false;
+      active = false;
     };
   }, []);
 
-  if (loading) {
-    return <p>Loading notifications...</p>;
-  }
-
-  if (error) {
-    return <p>{error}</p>;
-  }
+  if (loading) return <p>Loading notifications...</p>;
+  if (error) return <p>{error}</p>;
 
   return (
     <div>
@@ -61,9 +44,11 @@ const NotificationsPage = () => {
         <p>No notifications.</p>
       ) : (
         <ul>
-          {notifications.map((notif) => (
-            <li key={notif.id}>
-              {notif.message}
+          {notifications.map((n) => (
+            <li key={n.id}>
+              <strong>{n.title}</strong>
+              <br />
+              {n.message}
             </li>
           ))}
         </ul>
@@ -72,10 +57,10 @@ const NotificationsPage = () => {
   );
 };
 
-const WrappedNotificationsPage = () => (
-  <ProtectedRoute>
-    <NotificationsPage />
-  </ProtectedRoute>
-);
-
-export default WrappedNotificationsPage;
+export default function Wrapped() {
+  return (
+    <ProtectedRoute>
+      <NotificationsPage />
+    </ProtectedRoute>
+  );
+}

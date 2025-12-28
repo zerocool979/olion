@@ -1,11 +1,7 @@
 const prisma = require('../lib/prisma');
 const AppError = require('../utils/AppError');
+const { sendNotification } = require('./notificationService'); // FIX
 
-/**
- * =====================================================
- * GET semua pakar
- * =====================================================
- */
 exports.findAllPakars = async () => {
   return prisma.pakar.findMany({
     include: {
@@ -18,16 +14,11 @@ exports.findAllPakars = async () => {
       },
     },
     orderBy: {
-      createdAt: 'desc',
+      id: 'desc',
     },
   });
 };
 
-/**
- * =====================================================
- * GET detail pakar by ID
- * =====================================================
- */
 exports.findPakarById = async (pakarId) => {
   const pakar = await prisma.pakar.findUnique({
     where: { id: pakarId },
@@ -49,11 +40,6 @@ exports.findPakarById = async (pakarId) => {
   return pakar;
 };
 
-/**
- * =====================================================
- * USER apply pakar
- * =====================================================
- */
 exports.applyPakar = async (userId, body) => {
   const { expertise, document } = body;
 
@@ -69,7 +55,7 @@ exports.applyPakar = async (userId, body) => {
     throw new AppError('Pengajuan pakar sudah ada', 400);
   }
 
-  return prisma.pakar.create({
+  const pakar = await prisma.pakar.create({
     data: {
       userId,
       expertise,
@@ -77,13 +63,25 @@ exports.applyPakar = async (userId, body) => {
       status: 'Pending',
     },
   });
+
+  // 🔔 NOTIFICATION → ADMIN
+  const admins = await prisma.user.findMany({
+    where: { role: 'ADMIN' },
+    select: { id: true },
+  });
+
+  for (const admin of admins) {
+    await sendNotification({
+      userId: admin.id,
+      title: 'Pengajuan pakar baru',
+      message: 'Ada user yang mengajukan diri sebagai pakar',
+      channel: 'InApp',
+    });
+  }
+
+  return pakar;
 };
 
-/**
- * =====================================================
- * ADMIN verify pakar
- * =====================================================
- */
 exports.verifyPakar = async (pakarId, status) => {
   if (!['Approved', 'Rejected'].includes(status)) {
     throw new AppError('Status tidak valid', 400);
@@ -106,6 +104,20 @@ exports.verifyPakar = async (pakarId, status) => {
       data: { role: 'PAKAR' },
     });
   }
+
+  // 🔔 NOTIFICATION → USER
+  await sendNotification({
+    userId: pakar.userId,
+    title:
+      status === 'Approved'
+        ? 'Pengajuan pakar disetujui'
+        : 'Pengajuan pakar ditolak',
+    message:
+      status === 'Approved'
+        ? 'Selamat, Anda sekarang adalah pakar'
+        : 'Maaf, pengajuan pakar Anda ditolak',
+    channel: 'InApp',
+  });
 
   return updated;
 };

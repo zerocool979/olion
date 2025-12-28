@@ -1,9 +1,10 @@
 const prisma = require('../lib/prisma');
 const AppError = require('../utils/AppError');
 const checkOwner = require('../utils/ownership');
+const { sendNotification } = require('./notificationService'); // FIX
 
 exports.create = async (userId, data) => {
-  return prisma.discussion.create({
+  const discussion = await prisma.discussion.create({
     data: {
       title: data.title,
       content: data.content,
@@ -11,6 +12,16 @@ exports.create = async (userId, data) => {
       userId,
     },
   });
+
+  // 🔔 NOTIFICATION: DISCUSSION CREATED
+  await sendNotification({
+    userId,
+    title: 'Diskusi berhasil dibuat',
+    message: `Diskusi "${data.title}" berhasil diposting`,
+    channel: 'InApp',
+  });
+
+  return discussion;
 };
 
 exports.findAll = () => {
@@ -24,11 +35,6 @@ exports.findAll = () => {
   });
 };
 
-/**
- * ================================
- * FIX: FIND DISCUSSION BY ID
- * ================================
- */
 exports.findById = async (id) => {
   const discussion = await prisma.discussion.findUnique({
     where: { id },
@@ -36,9 +42,7 @@ exports.findById = async (id) => {
       user: {
         select: {
           id: true,
-          profile: {
-            select: { pseudonym: true },
-          },
+          profile: { select: { pseudonym: true } },
         },
       },
       category: true,
@@ -73,8 +77,18 @@ exports.remove = async (id, user) => {
 
   checkOwner(discussion.userId, user);
 
-  return prisma.discussion.update({
+  const deleted = await prisma.discussion.update({
     where: { id },
     data: { isDeleted: true },
   });
+
+  // 🔔 NOTIFICATION: DISCUSSION DELETED
+  await sendNotification({
+    userId: discussion.userId,
+    title: 'Diskusi dihapus',
+    message: `Diskusi "${discussion.title}" telah dihapus`,
+    channel: 'InApp',
+  });
+
+  return deleted;
 };

@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma');
 const AppError = require('../utils/AppError');
+const { sendNotification } = require('./notificationService'); // FIX
 
 exports.reportDiscussion = async (userId, discussionId, data) => {
   const discussion = await prisma.discussion.findUnique({
@@ -10,7 +11,7 @@ exports.reportDiscussion = async (userId, discussionId, data) => {
     throw new AppError('Discussion not found', 404);
   }
 
-  return prisma.discussionReport.create({
+  const report = await prisma.discussionReport.create({
     data: {
       reporterId: userId,
       discussionId,
@@ -18,16 +19,34 @@ exports.reportDiscussion = async (userId, discussionId, data) => {
       priority: data.priority,
     },
   });
+
+  // 🔔 NOTIFICATION → ADMIN
+  const admins = await prisma.user.findMany({
+    where: { role: 'ADMIN' },
+    select: { id: true },
+  });
+
+  for (const admin of admins) {
+    await sendNotification({
+      userId: admin.id,
+      title: 'Laporan diskusi baru',
+      message: 'Ada laporan diskusi baru yang perlu ditinjau',
+      channel: 'InApp',
+    });
+  }
+
+  return report;
 };
 
 exports.reportAnswer = async (userId, answerId, body) => {
   const answer = await prisma.answer.findUnique({
     where: { id: answerId },
   });
+
   if (!answer)
     throw new AppError('Answer not found', 404);
 
-  return prisma.answerReport.create({
+  const report = await prisma.answerReport.create({
     data: {
       reporterId: userId,
       answerId,
@@ -36,6 +55,23 @@ exports.reportAnswer = async (userId, answerId, body) => {
       aiScore: body.aiScore ?? null,
     },
   });
+
+  // 🔔 NOTIFICATION → ADMIN
+  const admins = await prisma.user.findMany({
+    where: { role: 'ADMIN' },
+    select: { id: true },
+  });
+
+  for (const admin of admins) {
+    await sendNotification({
+      userId: admin.id,
+      title: 'Laporan jawaban baru',
+      message: 'Ada laporan jawaban baru yang perlu ditinjau',
+      channel: 'InApp',
+    });
+  }
+
+  return report;
 };
 
 exports.reportComment = async (userId, commentId, body) => {
@@ -46,7 +82,7 @@ exports.reportComment = async (userId, commentId, body) => {
   if (!comment)
     throw new AppError('Comment not found', 404);
 
-  return prisma.commentReport.create({
+  const report = await prisma.commentReport.create({
     data: {
       reporterId: userId,
       commentId,
@@ -55,4 +91,21 @@ exports.reportComment = async (userId, commentId, body) => {
       aiScore: body.aiScore ?? null,
     },
   });
+
+  // 🔔 NOTIFICATION → ADMIN
+  const admins = await prisma.user.findMany({
+    where: { role: 'ADMIN' },
+    select: { id: true },
+  });
+
+  for (const admin of admins) {
+    await sendNotification({
+      userId: admin.id,
+      title: 'Laporan komentar baru',
+      message: 'Ada laporan komentar baru yang perlu ditinjau',
+      channel: 'InApp',
+    });
+  }
+
+  return report;
 };

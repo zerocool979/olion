@@ -1,7 +1,12 @@
 const jwt = require('jsonwebtoken');
 const AppError = require('../utils/AppError');
+const prisma = require('../lib/prisma');
 
-exports.authenticate = (req, res, next) => {
+/**
+ * AUTHENTICATE
+ * - FIX: Ambil user dari DB agar role selalu valid
+ */
+exports.authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader || !authHeader.startsWith('Bearer '))
@@ -11,13 +16,36 @@ exports.authenticate = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+
+    /**
+     * ❌ SALAH (tidak dihapus sesuai instruksi)
+     * req.user = decoded;
+     */
+
+    // ✅ FIX: ambil user lengkap dari database
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: {
+        id: true,
+        role: true,
+      },
+    });
+
+    if (!user)
+      return next(new AppError('User not found', 401));
+
+    req.user = user; // ✅ sekarang role PASTI ADA
     next();
-  } catch {
+  } catch (err) {
     next(new AppError('Invalid token', 401));
   }
 };
 
+/**
+ * AUTHORIZE
+ * - Sudah BENAR
+ * - Akan bekerja setelah authenticate di-fix
+ */
 exports.authorize = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role))

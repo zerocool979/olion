@@ -3,26 +3,20 @@ import api from './base';
 /**
  * =====================================================
  * Notification API
- * -----------------------------------------------------
- * Semua komunikasi terkait notifikasi
  * =====================================================
  */
 
-/**
- * Ambil semua notifikasi user
- */
 export const getNotifications = async (params = {}) => {
   try {
     const res = await api.get('/notifications', { params });
-    return res.data;
+
+    // FIX: backend pakai { success, data }
+    return res.data?.data || [];
   } catch (error) {
     throw error;
   }
 };
 
-/**
- * Tandai notifikasi sebagai dibaca
- */
 export const markNotificationAsRead = async (notificationId) => {
   if (!notificationId) {
     throw new Error('Notification ID is required');
@@ -38,9 +32,6 @@ export const markNotificationAsRead = async (notificationId) => {
   }
 };
 
-/**
- * Tandai semua notifikasi sebagai dibaca
- */
 export const markAllNotificationsAsRead = async () => {
   try {
     const res = await api.patch('/notifications/read-all');

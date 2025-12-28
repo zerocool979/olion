@@ -1,26 +1,29 @@
 import React, { useEffect, useState } from 'react';
 import { getNotifications } from '../api/notification';
-import socket from '../socket';
+// import socket from '../socket'; 
+// ⚠️ socket belum jelas implementasinya → NONAKTIFKAN
 import { useAuth } from '../context/AuthContext';
 
 const Notifications = () => {
-  const { user } = useAuth(); // ⬅️ AMBIL USER
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState([]);
 
   useEffect(() => {
-    if (!user) return; // ⬅️ JANGAN HIT API JIKA BELUM LOGIN
+    if (!user) return;
 
-    getNotifications().then(setNotifications);
-
-    if (!socket) return;
-
-    socket.on('notification', (data) => {
-      setNotifications((prev) => [data, ...prev]);
-    });
-
-    return () => {
-      socket.off('notification');
+    const fetch = async () => {
+      const data = await getNotifications();
+      setNotifications(data);
     };
+
+    fetch();
+
+    // ❌ BELUM ADA BACKEND SOCKET
+    // socket.on('notification', (data) => {
+    //   setNotifications((prev) => [data, ...prev]);
+    // });
+
+    // return () => socket.off('notification');
   }, [user]);
 
   if (!user) {
@@ -30,10 +33,17 @@ const Notifications = () => {
   return (
     <div className="notifications">
       <h3>Notifications</h3>
+
+      {notifications.length === 0 && (
+        <p>Tidak ada notifikasi</p>
+      )}
+
       <ul>
         {notifications.map((n) => (
           <li key={n.id}>
-            {n.title}: {n.message}
+            <strong>{n.title}</strong>
+            <br />
+            <span>{n.message}</span>
           </li>
         ))}
       </ul>
