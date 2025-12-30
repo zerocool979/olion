@@ -5,13 +5,26 @@ const { authenticate } = require('../middlewares/authMiddleware');
 const router = express.Router();
 const controller = require('../controllers/discussionController');
 
+/**
+ * =====================================================
+ * GET ALL DISCUSSIONS
+ * NOTE:
+ * - Menggunakan controller (existing code)
+ * - Dipertahankan sesuai instruksi (tidak dihapus)
+ * =====================================================
+ */
 router.get('/', controller.findAll);
 
 /**
- * ================================
+ * =====================================================
  * FIX: GET DISCUSSION BY ID
  * GET /api/discussions/:id
- * ================================
+ *
+ * NOTE:
+ * - Menggunakan service langsung
+ * - Konsisten dengan kebutuhan frontend
+ * - Error handling didelegasikan ke service
+ * =====================================================
  */
 router.get('/:id', async (req, res, next) => {
   try {
@@ -22,6 +35,11 @@ router.get('/:id', async (req, res, next) => {
   }
 });
 
+/**
+ * =====================================================
+ * CREATE DISCUSSION
+ * =====================================================
+ */
 router.post('/', authenticate, async (req, res, next) => {
   try {
     const data = await service.create(req.user.id, req.body);
@@ -31,6 +49,11 @@ router.post('/', authenticate, async (req, res, next) => {
   }
 });
 
+/**
+ * =====================================================
+ * UPDATE DISCUSSION
+ * =====================================================
+ */
 router.put('/:id', authenticate, async (req, res, next) => {
   try {
     const data = await service.update(req.params.id, req.user, req.body);
@@ -40,6 +63,11 @@ router.put('/:id', authenticate, async (req, res, next) => {
   }
 });
 
+/**
+ * =====================================================
+ * SOFT DELETE DISCUSSION
+ * =====================================================
+ */
 router.delete('/:id', authenticate, async (req, res, next) => {
   try {
     await service.remove(req.params.id, req.user);

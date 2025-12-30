@@ -1,0 +1,75 @@
+/* =====================================================
+   Answer & Comment Styles (CSS MODULE)
+   ===================================================== */
+
+.answerCard {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  background-color: #fafafa;
+}
+
+.answerContent {
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #111827;
+}
+
+.answerMeta {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #6b7280;
+  display: flex;
+  justify-content: space-between;
+}
+
+.answerAuthor {
+  font-weight: 600;
+  color: #374151;
+}
+
+.answerComments {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed #d1d5db;
+}
+
+.commentsTitle {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.loading,
+.empty {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.commentItem {
+  font-size: 0.85rem;
+  margin-bottom: 0.4rem;
+}
+
+.commentAuthor {
+  font-weight: 600;
+}
+
+.commentForm {
+  margin-top: 0.5rem;
+}
+
+.commentInput {
+  width: 100%;
+  padding: 0.45rem;
+  font-size: 0.85rem;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+}
+
+.commentInput:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px #2563eb;
+}

@@ -3,6 +3,11 @@ const AppError = require('../utils/AppError');
 const checkOwner = require('../utils/ownership');
 const { sendNotification } = require('./notificationService'); // FIX
 
+/**
+ * =====================================================
+ * CREATE DISCUSSION
+ * =====================================================
+ */
 exports.create = async (userId, data) => {
   const discussion = await prisma.discussion.create({
     data: {
@@ -14,6 +19,9 @@ exports.create = async (userId, data) => {
   });
 
   // 🔔 NOTIFICATION: DISCUSSION CREATED
+  // NOTE:
+  // - Discussion adalah ROOT entity
+  // - Tidak mengandung Answer / Comment
   await sendNotification({
     userId,
     title: 'Diskusi berhasil dibuat',
@@ -24,6 +32,11 @@ exports.create = async (userId, data) => {
   return discussion;
 };
 
+/**
+ * =====================================================
+ * GET ALL DISCUSSIONS
+ * =====================================================
+ */
 exports.findAll = () => {
   return prisma.discussion.findMany({
     where: { isDeleted: false },
@@ -35,6 +48,15 @@ exports.findAll = () => {
   });
 };
 
+/**
+ * =====================================================
+ * GET DISCUSSION BY ID
+ * NOTE:
+ * - Digunakan untuk halaman detail discussion
+ * - Answer & Comment TIDAK diambil di sini
+ * - Konsisten dengan konsep hirarki
+ * =====================================================
+ */
 exports.findById = async (id) => {
   const discussion = await prisma.discussion.findUnique({
     where: { id },
@@ -56,6 +78,11 @@ exports.findById = async (id) => {
   return discussion;
 };
 
+/**
+ * =====================================================
+ * UPDATE DISCUSSION
+ * =====================================================
+ */
 exports.update = async (id, user, data) => {
   const discussion = await prisma.discussion.findUnique({ where: { id } });
   if (!discussion) throw new AppError('Not found', 404);
@@ -71,6 +98,14 @@ exports.update = async (id, user, data) => {
   });
 };
 
+/**
+ * =====================================================
+ * SOFT DELETE DISCUSSION
+ * NOTE:
+ * - Tidak menghapus Answer / Comment
+ * - Menjaga histori diskusi
+ * =====================================================
+ */
 exports.remove = async (id, user) => {
   const discussion = await prisma.discussion.findUnique({ where: { id } });
   if (!discussion) throw new AppError('Not found', 404);

@@ -178,32 +178,40 @@ model Discussion {
 }
 
 model Answer {
-  id           String  @id @default(uuid())
-  discussionId String
-  userId       String?
-  content      String
-  isExpertAnswer Boolean @default(false)
-  isVerified Boolean          @default(false)
-  isFlagged  Boolean          @default(false)
-  isDeleted  Boolean          @default(false)
-  moderation ModerationStatus @default(Pending)
+  id             String           @id @default(uuid())
+  discussionId   String
+  userId         String?
+  content        String
+  isExpertAnswer Boolean          @default(false)
+  isVerified     Boolean          @default(false)
+  isFlagged      Boolean          @default(false)
+  isDeleted      Boolean          @default(false)
+  moderation     ModerationStatus @default(Pending)
 
   createdAt DateTime @default(now())
 
   discussion Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
   user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  votes   AnswerVote[]
-  reports AnswerReport[]
+  votes    AnswerVote[]
+  reports  AnswerReport[]
+  // FIX: relasi balik untuk komentar pada jawaban
+  comments Comment[]
 
   @@map("answers")
 }
 
 model Comment {
-  id           String  @id @default(uuid())
+  id String @id @default(uuid())
+
   discussionId String
-  userId       String?
-  content      String
+
+  answerId String? // FIX: komentar bisa menempel ke jawaban (nullable)
+
+  userId  String?
+  content String
+
+  // answerId     String? // DUPLICATE FIELD — DIKOMENTARI, JANGAN DIHAPUS
 
   isFlagged  Boolean          @default(false)
   isDeleted  Boolean          @default(false)
@@ -212,7 +220,11 @@ model Comment {
   createdAt DateTime @default(now())
 
   discussion Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
-  user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // FIX: relasi ke Answer (opsional)
+  answer Answer? @relation(fields: [answerId], references: [id], onDelete: Cascade)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   reports CommentReport[]
 

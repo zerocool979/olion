@@ -9,7 +9,10 @@ import api from './base';
  */
 
 /**
- * Ambil komentar berdasarkan answer
+ * =====================================================
+ * Ambil komentar berdasarkan ANSWER
+ * FIX: endpoint disesuaikan dengan backend
+ * =====================================================
  */
 export const getCommentsByAnswer = async (answerId) => {
   if (!answerId) {
@@ -17,7 +20,11 @@ export const getCommentsByAnswer = async (answerId) => {
   }
 
   try {
-    const res = await api.get(`/answers/${answerId}/comments`);
+    // OLD (SALAH, JANGAN DIHAPUS)
+    // const res = await api.get(`/answers/${answerId}/comments`);
+
+    // FIX
+    const res = await api.get(`/comments/answer/${answerId}`);
     return res.data;
   } catch (error) {
     throw error;
@@ -25,7 +32,9 @@ export const getCommentsByAnswer = async (answerId) => {
 };
 
 /**
- * Buat komentar baru
+ * =====================================================
+ * Buat komentar baru PADA ANSWER
+ * =====================================================
  */
 export const createComment = async (answerId, payload) => {
   if (!answerId || !payload) {
@@ -33,8 +42,12 @@ export const createComment = async (answerId, payload) => {
   }
 
   try {
+    // OLD (SALAH)
+    // const res = await api.post(`/answers/${answerId}/comments`, payload);
+
+    // FIX
     const res = await api.post(
-      `/answers/${answerId}/comments`,
+      `/comments/answer/${answerId}`,
       payload
     );
     return res.data;
@@ -44,7 +57,9 @@ export const createComment = async (answerId, payload) => {
 };
 
 /**
- * Update komentar
+ * =====================================================
+ * Update komentar (OWNER)
+ * =====================================================
  */
 export const updateComment = async (commentId, payload) => {
   if (!commentId || !payload) {
@@ -52,7 +67,10 @@ export const updateComment = async (commentId, payload) => {
   }
 
   try {
-    const res = await api.put(`/comments/${commentId}`, payload);
+    const res = await api.put(
+      `/comments/${commentId}`,
+      payload
+    );
     return res.data;
   } catch (error) {
     throw error;
@@ -60,7 +78,9 @@ export const updateComment = async (commentId, payload) => {
 };
 
 /**
- * Hapus komentar
+ * =====================================================
+ * Hapus komentar (OWNER)
+ * =====================================================
  */
 export const deleteComment = async (commentId) => {
   if (!commentId) {
@@ -68,7 +88,9 @@ export const deleteComment = async (commentId) => {
   }
 
   try {
-    const res = await api.delete(`/comments/${commentId}`);
+    const res = await api.delete(
+      `/comments/${commentId}`
+    );
     return res.data;
   } catch (error) {
     throw error;
