@@ -1,3 +1,4 @@
+// src/pages/reputation/index.js
 import { useEffect, useState } from 'react';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import { getReputation } from '../../api/reputation';
@@ -66,6 +67,9 @@ const ReputationPage = () => {
   );
 };
 
+// =====================================================
+// FINAL IMPLEMENTATION - WRAP WITH PROTECTEDROUTE
+// =====================================================
 const WrappedReputationPage = () => (
   <ProtectedRoute>
     <ReputationPage />
@@ -73,3 +77,10 @@ const WrappedReputationPage = () => (
 );
 
 export default WrappedReputationPage;
+
+// =====================================================
+// CATATAN:
+// 1. Halaman reputasi bisa diakses semua user yang login
+// 2. ProtectedRoute menangani auth tanpa spesifik role
+// 3. Komponen sederhana untuk menampilkan reputasi user
+// =====================================================

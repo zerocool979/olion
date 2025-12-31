@@ -1,3 +1,4 @@
+// src/pages/notifications/index.js
 import { useEffect, useState } from 'react';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import { getNotifications } from '../../api/notification';
@@ -57,6 +58,9 @@ const NotificationsPage = () => {
   );
 };
 
+// =====================================================
+// FINAL IMPLEMENTATION - WRAP WITH PROTECTEDROUTE
+// =====================================================
 export default function Wrapped() {
   return (
     <ProtectedRoute>
@@ -64,3 +68,10 @@ export default function Wrapped() {
     </ProtectedRoute>
   );
 }
+
+// =====================================================
+// CATATAN:
+// 1. Halaman notifications bisa diakses semua user yang login
+// 2. ProtectedRoute menangani auth tanpa spesifik role
+// 3. Komponen sederhana untuk menampilkan notifikasi user
+// =====================================================

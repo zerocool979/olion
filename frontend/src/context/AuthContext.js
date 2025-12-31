@@ -1,3 +1,6 @@
+// frontend/src/context/AuthContext.js
+'use client'; // Wajib untuk Next.js 13+ karena menggunakan hooks
+
 import {
   createContext,
   useContext,
@@ -6,14 +9,18 @@ import {
   useCallback,
   useMemo,
 } from 'react';
+// import { useRouter } from 'next/router'; // Untuk Pages Router
+import { useRouter } from 'next/navigation'; // Untuk App Router
 import api from '../api/base';
 
 /**
  * =====================================================
- * AuthContext
+ * AuthContext - Next.js 13+ Compatible
  * -----------------------------------------------------
  * - Single source of truth for authentication
- * - NO routing, NO redirect
+ * - Menggunakan useRouter() dari Next.js untuk routing
+ * - SSR compatible dengan pengecekan typeof window
+ * - Role-based redirect setelah login
  * =====================================================
  */
 
@@ -30,6 +37,7 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   /**
    * ---------------------------------------------------
@@ -58,13 +66,14 @@ export const AuthProvider = ({ children }) => {
 
   /**
    * ---------------------------------------------------
-   * Logout
+   * Logout - Menggunakan router.push() untuk Next.js
    * ---------------------------------------------------
    */
   const logout = useCallback(() => {
     setUser(null);
     setToken(null);
-  }, [setToken]);
+    router.push('/login');
+  }, [setToken, router]);
 
   /**
    * ---------------------------------------------------
@@ -108,7 +117,7 @@ export const AuthProvider = ({ children }) => {
 
   /**
    * ---------------------------------------------------
-   * Login
+   * Login - Menggunakan router.push() untuk Next.js
    * ---------------------------------------------------
    */
   const login = useCallback(
@@ -131,6 +140,13 @@ export const AuthProvider = ({ children }) => {
         const me = await fetchMe();
         setUser(me);
 
+        // Role-based redirect setelah login berhasil
+        if (me.role === 'admin' || me.role === 'moderator') {
+          router.push('/admin'); // Redirect admin/moderator ke admin dashboard
+        } else {
+          router.push('/dashboard'); // Regular users ke general dashboard
+        }
+
         return me;
       } catch (error) {
         // ⬅️ PENTING: propagate error ke UI
@@ -141,12 +157,12 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
       }
     },
-    [fetchMe, setToken]
+    [fetchMe, setToken, router]
   );
 
   /**
    * ---------------------------------------------------
-   * Register
+   * Register - Menggunakan router.push() untuk Next.js
    * ---------------------------------------------------
    */
   const register = useCallback(
@@ -169,6 +185,9 @@ export const AuthProvider = ({ children }) => {
         const me = await fetchMe();
         setUser(me);
 
+        // Redirect setelah register berhasil
+        router.push('/dashboard');
+
         return me;
       } catch (error) {
         setUser(null);
@@ -178,8 +197,49 @@ export const AuthProvider = ({ children }) => {
         setLoading(false);
       }
     },
-    [fetchMe, setToken]
+    [fetchMe, setToken, router]
   );
+
+  /**
+   * ---------------------------------------------------
+   * Manual login dengan token (untuk external auth)
+   * ---------------------------------------------------
+   */
+  const loginWithToken = useCallback((token, userData) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+
+      // Role-based redirect
+      if (userData.role === 'admin' || userData.role === 'moderator') {
+        router.push('/admin');
+      } else {
+        router.push('/dashboard');
+      }
+    }
+  }, [router]);
+
+  /**
+   * ---------------------------------------------------
+   * Manual redirect function untuk komponen lain
+   * ---------------------------------------------------
+   */
+  const redirectTo = useCallback((path) => {
+    router.push(path);
+  }, [router]);
+
+  /**
+   * ---------------------------------------------------
+   * Update user data (setelah edit profile, dll)
+   * ---------------------------------------------------
+   */
+  const updateUser = useCallback((userData) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+    }
+  }, []);
 
   /**
    * ---------------------------------------------------
@@ -198,10 +258,15 @@ export const AuthProvider = ({ children }) => {
       login,
       register,
       logout,
+      loginWithToken,
+      updateUser,
       setUser,
       setToken,
+
+      // router helper (optional)
+      redirectTo,
     }),
-    [user, loading, login, register, logout, setToken]
+    [user, loading, login, register, logout, loginWithToken, updateUser, setToken, redirectTo]
   );
 
   return (

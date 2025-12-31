@@ -1,36 +1,60 @@
-import { useEffect } from 'react';
+// frontend/src/components/ProtectedRoute.js (Simple Version)
+'use client';
+
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../context/AuthContext';
+import { Box, CircularProgress, Typography } from '@mui/material';
 
-/**
- * =====================================================
- * ProtectedRoute
- * -----------------------------------------------------
- * - Melindungi halaman dari user tidak login
- * - Sinkron dengan AuthContext
- * =====================================================
- */
-
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+const ProtectedRoute = ({ children, roles = [] }) => {
+  const { user, loading } = useAuth();
   const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.replace('/login');
+      // CEGAH redirect loop ke /login
+     if (!user) {
+       if (router.pathname !== '/login') {
+         router.push(`/login?redirect=${encodeURIComponent(router.pathname)}`);
+       }
+       return;
+     }
+
+    if (!loading) {
+      // Check if user is authenticated
+      if (!user) {
+        router.push(`/login?redirect=${encodeURIComponent(router.pathname)}`);
+        return;
+      }
+
+      // Check role permissions
+      if (roles.length > 0 && !roles.includes(user.role)) {
+        router.push('/unauthorized');
+        return;
+      }
+
+      // User is authorized
+      setIsAuthorized(true);
     }
-  }, [loading, isAuthenticated, router]);
+  }, [user, loading, roles, router]);
 
-  if (loading) {
-    return <div style={{ padding: '2rem' }}>Loading...</div>;
+  // Show loading while checking
+  if (loading || !isAuthorized) {
+    return (
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '70vh'
+        }}
+      >
+        <CircularProgress />
+      </Box>
+    );
   }
 
-  if (!isAuthenticated) {
-    // Sambil redirect
-    return null;
-  }
-
-  return children;
+  return <>{children}</>;
 };
 
 export default ProtectedRoute;
