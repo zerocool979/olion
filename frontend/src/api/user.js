@@ -79,3 +79,79 @@ export const deleteUser = async (userId) => {
     throw error;
   }
 };
+
+/**
+ * Ajukan diri sebagai pakar
+ */
+export const applyForPakar = async (data) => {
+  try {
+    const res = await api.post('/users/apply-pakar', data);
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Ambil statistik dashboard user
+ */
+export const getUserDashboardStats = async () => {
+  try {
+    const res = await api.get('/users/dashboard-stats');
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Ambil notifikasi user
+ */
+export const getUserNotifications = async (params = {}) => {
+  try {
+    const res = await api.get('/notifications', { params });
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Mark notification as read
+ */
+export const markNotificationAsRead = async (notificationId) => {
+  if (!notificationId) {
+    throw new Error('Notification ID is required');
+  }
+
+  try {
+    const res = await api.patch(`/notifications/${notificationId}/read`);
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Get user's reputation history
+ */
+export const getUserReputationHistory = async (params = {}) => {
+  try {
+    const res = await api.get('/reputation/history', { params });
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Get user's bookmarked discussions
+ */
+export const getUserBookmarks = async (params = {}) => {
+  try {
+    const res = await api.get('/bookmarks', { params });
+    return res.data;
+  } catch (error) {
+    throw error;
+  }
+};

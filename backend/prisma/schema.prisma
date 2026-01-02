@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -86,18 +83,28 @@ model User {
   createdAt    DateTime  @default(now())
   lastLogin    DateTime?
 
+  // PAKAR APPLICATION SUPPORT
+  reputation      Int     @default(0)
+  hasAppliedPakar Boolean @default(false)
+
   profile       AnonymousProfile?
   sessions      Session[]
   discussions   Discussion[]
   answers       Answer[]
   comments      Comment[]
-  reputation    Reputation?
   reputationLog ReputationHistory[]
   notifications Notification[]
   preferences   UserChannelPreference[]
   pakar         Pakar?
 
-  // RELATION FIX
+  // PAKAR APPLICATION SUPPORT
+  pakarApplications PakarApplication[]
+
+  // RELATION FIX - TAMBAHKAN INI
+  reputationRecord Reputation? // Relasi ke Reputation
+  bookmarks        Bookmark[] // Relasi ke Bookmark
+
+  // RELATION EXISTING
   adminCategories Category[]
   discussionVotes DiscussionVote[]
   answerVotes     AnswerVote[]
@@ -174,6 +181,9 @@ model Discussion {
   votes    DiscussionVote[]
   reports  DiscussionReport[]
 
+  // RELATION FIX - TAMBAHKAN INI
+  bookmarks Bookmark[] // Relasi ke Bookmark
+
   @@map("discussions")
 }
 
@@ -195,7 +205,6 @@ model Answer {
 
   votes    AnswerVote[]
   reports  AnswerReport[]
-  // FIX: relasi balik untuk komentar pada jawaban
   comments Comment[]
 
   @@map("answers")
@@ -205,13 +214,9 @@ model Comment {
   id String @id @default(uuid())
 
   discussionId String
-
-  answerId String? // FIX: komentar bisa menempel ke jawaban (nullable)
-
-  userId  String?
-  content String
-
-  // answerId     String? // DUPLICATE FIELD — DIKOMENTARI, JANGAN DIHAPUS
+  answerId     String? // komentar bisa menempel ke jawaban (nullable)
+  userId       String?
+  content      String
 
   isFlagged  Boolean          @default(false)
   isDeleted  Boolean          @default(false)
@@ -220,11 +225,8 @@ model Comment {
   createdAt DateTime @default(now())
 
   discussion Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
-
-  // FIX: relasi ke Answer (opsional)
-  answer Answer? @relation(fields: [answerId], references: [id], onDelete: Cascade)
-
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  answer     Answer?    @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   reports CommentReport[]
 
@@ -366,7 +368,7 @@ model Moderation {
 }
 
 ////////////////////
-/// EXPERT
+/// EXPERT & PAKAR APPLICATION
 ////////////////////
 
 model Pakar {
@@ -379,6 +381,31 @@ model Pakar {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("pakar")
+}
+
+model PakarApplication {
+  id                String    @id @default(cuid())
+  userId            String
+  field             String
+  reason            String
+  yearsOfExperience Int?
+  qualifications    String?
+  portfolioUrl      String?
+  references        String?
+  status            String    @default("pending") // pending, approved, rejected
+  adminNotes        String?
+  rejectionReason   String?
+  reviewedAt        DateTime?
+  canReapplyAfter   DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("pakar_applications")
 }
 
 ////////////////////
@@ -409,4 +436,21 @@ model UserChannelPreference {
 
   @@unique([userId, channel])
   @@map("user_channel_preferences")
+}
+
+////////////////////
+/// BOOKMARK
+////////////////////
+
+model Bookmark {
+  id           String   @id @default(uuid())
+  userId       String
+  discussionId String
+  createdAt    DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  discussion Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, discussionId])
+  @@map("bookmarks")
 }

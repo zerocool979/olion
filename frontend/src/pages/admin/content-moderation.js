@@ -73,12 +73,7 @@ import { useRouter } from 'next/router';
 import { useAuth } from '../../context/AuthContext';
 import ProtectedRoute from '../../components/ProtectedRoute';
 import api from '../../api/base';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-
-// Extend dayjs
-dayjs.extend(relativeTime);
-
+import dayjs from '../../utils/dayjs';
 const ContentModerationPage = () => {
   const router = useRouter();
   const { user } = useAuth();

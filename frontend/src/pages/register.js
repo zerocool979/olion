@@ -3,13 +3,13 @@
 // ==============================
 // ORIGINAL CODE (DO NOT DELETE)
 // ==============================
-'use client'; // Tambahkan directive untuk Next.js 13+
+// 'use client'; // Tambahkan directive untuk Next.js 13+
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../context/AuthContext';
 // Import ProtectedRoute untuk melindungi halaman register
-import ProtectedRoute from '../components/ProtectedRoute';
+// import ProtectedRoute from '../components/ProtectedRoute';
 
 /**
  * =====================================================

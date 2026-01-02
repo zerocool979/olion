@@ -3,13 +3,14 @@
 // ==============================
 // ORIGINAL CODE (DO NOT DELETE)
 // ==============================
-'use client'; // Tambahkan directive untuk Next.js 13+
+
+// 'use client'; // Tambahkan directive untuk Next.js 13+
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../context/AuthContext';
 // Import ProtectedRoute untuk melindungi halaman login
-import ProtectedRoute from '../components/ProtectedRoute';
+// import ProtectedRoute from '../components/ProtectedRoute';
 
 /**
  * =====================================================
@@ -390,6 +391,7 @@ if (typeof document !== 'undefined') {
 // =====================================================
 // FINAL IMPLEMENTATION - WRAP WITH PROTECTEDROUTE
 // =====================================================
+/*
 const LoginPageWithProtection = () => {
   return (
     <ProtectedRoute requireAuth={false}>
@@ -399,11 +401,12 @@ const LoginPageWithProtection = () => {
 };
 
 export default LoginPageWithProtection;
+*/
 
 // =====================================================
 // CATATAN: LoginPage asli dikomentari karena sudah dibungkus
 // dengan ProtectedRoute yang mencegah akses jika sudah login
 // =====================================================
-/*
+
 export default LoginPage;
-*/
+

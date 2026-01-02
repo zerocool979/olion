@@ -1,35 +1,48 @@
-// backend/src/middlewares/errorHandler.js
+// src/middlewares/errorHandler.js
 
 /**
  * Global Error Handler Middleware
- * - Menangani semua error yang dilempar oleh route atau middleware lain
- * - Memisahkan error operasional (user-friendly) dan programming/internal error
- * - Bisa ditambahkan logging ke file atau service eksternal (misal Sentry)
  */
+const errorHandler = (err, req, res, next) => {
+  console.error('Error:', err);
 
-module.exports = (err, req, res, next) => {
-  // Ambil status code, default 500 (Internal Server Error)
-  const status = err.statusCode || 500;
+  // Default error
+  let statusCode = err.statusCode || 500;
+  let message = err.message || 'Internal Server Error';
+  let errors = err.errors;
 
-  // Logging error ke console
-  // Bisa dikembangkan ke logger eksternal
-  console.error('🔥 GLOBAL ERROR:', {
-    message: err.message,
-    stack: err.stack,
-    status: status,
-    isOperational: err.isOperational || false,
-    timestamp: new Date().toISOString(),
-  });
+  // Prisma errors
+  if (err.code === 'P2002') {
+    statusCode = 409;
+    message = 'Duplicate entry detected';
+  } else if (err.code === 'P2025') {
+    statusCode = 404;
+    message = 'Record not found';
+  }
 
-  // Kirim response ke client
-  res.status(status).json({
+  // JWT errors
+  if (err.name === 'JsonWebTokenError') {
+    statusCode = 401;
+    message = 'Invalid token';
+  } else if (err.name === 'TokenExpiredError') {
+    statusCode = 401;
+    message = 'Token expired';
+  }
+
+  // Validation errors
+  if (err.name === 'ValidationError') {
+    statusCode = 400;
+    message = 'Validation error';
+    errors = Object.values(err.errors).map(e => e.message);
+  }
+
+  // Send error response
+  res.status(statusCode).json({
     success: false,
-    // Jika error operasional, kirim pesan spesifik
-    // Jika error internal, jangan bocorkan detail
-    message: err.isOperational
-      ? err.message
-      : 'Internal Server Error',
-    // Optional: kirim error stack di development
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+    message,
+    errors: errors || undefined,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
 };
+
+module.exports = errorHandler;

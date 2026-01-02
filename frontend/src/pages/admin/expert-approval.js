@@ -68,11 +68,7 @@ import { useAuth } from '../../context/AuthContext';
 // Import ProtectedRoute - PERBAIKAN: path yang benar
 import ProtectedRoute from '../../components/ProtectedRoute';
 import api from '../../api/base';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-
-// Extend dayjs
-dayjs.extend(relativeTime);
+import dayjs from '../../utils/dayjs';
 
 const ExpertApprovalPage = () => {
   const router = useRouter();

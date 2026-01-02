@@ -177,6 +177,18 @@ model Discussion {
   @@map("discussions")
 }
 
+model DiscussionBookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  discussionId String
+  discussion Discussion @relation(fields: [discussionId], references: [id])
+  createdAt DateTime @default(now())
+  
+  @@unique([userId, discussionId])
+  @@map("discussion_bookmarks")
+}
+
 model Answer {
   id           String           @id @default(uuid())
   discussionId String

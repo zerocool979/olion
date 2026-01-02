@@ -9,6 +9,10 @@ import { useAuth } from '../../context/AuthContext';
 import api from '../../api/base';
 import ProtectedRoute from '../../components/ProtectedRoute';
 
+import relativeTime from 'dayjs/plugin/relativeTime';
+import dayjs from '../../utils/dayjs';
+dayjs.extend(relativeTime);
+
 // Import MUI components untuk UI yang lebih baik
 import {
   Container,
@@ -37,9 +41,7 @@ import {
   Link as MuiLink,
   Divider,
   Fade,
-  Zoom,
-  Badge,
-  Avatar
+  Zoom
 } from '@mui/material';
 import {
   Search,
@@ -63,7 +65,59 @@ import {
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import dayjs from 'dayjs';
+
+// 🔧 UTILITY FUNCTIONS untuk safety
+const normalizeValue = (value) => {
+  // Handle semua kemungkinan type
+  if (value === null || value === undefined || value === '') return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return value.toString();
+  if (typeof value === 'boolean') return value ? 'Ya' : 'Tidak';
+  if (Array.isArray(value)) return value.join(', ');
+  if (typeof value === 'object') {
+    // Priority: name > title > label > id > first string property
+    if (value.name && typeof value.name === 'string') return value.name;
+    if (value.title && typeof value.title === 'string') return value.title;
+    if (value.label && typeof value.label === 'string') return value.label;
+    if (value.id) return value.id.toString();
+    // Try to find any string property
+    const stringValues = Object.values(value).filter(v => typeof v === 'string');
+    if (stringValues.length > 0) return stringValues[0];
+    // Fallback ke string kosong
+    return '';
+  }
+  return String(value);
+};
+
+const normalizeCategory = (category) => {
+  return normalizeValue(category);
+};
+
+const normalizeAuthor = (author) => {
+  const normalized = normalizeValue(author);
+  return normalized || 'Anonim';
+};
+
+// 🔧 HOOK untuk safe state management
+const useSafeFilters = (initialFilters) => {
+  const [filters, setFilters] = useState(initialFilters);
+  
+  const safeSetFilters = useCallback((updater) => {
+    setFilters(prev => {
+      const newFilters = typeof updater === 'function' 
+        ? updater(prev) 
+        : updater;
+      
+      // Normalize semua values
+      return Object.keys(newFilters).reduce((acc, key) => {
+        acc[key] = normalizeValue(newFilters[key]);
+        return acc;
+      }, {});
+    });
+  }, []);
+  
+  return [filters, safeSetFilters];
+};
 
 export default function DiscussionsPage() {
   return (
@@ -90,8 +144,8 @@ function DiscussionsContent() {
     itemsPerPage: 12
   });
 
-  // State untuk filter dan search
-  const [filters, setFilters] = useState({
+  // State untuk filter dan search dengan safe filters
+  const [filters, setFilters] = useSafeFilters({
     search: '',
     category: '',
     sort: 'newest',
@@ -109,7 +163,7 @@ function DiscussionsContent() {
       setLoading(true);
       setError(null);
 
-      // Prepare query parameters
+      // Prepare query parameters - normalize semua values
       const queryParams = {
         page: page.toString(),
         limit: pagination.itemsPerPage.toString(),
@@ -128,24 +182,76 @@ function DiscussionsContent() {
         signal: controller.signal
       });
 
-      // Handle response
+      // Handle response dengan normalisasi data
       if (response.data) {
+        let data = [];
+        let paginationInfo = {};
+        
         // Jika API mengembalikan pagination
         if (response.data.pagination) {
-          setDiscussions(response.data.data || []);
-          setPagination(prev => ({
-            ...prev,
-            page: response.data.pagination.page || page,
-            totalPages: response.data.pagination.totalPages || 1,
-            totalItems: response.data.pagination.totalItems || 0
-          }));
+          data = response.data.data || [];
+          paginationInfo = response.data.pagination || {};
         } else {
           // Jika hanya array biasa
-          setDiscussions(response.data || []);
+          data = response.data || [];
+        }
+
+        // Normalize semua data untuk UI
+        const normalizedData = data.map(item => {
+          // Extract data dengan default values
+          const {
+            id = '',
+            title = '',
+            content = '',
+            category = null,
+            author = null,
+            createdAt = new Date().toISOString(),
+            commentCount = 0,
+            upvotes = 0,
+            views = 0,
+            isClosed = false,
+            hasExpertAnswer = false,
+            isTrending = false
+          } = item || {};
+
+          // Pre-normalize untuk performa
+          return {
+            ...item,
+            // Original data
+            id,
+            title,
+            content,
+            category,
+            author,
+            createdAt,
+            commentCount: Number(commentCount) || 0,
+            upvotes: Number(upvotes) || 0,
+            views: Number(views) || 0,
+            isClosed: Boolean(isClosed),
+            hasExpertAnswer: Boolean(hasExpertAnswer),
+            isTrending: Boolean(isTrending),
+            // Safe display properties
+            displayCategory: normalizeCategory(category),
+            displayAuthor: normalizeAuthor(author),
+            displayTitle: normalizeValue(title),
+            displayContent: normalizeValue(content)
+          };
+        });
+
+        setDiscussions(normalizedData);
+        
+        if (response.data.pagination) {
+          setPagination(prev => ({
+            ...prev,
+            page: paginationInfo.page || page,
+            totalPages: paginationInfo.totalPages || 1,
+            totalItems: paginationInfo.totalItems || 0
+          }));
+        } else {
           setPagination(prev => ({
             ...prev,
             page,
-            totalItems: response.data?.length || 0
+            totalItems: normalizedData.length || 0
           }));
         }
       }
@@ -176,18 +282,20 @@ function DiscussionsContent() {
     fetchDiscussions(pagination.page, filters);
   }, [fetchDiscussions, pagination.page]);
 
-  // Handlers
-  const handleSearch = (value) => {
-    setFilters(prev => ({ ...prev, search: value }));
+  // Handlers dengan type safety
+  const handleSearch = useCallback((value) => {
+    const safeValue = normalizeValue(value);
+    setFilters(prev => ({ ...prev, search: safeValue }));
     setPagination(prev => ({ ...prev, page: 1 }));
-  };
+  }, [setFilters]);
 
-  const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+  const handleFilterChange = useCallback((key, value) => {
+    const safeValue = normalizeValue(value);
+    setFilters(prev => ({ ...prev, [key]: safeValue }));
     setPagination(prev => ({ ...prev, page: 1 }));
-  };
+  }, [setFilters]);
 
-  const handleClearFilters = () => {
+  const handleClearFilters = useCallback(() => {
     setFilters({
       search: '',
       category: '',
@@ -196,21 +304,28 @@ function DiscussionsContent() {
       author: ''
     });
     setPagination(prev => ({ ...prev, page: 1 }));
-  };
+  }, [setFilters]);
 
-  const handlePageChange = (event, page) => {
+  const handlePageChange = useCallback((event, page) => {
     setPagination(prev => ({ ...prev, page }));
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  }, []);
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     setRefreshing(true);
     fetchDiscussions(pagination.page, filters);
-  };
+  }, [fetchDiscussions, pagination.page, filters]);
 
-  const handleCreateDiscussion = () => {
+  const handleCreateDiscussion = useCallback(() => {
     router.push('/discussions/create');
-  };
+  }, [router]);
+
+  // Safe select handler untuk MUI Select
+  const handleSelectChange = useCallback((key) => (event) => {
+    const value = event.target.value;
+    const safeValue = normalizeValue(value);
+    handleFilterChange(key, safeValue);
+  }, [handleFilterChange]);
 
   // Role-based permissions
   const userRole = user?.role || 'user';
@@ -230,6 +345,17 @@ function DiscussionsContent() {
 
     return { total, trending, newToday, withExpertAnswer };
   }, [discussions]);
+
+  // Safe value getter untuk MUI Select
+  const getSafeSelectValue = useCallback((value) => {
+    const normalized = normalizeValue(value);
+    // Pastikan value sesuai dengan MenuItem values
+    if (normalized === '' || ['newest', 'oldest', 'popular', 'trending', 'all', 'open', 'closed', 'resolved'].includes(normalized)) {
+      return normalized;
+    }
+    // Jika value adalah object yang sudah dinormalisasi, kembalikan string kosong
+    return '';
+  }, []);
 
   // Loading State
   if (loading && !refreshing) {
@@ -369,13 +495,13 @@ function DiscussionsContent() {
             }}
           />
 
-          {/* Category Filter */}
+          {/* Category Filter - SAFE VERSION */}
           <FormControl sx={{ minWidth: 150 }}>
             <InputLabel>Kategori</InputLabel>
             <Select
-              value={filters.category}
+              value={getSafeSelectValue(filters.category)}
               label="Kategori"
-              onChange={(e) => handleFilterChange('category', e.target.value)}
+              onChange={handleSelectChange('category')}
             >
               <MenuItem value="">Semua Kategori</MenuItem>
               <MenuItem value="pertanian">Pertanian</MenuItem>
@@ -386,13 +512,13 @@ function DiscussionsContent() {
             </Select>
           </FormControl>
 
-          {/* Sort */}
+          {/* Sort - SAFE VERSION */}
           <FormControl sx={{ minWidth: 150 }}>
             <InputLabel>Urutkan</InputLabel>
             <Select
-              value={filters.sort}
+              value={getSafeSelectValue(filters.sort)}
               label="Urutkan"
-              onChange={(e) => handleFilterChange('sort', e.target.value)}
+              onChange={handleSelectChange('sort')}
             >
               <MenuItem value="newest">Terbaru</MenuItem>
               <MenuItem value="oldest">Terlama</MenuItem>
@@ -434,9 +560,9 @@ function DiscussionsContent() {
                   <FormControl fullWidth>
                     <InputLabel>Status</InputLabel>
                     <Select
-                      value={filters.status}
+                      value={getSafeSelectValue(filters.status)}
                       label="Status"
-                      onChange={(e) => handleFilterChange('status', e.target.value)}
+                      onChange={handleSelectChange('status')}
                     >
                       <MenuItem value="all">Semua Status</MenuItem>
                       <MenuItem value="open">Open</MenuItem>
@@ -506,155 +632,187 @@ function DiscussionsContent() {
           </Box>
 
           <Grid container spacing={3}>
-            {discussions.map((discussion) => (
-              <Grid item xs={12} sm={6} md={4} key={discussion.id}>
-                <Zoom in={true} style={{ transitionDelay: '100ms' }}>
-                  <Card
-                    sx={{
-                      height: '100%',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      transition: 'transform 0.2s, box-shadow 0.2s',
-                      '&:hover': {
-                        transform: 'translateY(-4px)',
-                        boxShadow: 6,
-                        cursor: 'pointer'
-                      }
-                    }}
-                    onClick={() => router.push(`/discussions/${discussion.id}`)}
-                  >
-                    <CardContent sx={{ flexGrow: 1 }}>
-                      {/* Status Badges */}
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                        <Box>
-                          {discussion.isClosed && (
-                            <Chip label="Tertutup" size="small" color="error" variant="outlined" sx={{ mr: 1 }} />
-                          )}
-                          {discussion.hasExpertAnswer && (
-                            <Chip label="Jawaban Pakar" size="small" color="success" variant="outlined" />
+            {discussions.map((discussion) => {
+              // Gunakan pre-normalized values dari state
+              const {
+                id,
+                displayTitle,
+                displayContent,
+                displayCategory,
+                displayAuthor,
+                createdAt,
+                commentCount,
+                upvotes,
+                views,
+                isClosed,
+                hasExpertAnswer,
+                isTrending,
+                author
+              } = discussion;
+              
+              const isAuthorPakar = author?.role === 'pakar';
+              
+              return (
+                <Grid item xs={12} sm={6} md={4} key={id}>
+                  <Zoom in={true} style={{ transitionDelay: '100ms' }}>
+                    <Card
+                      sx={{
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        transition: 'transform 0.2s, box-shadow 0.2s',
+                        '&:hover': {
+                          transform: 'translateY(-4px)',
+                          boxShadow: 6,
+                          cursor: 'pointer'
+                        }
+                      }}
+                      onClick={() => router.push(`/discussions/${id}`)}
+                    >
+                      <CardContent sx={{ flexGrow: 1 }}>
+                        {/* Status Badges */}
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                          <Box>
+                            {isClosed && (
+                              <Chip 
+                                label="Tertutup" 
+                                size="small" 
+                                color="error" 
+                                variant="outlined" 
+                                sx={{ mr: 1 }} 
+                              />
+                            )}
+                            {hasExpertAnswer && (
+                              <Chip 
+                                label="Jawaban Pakar" 
+                                size="small" 
+                                color="success" 
+                                variant="outlined" 
+                              />
+                            )}
+                          </Box>
+                          {isTrending && (
+                            <Whatshot color="warning" />
                           )}
                         </Box>
-                        {discussion.isTrending && (
-                          <Whatshot color="warning" />
-                        )}
-                      </Box>
 
-                      {/* Title */}
-                      <Typography
-                        variant="h6"
-                        gutterBottom
-                        sx={{
-                          fontWeight: 600,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical'
-                        }}
-                      >
-                        {discussion.title}
-                      </Typography>
+                        {/* Title - GUARANTEED STRING */}
+                        <Typography
+                          variant="h6"
+                          gutterBottom
+                          sx={{
+                            fontWeight: 600,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical'
+                          }}
+                        >
+                          {displayTitle}
+                        </Typography>
 
-                      {/* Content Preview */}
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{
-                          mb: 2,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 3,
-                          WebkitBoxOrient: 'vertical'
-                        }}
-                      >
-                        {discussion.content}
-                      </Typography>
+                        {/* Content Preview - GUARANTEED STRING */}
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{
+                            mb: 2,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: 'vertical'
+                          }}
+                        >
+                          {displayContent}
+                        </Typography>
 
-                      {/* Metadata */}
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-                        {/* Category */}
-                        {discussion.category && (
+                        {/* Metadata */}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                          {/* Category - GUARANTEED STRING */}
+                          {displayCategory && (
+                            <Chip
+                              icon={<Category />}
+                              label={displayCategory}
+                              size="small"
+                              variant="outlined"
+                            />
+                          )}
+
+                          {/* Author - GUARANTEED STRING */}
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <Person fontSize="small" color="action" />
+                            <Typography variant="caption" color="text.secondary">
+                              {displayAuthor}
+                            </Typography>
+                          </Box>
+
+                          {/* Time */}
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <AccessTime fontSize="small" color="action" />
+                            <Typography variant="caption" color="text.secondary">
+                              {dayjs(createdAt).fromNow()}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </CardContent>
+
+                      {/* Stats Footer */}
+                      <CardActions sx={{
+                        justifyContent: 'space-between',
+                        borderTop: 1,
+                        borderColor: 'divider',
+                        pt: 1
+                      }}>
+                        <Box sx={{ display: 'flex', gap: 2 }}>
+                          {/* Comments */}
+                          <Tooltip title="Jumlah Komentar">
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <Comment fontSize="small" color="action" />
+                              <Typography variant="body2" color="text.secondary">
+                                {commentCount}
+                              </Typography>
+                            </Box>
+                          </Tooltip>
+
+                          {/* Upvotes */}
+                          <Tooltip title="Upvotes">
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <ThumbUp fontSize="small" color="action" />
+                              <Typography variant="body2" color="text.secondary">
+                                {upvotes}
+                              </Typography>
+                            </Box>
+                          </Tooltip>
+
+                          {/* Views */}
+                          <Tooltip title="Dilihat">
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <Visibility fontSize="small" color="action" />
+                              <Typography variant="body2" color="text.secondary">
+                                {views}
+                              </Typography>
+                            </Box>
+                          </Tooltip>
+                        </Box>
+
+                        {/* Expert Badge */}
+                        {isAuthorPakar && (
                           <Chip
-                            icon={<Category />}
-                            label={discussion.category}
+                            label="Pakar"
                             size="small"
-                            variant="outlined"
+                            color="success"
+                            variant="filled"
+                            sx={{ height: 24 }}
                           />
                         )}
-
-                        {/* Author */}
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <Person fontSize="small" color="action" />
-                          <Typography variant="caption" color="text.secondary">
-                            {discussion.author?.name || discussion.author?.pseudonym || 'Anonim'}
-                          </Typography>
-                        </Box>
-
-                        {/* Time */}
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <AccessTime fontSize="small" color="action" />
-                          <Typography variant="caption" color="text.secondary">
-                            {dayjs(discussion.createdAt).fromNow()}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </CardContent>
-
-                    {/* Stats Footer */}
-                    <CardActions sx={{
-                      justifyContent: 'space-between',
-                      borderTop: 1,
-                      borderColor: 'divider',
-                      pt: 1
-                    }}>
-                      <Box sx={{ display: 'flex', gap: 2 }}>
-                        {/* Comments */}
-                        <Tooltip title="Jumlah Komentar">
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Comment fontSize="small" color="action" />
-                            <Typography variant="body2" color="text.secondary">
-                              {discussion.commentCount || 0}
-                            </Typography>
-                          </Box>
-                        </Tooltip>
-
-                        {/* Upvotes */}
-                        <Tooltip title="Upvotes">
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <ThumbUp fontSize="small" color="action" />
-                            <Typography variant="body2" color="text.secondary">
-                              {discussion.upvotes || 0}
-                            </Typography>
-                          </Box>
-                        </Tooltip>
-
-                        {/* Views */}
-                        <Tooltip title="Dilihat">
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <Visibility fontSize="small" color="action" />
-                            <Typography variant="body2" color="text.secondary">
-                              {discussion.views || 0}
-                            </Typography>
-                          </Box>
-                        </Tooltip>
-                      </Box>
-
-                      {/* Expert Badge */}
-                      {discussion.author?.role === 'pakar' && (
-                        <Chip
-                          label="Pakar"
-                          size="small"
-                          color="success"
-                          variant="filled"
-                          sx={{ height: 24 }}
-                        />
-                      )}
-                    </CardActions>
-                  </Card>
-                </Zoom>
-              </Grid>
-            ))}
+                      </CardActions>
+                    </Card>
+                  </Zoom>
+                </Grid>
+              );
+            })}
           </Grid>
 
           {/* Pagination */}
@@ -719,9 +877,12 @@ function DiscussionsContent() {
 }
 
 // =====================================================
-// CATATAN:
-// 1. Halaman diskusi bisa diakses semua user yang login
-// 2. ProtectedRoute menangani auth tanpa spesifik role
-// 3. Fitur search, filter, dan pagination sudah lengkap
-// 4. Semua user bisa membuat diskusi baru
+// CATATAN PERBAIKAN:
+// 1. Semua object telah dinormalisasi menjadi string sebelum render
+// 2. MUI Select hanya menerima string/number yang valid
+// 3. State filters hanya menyimpan primitive values
+// 4. Type guards untuk semua data dari API
+// 5. Fallback values untuk null/undefined
+// 6. Pre-normalized display properties untuk performa
+// 7. Custom hook untuk safe state management
 // =====================================================

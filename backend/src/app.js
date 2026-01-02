@@ -25,6 +25,9 @@ const adminUserRoutes = require('./routes/adminUserRoutes');
 const userRoutes = require('./routes/userRoutes');
 const moderationRoutes = require('./routes/moderationRoutes'); // pastikan file ada
 
+// Import middlewares
+const errorHandler = require('./middlewares/errorHandler');
+
 const app = express();
 
 /**
@@ -96,46 +99,54 @@ app.get('/api/status', (req, res) => {
     message: 'OLION API is running',
     version: '1.0.0',
     endpoints: [
-      '/api/auth - Authentication',
-      '/api/users - User management',
-      '/api/admin - Admin management',
-      '/api/discussions - Discussions',
-      '/api/pakar - Expert management',
-      '/api/dashboard - Dashboard data',
-      '/api/notifications - Notifications',
-      '/api/reputation - Reputation system'
+      '/api/v1/auth - Authentication',
+      '/api/v1/users - User management',
+      '/api/v1/admin - Admin management',
+      '/api/v1/discussions - Discussions',
+      '/api/v1/pakars - Expert management',
+      '/api/v1/dashboard - Dashboard data',
+      '/api/v1/notifications - Notifications',
+      '/api/v1/reputation - Reputation system',
+      '/api/v1/categories - Categories',
+      '/api/v1/answers - Answers',
+      '/api/v1/comments - Comments'
     ]
   });
 });
 
 /**
  * =====================================================
- * API ROUTES
+ * API ROUTES - VERSION 1
  * =====================================================
  */
-// Public routes
+
+// Public routes - versioned
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/test', testRoutes);
+
+// Protected routes - versioned
+app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/admin/users', adminUserRoutes);
+app.use('/api/v1/admin/answers', adminAnswerRoutes);
+app.use('/api/v1/categories', categoryRoutes);
+app.use('/api/v1/discussions', discussionRoutes);
+app.use('/api/v1/answers', answerRoutes);
+app.use('/api/v1/comments', commentRoutes);
+app.use('/api/v1/votes', voteRoutes);
+app.use('/api/v1/reports', reportRoutes);
+app.use('/api/v1/moderation', moderationRoutes);
+
+// New routes for dashboard features - versioned
+app.use('/api/v1/pakars', pakarRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/reputation', reputationRoutes);
+app.use('/api/v1/dashboard', dashboardRoutes);
+
+// Legacy API routes without version (for backward compatibility)
 app.use('/api/auth', authRoutes);
-app.use('/api/test', testRoutes);
-
-// Protected routes
 app.use('/api/users', userRoutes);
-app.use('/api/admin', adminUserRoutes);
-app.use('/api/admin/answers', adminAnswerRoutes);
-app.use('/api/categories', categoryRoutes);
-app.use('/api/discussions', discussionRoutes);
-app.use('/api/answers', answerRoutes);
-app.use('/api/comments', commentRoutes);
-app.use('/api/votes', voteRoutes);
-app.use('/api/reports', reportRoutes);
-
-// FIX: pastikan moderationRoutes adalah router
-app.use('/api/moderation', moderationRoutes); // harus function/router
-
-app.use('/api/pakar', pakarRoutes);
-app.use('/api/pakars', pakarRoutes); // backward compatibility
-app.use('/api/notifications', notificationRoutes);
+app.use('/api/pakars', pakarRoutes);
 app.use('/api/reputation', reputationRoutes);
-app.use('/api/dashboard', dashboardRoutes);
 
 /**
  * =====================================================
@@ -143,23 +154,16 @@ app.use('/api/dashboard', dashboardRoutes);
  * =====================================================
  */
 
-// Middlewares
-const errorHandler = require('./middlewares/errorHandler'); // harus ex>
-
-// FIX: import notFound sesuai export default function
-const notFound = require('./middlewares/notFound'); // harus function, >
-
-// 404 handler
-// app.use('*', notFoundHandler); // ❌ Express v5 error
-
-app.use((req, res) => {
+// 404 handler - function
+app.use((req, res) => (req, res) => {
   res.status(404).json({
     success: false,
-    message: 'Route not found'
+    message: `Route ${req.originalUrl} not found`,
+    timestamp: new Date().toISOString()
   });
 });
 
-// Global error handler
+// Global error handler - use middleware properly
 app.use(errorHandler);
 
 /**
@@ -171,6 +175,7 @@ process.on('SIGTERM', () => {
   console.log('SIGTERM signal received: closing HTTP server');
   process.exit(0);
 });
+
 process.on('SIGINT', () => {
   console.log('SIGINT signal received: closing HTTP server');
   process.exit(0);

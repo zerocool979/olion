@@ -1,60 +1,40 @@
-// frontend/src/components/ProtectedRoute.js (Simple Version)
-'use client';
-
+// src/components/ProtectedRoute.js
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useAuth } from '../context/AuthContext';
-import { Box, CircularProgress, Typography } from '@mui/material';
+import { Box, CircularProgress } from '@mui/material';
 
-const ProtectedRoute = ({ children, roles = [] }) => {
+export default function ProtectedRoute({ children, roles = [] }) {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-      // CEGAH redirect loop ke /login
-     if (!user) {
-       if (router.pathname !== '/login') {
-         router.push(`/login?redirect=${encodeURIComponent(router.pathname)}`);
-       }
-       return;
-     }
+    if (loading) return;
 
-    if (!loading) {
-      // Check if user is authenticated
-      if (!user) {
-        router.push(`/login?redirect=${encodeURIComponent(router.pathname)}`);
-        return;
-      }
-
-      // Check role permissions
-      if (roles.length > 0 && !roles.includes(user.role)) {
-        router.push('/unauthorized');
-        return;
-      }
-
-      // User is authorized
-      setIsAuthorized(true);
+    if (!user) {
+      router.replace(`/login?redirect=${router.asPath}`);
+      return;
     }
-  }, [user, loading, roles, router]);
 
-  // Show loading while checking
-  if (loading || !isAuthorized) {
+    if (
+      roles.length &&
+      !roles.map(r => r.toLowerCase()).includes(user.role?.toLowerCase())
+    ) {
+      router.replace('/unauthorized');
+      return;
+    }
+
+    setReady(true);
+  }, [loading, user]);
+
+  if (loading || !ready) {
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '70vh'
-        }}
-      >
+      <Box sx={{ minHeight: '70vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
         <CircularProgress />
       </Box>
     );
   }
 
-  return <>{children}</>;
-};
-
-export default ProtectedRoute;
+  return children;
+}

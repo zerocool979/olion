@@ -1,21 +1,14 @@
-// backend/src/middlewares/notFound.js
+// src/middlewares/notFound.js
 
 /**
- * Middleware untuk menangani route yang tidak ditemukan (404)
- * - Dijalankan setelah semua route lain
- * - Memberikan response JSON standar untuk client
+ * 404 Not Found Middleware
  */
-
 const notFound = (req, res, next) => {
   res.status(404).json({
     success: false,
     message: `Route ${req.originalUrl} not found`,
-    method: req.method,
-    timestamp: new Date().toISOString(),
-    // Optional: bisa tambahkan info environment atau base URL
-    environment: process.env.NODE_ENV || 'development'
+    timestamp: new Date().toISOString()
   });
 };
 
-// Export middleware
 module.exports = notFound;
