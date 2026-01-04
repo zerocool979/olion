@@ -1,8 +1,18 @@
 const express = require('express');
 const { authenticate } = require('../middlewares/authMiddleware');
 const commentService = require('../services/commentService');
+const voteController = require('../controllers/commentVoteController');
+const bookmarkController = require('../controllers/commentBookmarkController');
 
 const router = express.Router();
+
+// vote
+router.post('/:id/vote', authenticate, voteController.vote);
+router.delete('/:id/vote', authenticate, voteController.unvote);
+
+// bookmark
+router.post('/:id/bookmark', authenticate, bookmarkController.bookmark);
+router.delete('/:id/bookmark', authenticate, bookmarkController.unbookmark);
 
 /* =======================
    CREATE COMMENT (DISCUSSION)

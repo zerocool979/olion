@@ -84,7 +84,10 @@ model User {
   lastLogin    DateTime?
 
   // PAKAR APPLICATION SUPPORT
-  reputation      Int     @default(0)
+
+  // OLD: raw reputation value (REDUNDANT)
+  // reputation      Int     @default(0)
+
   hasAppliedPakar Boolean @default(false)
 
   profile       AnonymousProfile?
@@ -100,7 +103,7 @@ model User {
   // PAKAR APPLICATION SUPPORT
   pakarApplications PakarApplication[]
 
-  // RELATION FIX - TAMBAHKAN INI
+  // RELATION FIX - single source of truth
   reputationRecord Reputation? // Relasi ke Reputation
   bookmarks        Bookmark[] // Relasi ke Bookmark
 
@@ -134,7 +137,7 @@ model AnonymousProfile {
 model Session {
   id        String    @id @default(uuid())
   userId    String
-  token     String
+  token     String    @unique
   ipAddress String?
   device    Json?
   startAt   DateTime  @default(now())
@@ -392,7 +395,10 @@ model PakarApplication {
   qualifications    String?
   portfolioUrl      String?
   references        String?
-  status            String    @default("pending") // pending, approved, rejected
+
+  // status            String    @default("pending") // pending, approved, rejected
+  status VerificationStatus @default(Pending)
+
   adminNotes        String?
   rejectionReason   String?
   reviewedAt        DateTime?

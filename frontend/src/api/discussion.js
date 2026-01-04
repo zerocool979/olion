@@ -2,9 +2,7 @@ import api from './base';
 
 /**
  * =====================================================
- * Discussion API
- * -----------------------------------------------------
- * Semua komunikasi terkait diskusi
+ * Discussion API - FULL FIX (categoryId | categoryName)
  * =====================================================
  */
 
@@ -12,222 +10,106 @@ import api from './base';
  * Ambil semua diskusi dengan filter
  */
 export const getDiscussions = async (params = {}) => {
-  try {
-    // Clean up empty params
-    const cleanParams = {};
-    Object.keys(params).forEach(key => {
-      if (params[key] !== '' && params[key] !== null && params[key] !== undefined) {
-        cleanParams[key] = params[key];
-      }
-    });
+  const cleanParams = {};
+  Object.keys(params).forEach(key => {
+    if (params[key] !== '' && params[key] !== null && params[key] !== undefined) {
+      cleanParams[key] = params[key];
+    }
+  });
 
-    const res = await api.get('/discussions', { params: cleanParams });
-    return res.data;
-  } catch (error) {
-    throw error;
-  }
+  const res = await api.get('/discussions', { params: cleanParams });
+  return res.data;
 };
 
 /**
  * Ambil detail diskusi
  */
 export const getDiscussionById = async (id) => {
-  if (!id) {
-    throw new Error('Discussion ID is required');
-  }
-
-  try {
-    const res = await api.get(`/discussions/${id}`);
-    return res.data;
-  } catch (error) {
-    throw error;
-  }
+  if (!id) throw new Error('Discussion ID is required');
+  const res = await api.get(`/discussions/${id}`);
+  return res.data;
 };
 
 /**
- * Buat diskusi baru
+ * =====================================================
+ * CREATE DISCUSSION (FIXED)
+ * - support categoryId OR categoryName
+ * =====================================================
  */
 export const createDiscussion = async (payload) => {
-  if (!payload) {
-    throw new Error('Payload is required');
+  if (!payload) throw new Error('Payload is required');
+
+  const { title, content, categoryId, categoryName } = payload;
+
+  if (!title || !content) {
+    throw new Error('Title and content are required');
   }
 
-  // Validate required fields
-  if (!payload.title || !payload.content || !payload.categoryId) {
-    throw new Error('Title, content, and category are required');
+  if (!categoryId && !categoryName) {
+    throw new Error('categoryId or categoryName is required');
   }
 
-  try {
-    const res = await api.post('/discussions', payload);
-    return res.data;
-  } catch (error) {
-    throw error;
-  }
+  const res = await api.post('/discussions', payload);
+  return res.data;
 };
 
 /**
  * Update diskusi
  */
 export const updateDiscussion = async (id, payload) => {
-  if (!id || !payload) {
-    throw new Error('ID and payload are required');
-  }
-
-  try {
-    const res = await api.put(`/discussions/${id}`, payload);
-    return res.data;
-  } catch (error) {
-    throw error;
-  }
+  if (!id || !payload) throw new Error('ID and payload are required');
+  const res = await api.put(`/discussions/${id}`, payload);
+  return res.data;
 };
 
 /**
  * Hapus diskusi
  */
 export const deleteDiscussion = async (id) => {
-  if (!id) {
-    throw new Error('Discussion ID is required');
-  }
-
-  try {
-    const res = await api.delete(`/discussions/${id}`);
-    return res.data;
-  } catch (error) {
-    throw error;
-  }
+  if (!id) throw new Error('Discussion ID is required');
+  await api.delete(`/discussions/${id}`);
+  return { success: true };
 };
 
 /**
- * Ambil diskusi milik user yang sedang login
+ * Ambil diskusi milik user yang login
  */
 export const getMyDiscussions = async () => {
-  try {
-    const res = await api.get('/discussions/my');
-    return res.data;
-  } catch (error) {
-    throw error;
-  }
+  const res = await api.get('/discussions/my');
+  return res.data;
 };
 
 /**
  * Ambil diskusi yang di-bookmark user
  */
 export const getBookmarkedDiscussions = async () => {
-  try {
-    const res = await api.get('/discussions/bookmarked');
-    return res.data;
-  } catch (error) {
-    throw error;
-  }
+  const res = await api.get('/discussions/bookmarked');
+  return res.data;
 };
 
 /**
  * Toggle bookmark diskusi
  */
 export const toggleBookmark = async (discussionId) => {
-  if (!discussionId) {
-    throw new Error('Discussion ID is required');
-  }
-
-  try {
-    // Cek dulu apakah sudah di-bookmark
-    const checkRes = await api.get(`/discussions/${discussionId}/bookmark/status`);
-    const isBookmarked = checkRes.data?.isBookmarked;
-    
-    if (isBookmarked) {
-      // Hapus bookmark
-      const res = await api.delete(`/discussions/${discussionId}/bookmark`);
-      return { ...res.data, action: 'removed' };
-    } else {
-      // Tambah bookmark
-      const res = await api.post(`/discussions/${discussionId}/bookmark`);
-      return { ...res.data, action: 'added' };
-    }
-  } catch (error) {
-    // Fallback: langsung coba POST (asumsi belum di-bookmark)
-    try {
-      const res = await api.post(`/discussions/${discussionId}/bookmark`);
-      return { ...res.data, action: 'added' };
-    } catch (fallbackError) {
-      throw error;
-    }
-  }
+  if (!discussionId) throw new Error('Discussion ID is required');
+  const res = await api.post(`/discussions/${discussionId}/bookmark`);
+  return res.data;
 };
 
 /**
- * Vote diskusi (upvote/downvote)
+ * Vote diskusi
+ * voteType: 'up' | 'down'
  */
 export const voteDiscussion = async (discussionId, voteType) => {
   if (!discussionId || !voteType) {
     throw new Error('Discussion ID and vote type are required');
   }
-
-  if (!['upvote', 'downvote'].includes(voteType)) {
-    throw new Error('Vote type must be "upvote" or "downvote"');
+  if (!['up', 'down'].includes(voteType)) {
+    throw new Error('Vote type must be "up" or "down"');
   }
 
-  try {
-    const res = await api.post(`/discussions/${discussionId}/vote`, { type: voteType });
-    return res.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-/**
- * Ambil diskusi trending
- */
-export const getTrendingDiscussions = async (limit = 10) => {
-  try {
-    const res = await api.get('/discussions/trending', { params: { limit } });
-    return res.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-/**
- * Ambil diskusi terbaru
- */
-export const getRecentDiscussions = async (limit = 10) => {
-  try {
-    const res = await api.get('/discussions/recent', { params: { limit } });
-    return res.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-/**
- * Ambil diskusi yang belum terjawab
- */
-export const getUnansweredDiscussions = async (limit = 10) => {
-  try {
-    const res = await api.get('/discussions/unanswered', { params: { limit } });
-    return res.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-/**
- * Update status diskusi (open/closed)
- */
-export const updateDiscussionStatus = async (discussionId, status) => {
-  if (!discussionId || !status) {
-    throw new Error('Discussion ID and status are required');
-  }
-
-  if (!['open', 'closed'].includes(status)) {
-    throw new Error('Status must be "open" or "closed"');
-  }
-
-  try {
-    const res = await api.patch(`/discussions/${discussionId}/status`, { status });
-    return res.data;
-  } catch (error) {
-    throw error;
-  }
+  const res = await api.post(`/discussions/${discussionId}/vote`, { type: voteType });
+  return res.data;
 };
 
 /**
@@ -238,36 +120,8 @@ export const reportDiscussion = async (discussionId, reason) => {
     throw new Error('Discussion ID and reason are required');
   }
 
-  try {
-    const res = await api.post(`/discussions/${discussionId}/report`, { reason });
-    return res.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-/**
- * Ambil statistik diskusi untuk dashboard
- */
-export const getDiscussionStats = async () => {
-  try {
-    const res = await api.get('/discussions/stats');
-    return res.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-/**
- * Ambil kategori diskusi
- */
-export const getCategories = async () => {
-  try {
-    const res = await api.get('/categories');
-    return res.data;
-  } catch (error) {
-    throw error;
-  }
+  const res = await api.post(`/discussions/${discussionId}/report`, { reason });
+  return res.data;
 };
 
 /**
@@ -278,63 +132,31 @@ export const searchDiscussions = async (query, options = {}) => {
     throw new Error('Search query is required');
   }
 
-  try {
-    const res = await api.get('/discussions/search', { 
-      params: { q: query, ...options }
-    });
-    return res.data;
-  } catch (error) {
-    throw error;
-  }
+  const res = await api.get('/discussions/search', {
+    params: { q: query, ...options },
+  });
+  return res.data;
 };
 
 /**
  * Ambil diskusi berdasarkan kategori
  */
 export const getDiscussionsByCategory = async (categoryId, options = {}) => {
-  if (!categoryId) {
-    throw new Error('Category ID is required');
-  }
-
-  try {
-    const res = await api.get(`/categories/${categoryId}/discussions`, { params: options });
-    return res.data;
-  } catch (error) {
-    throw error;
-  }
+  if (!categoryId) throw new Error('Category ID is required');
+  const res = await api.get(`/discussions/category/${categoryId}`, {
+    params: options,
+  });
+  return res.data;
 };
 
 /**
- * Ambil diskusi yang diikuti (subscription)
+ * Ambil statistik diskusi (admin)
  */
-export const getSubscribedDiscussions = async () => {
-  try {
-    const res = await api.get('/discussions/subscribed');
-    return res.data;
-  } catch (error) {
-    throw error;
-  }
+export const getDiscussionStats = async () => {
+  const res = await api.get('/discussions/admin/stats');
+  return res.data;
 };
 
-/**
- * Toggle subscription/follow diskusi
- */
-export const toggleSubscription = async (discussionId) => {
-  if (!discussionId) {
-    throw new Error('Discussion ID is required');
-  }
-
-  try {
-    const res = await api.post(`/discussions/${discussionId}/subscribe`);
-    return res.data;
-  } catch (error) {
-    throw error;
-  }
-};
-
-/**
- * Ekspor semua fungsi untuk digunakan
- */
 export default {
   getDiscussions,
   getDiscussionById,
@@ -345,49 +167,8 @@ export default {
   getBookmarkedDiscussions,
   toggleBookmark,
   voteDiscussion,
-  getTrendingDiscussions,
-  getRecentDiscussions,
-  getUnansweredDiscussions,
-  updateDiscussionStatus,
   reportDiscussion,
-  getDiscussionStats,
-  getCategories,
   searchDiscussions,
   getDiscussionsByCategory,
-  getSubscribedDiscussions,
-  toggleSubscription
+  getDiscussionStats,
 };
-
-/**
- * =====================================================
- * PENGGUNAAN CONTOH:
- * =====================================================
- * 
- * 1. Ambil semua diskusi dengan filter:
- *    const discussions = await getDiscussions({ 
- *      page: 1, 
- *      limit: 10,
- *      category: 'technology',
- *      sort: 'newest'
- *    });
- * 
- * 2. Buat diskusi baru:
- *    const newDiscussion = await createDiscussion({
- *      title: 'Judul Diskusi',
- *      content: 'Isi diskusi...',
- *      categoryId: '123',
- *      tags: ['javascript', 'react']
- *    });
- * 
- * 3. Bookmark diskusi:
- *    const result = await toggleBookmark('discussion_id');
- *    console.log(result.action); // 'added' atau 'removed'
- * 
- * 4. Vote diskusi:
- *    await voteDiscussion('discussion_id', 'upvote');
- * 
- * 5. Search:
- *    const results = await searchDiscussions('react hooks');
- * 
- * =====================================================
- */

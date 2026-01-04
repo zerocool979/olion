@@ -1,6 +1,35 @@
 const prisma = require('../lib/prisma');
 const AppError = require('../utils/AppError');
-const { sendNotification } = require('./notificationService'); // FIX
+const { sendNotification } = require('./notificationService');
+const { normalizeComment, normalizeCommentList } = require('./normalizers/commentNormalizer');
+
+/**
+ * DATA CONTRACT:
+ * - Frontend menerima `author`
+ * - Prisma relasi = `user`
+ * - Normalisasi dilakukan di service
+ * - Controller tidak transform data
+ */
+
+/**
+ * Get default user selection for comment queries
+ */
+const getUserSelect = (includeProfile = false) => ({
+  select: {
+    id: true,
+    email: true,
+    username: true,
+    role: true,
+    ...(includeProfile && {
+      profile: {
+        select: {
+          pseudonym: true,
+          avatarUrl: true
+        }
+      }
+    })
+  }
+});
 
 /* =====================================================
    CREATE COMMENT ON DISCUSSION (EXISTING)
@@ -21,7 +50,9 @@ exports.createComment = async (userId, discussionId, content) => {
       userId,
       discussionId,
       content,
-      // answerId: null // implicit, komentar langsung ke diskusi
+    },
+    include: {
+      user: getUserSelect(true),
     },
   });
 
@@ -33,7 +64,7 @@ exports.createComment = async (userId, discussionId, content) => {
     channel: 'InApp',
   });
 
-  return comment;
+  return normalizeComment(comment);
 };
 
 /* =====================================================
@@ -55,8 +86,11 @@ exports.createCommentOnAnswer = async (userId, answerId, content) => {
     data: {
       userId,
       answerId,
-      discussionId: answer.discussionId, // FIX: konsistensi relasi
+      discussionId: answer.discussionId,
       content,
+    },
+    include: {
+      user: getUserSelect(true),
     },
   });
 
@@ -70,52 +104,74 @@ exports.createCommentOnAnswer = async (userId, answerId, content) => {
     });
   }
 
-  return comment;
+  return normalizeComment(comment);
 };
 
 /* =====================================================
    LIST COMMENTS BY DISCUSSION (ONLY ROOT COMMENTS)
    ===================================================== */
 exports.listByDiscussion = async (discussionId) => {
-  return prisma.comment.findMany({
+  const comments = await prisma.comment.findMany({
     where: {
       discussionId,
-      answerId: null, // FIX: hanya komentar langsung ke diskusi
+      answerId: null,
       isDeleted: false,
     },
     include: {
-      user: {
-        select: {
-          id: true,
-          role: true,
-          profile: { select: { pseudonym: true } },
-        },
-      },
+      user: getUserSelect(true),
     },
     orderBy: { createdAt: 'asc' },
   });
+
+  return normalizeCommentList(comments);
 };
 
 /* =====================================================
    LIST COMMENTS BY ANSWER (NEW)
    ===================================================== */
 exports.listByAnswer = async (answerId) => {
-  return prisma.comment.findMany({
+  const comments = await prisma.comment.findMany({
     where: {
       answerId,
       isDeleted: false,
     },
     include: {
-      user: {
-        select: {
-          id: true,
-          role: true,
-          profile: { select: { pseudonym: true } },
-        },
-      },
+      user: getUserSelect(true),
     },
     orderBy: { createdAt: 'asc' },
   });
+
+  return normalizeCommentList(comments);
+};
+
+/* =====================================================
+   GET COMMENT BY ID
+   ===================================================== */
+exports.findById = async (id) => {
+  const comment = await prisma.comment.findUnique({
+    where: { id },
+    include: {
+      user: getUserSelect(true),
+      discussion: {
+        select: {
+          id: true,
+          title: true,
+        },
+      },
+      answer: {
+        select: {
+          id: true,
+          content: true,
+        },
+      },
+    },
+  });
+
+  if (!comment || comment.isDeleted) {
+    throw new AppError('Comment not found', 404);
+  }
+
+  return normalizeComment(comment);
 };
 
 /* =====================================================
@@ -135,10 +191,15 @@ exports.updateComment = async (userId, commentId, content) => {
   if (comment.userId !== userId)
     throw new AppError('Forbidden', 403);
 
-  return prisma.comment.update({
+  const updated = await prisma.comment.update({
     where: { id: commentId },
     data: { content },
+    include: {
+      user: getUserSelect(true),
+    },
   });
+
+  return normalizeComment(updated);
 };
 
 /* =====================================================
@@ -155,10 +216,15 @@ exports.deleteComment = async (userId, commentId) => {
   if (comment.userId !== userId)
     throw new AppError('Forbidden', 403);
 
-  return prisma.comment.update({
+  const deleted = await prisma.comment.update({
     where: { id: commentId },
     data: { isDeleted: true },
+    include: {
+      user: getUserSelect(true),
+    },
   });
+
+  return normalizeComment(deleted);
 };
 
 /* =====================================================
@@ -172,8 +238,13 @@ exports.adminDelete = async (commentId) => {
   if (!comment || comment.isDeleted)
     throw new AppError('Comment not found', 404);
 
-  return prisma.comment.update({
+  const deleted = await prisma.comment.update({
     where: { id: commentId },
     data: { isDeleted: true },
+    include: {
+      user: getUserSelect(true),
+    },
   });
+
+  return normalizeComment(deleted);
 };

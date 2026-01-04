@@ -3,25 +3,27 @@ import axios from 'axios';
 /**
  * =====================================================
  * Axios Base Instance
- * -----------------------------------------------------
- * - SINGLE source of truth for API communication
- * - Digunakan oleh AuthContext & seluruh API
  * =====================================================
  */
-
+/*
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  withCredentials: false, // JWT via Authorization header
+  withCredentials: false,
+});
+*/
+
+const api = axios.create({
+  baseURL: 'http://localhost:5000/api/v1',
+  withCredentials: true,
 });
 
 /**
- * -----------------------------------------------------
- * Request Interceptor
- * - Inject JWT token if exists
- * -----------------------------------------------------
+ * =====================================================
+ * REQUEST INTERCEPTOR
+ * =====================================================
  */
 api.interceptors.request.use(
   (config) => {
@@ -29,6 +31,8 @@ api.interceptors.request.use(
       const token = localStorage.getItem('token');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+      } else {
+        delete config.headers.Authorization;
       }
     }
     return config;
@@ -37,26 +41,39 @@ api.interceptors.request.use(
 );
 
 /**
- * -----------------------------------------------------
- * Response Interceptor
- * - Normalize error message
- * - Preserve backend message
- * -----------------------------------------------------
+ * =====================================================
+ * RESPONSE INTERCEPTOR (FIXED)
+ * =====================================================
  */
 api.interceptors.response.use(
   (response) => response,
+
   (error) => {
-    const message =
+    // ===============================
+    // OLD (BUGGY)
+    // ===============================
+    // return Promise.reject({
+    //   ...error,
+    //   message,
+    //   status: error.response?.status,
+    // });
+
+    // ===============================
+    // FIXED & SAFE
+    // ===============================
+    const apiMessage =
       error.response?.data?.message ||
       error.response?.data?.error ||
       error.message ||
       'Request failed';
 
-    return Promise.reject({
-      ...error,
-      message,
-      status: error.response?.status,
-    });
+    const normalizedError = new Error(apiMessage);
+
+    normalizedError.status = error.response?.status || 500;
+    normalizedError.code = error.response?.data?.code || 'API_ERROR';
+    normalizedError.raw = error.response?.data; // untuk debugging
+
+    return Promise.reject(normalizedError);
   }
 );
 

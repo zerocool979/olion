@@ -69,8 +69,10 @@ exports.getUserReputation = async (req, res, next) => {
       prisma.answerVote.count({
         where: {
           answer: {
-            authorId: userId,
-            isDeleted: false
+            is: {
+              authorId: userId,
+              isDeleted: false
+            }
           },
           type: 'Up'
         }

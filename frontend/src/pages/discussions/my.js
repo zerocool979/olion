@@ -1,5 +1,3 @@
-// src/pages/discussions/my.js
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -11,17 +9,15 @@ import {
   Button,
   Chip,
   Stack,
-  LinearProgress,
+  CircularProgress,
   IconButton,
   Card,
   CardContent,
   CardActions,
-  Grid,
   Divider,
   TextField,
   InputAdornment,
   Alert,
-  CircularProgress
 } from '@mui/material';
 import {
   Forum,
@@ -33,12 +29,12 @@ import {
   Search,
   Add,
   ArrowBack,
-  AccessTime
+  AccessTime,
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
-import { useAuth } from '../../context/AuthContext';
 import ProtectedRoute from '../../components/ProtectedRoute';
-import api from '../../api/base';
+import { useAuth } from '../../context/AuthContext';
+import api from '../../api/discussion'; // gunakan API service yang fix
 import dayjs from '../../utils/dayjs';
 
 const MyDiscussionsPage = () => {
@@ -54,11 +50,10 @@ const MyDiscussionsPage = () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await api.get('/discussions/my');
-      const discussionsData = res.data?.data || res.data || [];
-      setDiscussions(discussionsData);
+      const res = await api.getMyDiscussions();
+      setDiscussions(res.data || []);
     } catch (err) {
-      console.error('Error fetching discussions:', err);
+      console.error(err);
       setError('Failed to load discussions. Please try refreshing.');
     } finally {
       setLoading(false);
@@ -71,32 +66,30 @@ const MyDiscussionsPage = () => {
 
   const handleDeleteDiscussion = async (id) => {
     if (!confirm('Are you sure you want to delete this discussion?')) return;
-    
+
     try {
       setDeletingId(id);
-      await api.delete(`/discussions/${id}`);
+      await api.deleteDiscussion(id);
       setDiscussions(discussions.filter(d => d.id !== id));
     } catch (err) {
-      console.error('Error deleting discussion:', err);
+      console.error(err);
       alert('Failed to delete discussion. Please try again.');
     } finally {
       setDeletingId(null);
     }
   };
 
-  const handleEditDiscussion = (id) => {
-    router.push(`/discussions/${id}/edit`);
-  };
+  const handleEditDiscussion = (id) => router.push(`/discussions/${id}/edit`);
 
-  const filteredDiscussions = discussions.filter(discussion =>
-    discussion.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    discussion.content?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredDiscussions = discussions.filter(d =>
+    d.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    d.content?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', minHeight: '60vh', alignItems: 'center' }}>
           <CircularProgress />
         </Box>
       </Container>
@@ -113,7 +106,7 @@ const MyDiscussionsPage = () => {
         >
           Back to Dashboard
         </Button>
-        
+
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
           <Box>
             <Typography variant="h4" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
@@ -165,10 +158,9 @@ const MyDiscussionsPage = () => {
             {searchTerm ? 'No discussions found' : 'No discussions yet'}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            {searchTerm 
+            {searchTerm
               ? 'Try a different search term'
-              : 'Start sharing your thoughts with the community'
-            }
+              : 'Start sharing your thoughts with the community'}
           </Typography>
           <Button
             variant="contained"
@@ -191,7 +183,7 @@ const MyDiscussionsPage = () => {
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                       {discussion.content?.substring(0, 200)}...
                     </Typography>
-                    
+
                     <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
                       <Chip
                         size="small"
@@ -199,10 +191,10 @@ const MyDiscussionsPage = () => {
                         label={dayjs(discussion.createdAt).format('DD MMM YYYY')}
                         variant="outlined"
                       />
-                      {discussion.category && (
+                      {discussion.category?.name && (
                         <Chip
                           size="small"
-                          label={discussion.category}
+                          label={discussion.category.name}
                           color="primary"
                           variant="outlined"
                         />
@@ -210,30 +202,31 @@ const MyDiscussionsPage = () => {
                       <Chip
                         size="small"
                         icon={<Comment />}
-                        label={discussion.commentCount || discussion.comments_count || 0}
+                        label={discussion._count?.comments || 0}
                         variant="outlined"
                       />
                       <Chip
                         size="small"
                         icon={<ThumbUp />}
-                        label={discussion.upvotes || discussion.upvote_count || 0}
+                        label={discussion.vote?.upvote || 0}
                         variant="outlined"
                         color="success"
                       />
                       <Chip
                         size="small"
                         icon={<Visibility />}
-                        label={discussion.views || discussion.view_count || 0}
+                        label={discussion.views || 0}
                         variant="outlined"
                         color="info"
                       />
                     </Box>
 
                     <Typography variant="caption" color="text.secondary">
-                      Created: {dayjs(discussion.createdAt).fromNow()}
-                      {discussion.updatedAt !== discussion.createdAt && 
-                        ` • Updated: ${dayjs(discussion.updatedAt).fromNow()}`
-                      }
+                      Created by: {discussion.author?.profile?.pseudonym || discussion.author?.email}
+                      <br />
+                      {dayjs(discussion.createdAt).fromNow()}
+                      {discussion.updatedAt !== discussion.createdAt &&
+                        ` • Updated: ${dayjs(discussion.updatedAt).fromNow()}`}
                     </Typography>
                   </Box>
                 </Box>
@@ -241,10 +234,7 @@ const MyDiscussionsPage = () => {
               <Divider />
               <CardActions sx={{ justifyContent: 'space-between', px: 2, py: 1 }}>
                 <Box>
-                  <Button
-                    size="small"
-                    onClick={() => router.push(`/discussions/${discussion.id}`)}
-                  >
+                  <Button size="small" onClick={() => router.push(`/discussions/${discussion.id}`)}>
                     View Discussion
                   </Button>
                 </Box>
@@ -275,7 +265,6 @@ const MyDiscussionsPage = () => {
   );
 };
 
-// Wrap dengan ProtectedRoute yang benar
 export default function MyDiscussionsPageWrapper() {
   return (
     <ProtectedRoute>

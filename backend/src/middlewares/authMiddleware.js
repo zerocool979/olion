@@ -1,79 +1,75 @@
-// backend/src/middlewares/authMiddleware.js
 const jwt = require('jsonwebtoken');
-const AppError = require('../utils/AppError');
-const prisma = require('../lib/prisma');
+const { PrismaClient } = require('@prisma/client');
 
-/**
- * AUTHENTICATE
- * Middleware untuk memverifikasi JWT dan mengambil data user dari DB
- * - Memastikan role selalu valid
- */
-exports.authenticate = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
+const prisma = new PrismaClient();
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return next(new AppError('Unauthorized', 401));
-  }
-
-  const token = authHeader.split(' ')[1];
-
+// ======================
+// AUTHENTICATE
+// ======================
+const authenticate = async (req, res, next) => {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const authHeader = req.headers['authorization'];
+    if (!authHeader) {
+      req.user = null;
+      return next();
+    }
 
-    // Ambil user lengkap dari database (id + role)
+    const token = authHeader.split(' ')[1];
+    if (!token) {
+      req.user = null;
+      return next();
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      console.error('JWT verify failed:', err.message);
+      req.user = null;
+      return next();
+    }
+
+    if (!decoded?.id) {
+      req.user = null;
+      return next();
+    }
+
+    if (!prisma.user || !prisma.user.findUnique) {
+      console.error('Prisma client user model undefined');
+      req.user = null;
+      return next();
+    }
+
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
-      select: {
-        id: true,
-        role: true,
-      },
     });
 
-    if (!user) {
-      return next(new AppError('User not found', 401));
-    }
-
-    req.user = user; // Sekarang role pasti ada
+    req.user = user || null;
     next();
   } catch (err) {
-    next(new AppError('Invalid token', 401));
+    console.error('Auth middleware error:', err);
+    req.user = null;
+    next();
   }
 };
 
-/**
- * AUTHORIZE
- * Middleware untuk mengecek apakah user memiliki salah satu role yang diizinkan
- * - Harus dipanggil setelah authenticate
- * @param  {...string} roles - daftar role yang diizinkan
- */
-exports.authorize = (...roles) => {
-  return (req, res, next) => {
-    if (!req.user) {
-      return next(new AppError('Unauthorized', 401));
-    }
+// ======================
+// AUTHORIZE
+// ======================
+const authorize = (requiredRole) => (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  }
 
-    if (!roles.includes(req.user.role)) {
-      return next(new AppError('Forbidden', 403));
-    }
+  if (!req.user.role) {
+    return res.status(403).json({ success: false, message: 'Forbidden: role not set' });
+  }
 
-    next();
-  };
+  if (req.user.role.toUpperCase() !== requiredRole.toUpperCase()) {
+    return res.status(403).json({ success: false, message: 'Forbidden: insufficient role' });
+  }
+
+  next();
 };
 
-/**
- * OPTIONAL: helper untuk memeriksa role dengan hierarki
- * - Misal: ADMIN > MODERATOR > PAKAR > USER
- */
-exports.hasRole = (userRole, requiredRole) => {
-  const roleHierarchy = {
-    USER: 1,
-    PAKAR: 2,
-    MODERATOR: 3,
-    ADMIN: 4,
-  };
-
-  const userLevel = roleHierarchy[userRole?.toUpperCase()] || 0;
-  const requiredLevel = roleHierarchy[requiredRole?.toUpperCase()] || 0;
-
-  return userLevel >= requiredLevel;
-};
+module.exports = { authenticate, authorize };
