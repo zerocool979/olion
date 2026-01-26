@@ -1,0 +1,12 @@
+const service = require('./service')
+
+exports.create = async (req, res, next) => {
+  try {
+    const c = await service.create(
+      req.body.content,
+      req.body.discussionId,
+      req.user.id
+    )
+    res.json(c)
+  } catch (e) { next(e) }
+}

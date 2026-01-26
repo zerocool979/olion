@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,453 +7,115 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-////////////////////
-/// ENUM
-////////////////////
-
-enum UserRole {
-  ADMIN
-  MODERATOR
-  USER
-  PAKAR
-}
-
-enum PublishStatus {
-  Draft
-  Published
-  Archived
-}
-
-enum ModerationStatus {
-  Pending
-  Approved
-  Rejected
-}
-
-enum VoteType {
-  Up
-  Down
-}
-
-enum ReportPriority {
-  Low
-  Medium
-  High
-  Critical
-}
-
-enum ReportStatus {
-  Pending
-  Reviewed
-  Resolved
-}
-
-enum ModerationAction {
-  Ignore
-  Warning
-  Hide
-  Delete
-}
-
-enum VerificationStatus {
-  Pending
-  Approved
-  Rejected
-}
-
-enum NotificationChannel {
-  Email
-  InApp
-  Popup
-}
-
-////////////////////
-/// USER & AUTH
-////////////////////
-
 model User {
-  id           String    @id @default(uuid())
-  email        String    @unique
-  passwordHash String
-  role         UserRole  @default(USER)
-  isActive     Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  lastLogin    DateTime?
+  id               String   @id @default(uuid())
+  email            String   @unique
+  password         String
+  role             Role     @default(USER)
+  isVerifiedExpert Boolean  @default(false)
+  createdAt        DateTime @default(now())
 
-  // PAKAR APPLICATION SUPPORT
-
-  // OLD: raw reputation value (REDUNDANT)
-  // reputation      Int     @default(0)
-
-  hasAppliedPakar Boolean @default(false)
-
-  profile       AnonymousProfile?
-  sessions      Session[]
-  discussions   Discussion[]
-  answers       Answer[]
-  comments      Comment[]
-  reputationLog ReputationHistory[]
-  notifications Notification[]
-  preferences   UserChannelPreference[]
-  pakar         Pakar?
-
-  // PAKAR APPLICATION SUPPORT
-  pakarApplications PakarApplication[]
-
-  // RELATION FIX - single source of truth
-  reputationRecord Reputation? // Relasi ke Reputation
-  bookmarks        Bookmark[] // Relasi ke Bookmark
-
-  // RELATION EXISTING
-  adminCategories Category[]
-  discussionVotes DiscussionVote[]
-  answerVotes     AnswerVote[]
-
-  discussionReports DiscussionReport[]
-  answerReports     AnswerReport[]
-  commentReports    CommentReport[]
-
-  moderations Moderation[]
-
-  @@map("users")
+  profile     Profile?
+  discussions Discussion[]
+  comments    Comment[]
+  votes       Vote[]
+  reports     Report[]
+  reputations ReputationLog[]
 }
 
-model AnonymousProfile {
-  id        String  @id @default(uuid())
-  userId    String  @unique
-  pseudonym String
-  interests String?
-  bio       String?
-  avatarUrl String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("anonymous_profiles")
+model Profile {
+  id       String @id @default(uuid())
+  username String @unique
+  userId   String @unique
+  user     User   @relation(fields: [userId], references: [id])
 }
-
-model Session {
-  id        String    @id @default(uuid())
-  userId    String
-  token     String    @unique
-  ipAddress String?
-  device    Json?
-  startAt   DateTime  @default(now())
-  endAt     DateTime?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("sessions")
-}
-
-////////////////////
-/// DISCUSSION
-////////////////////
 
 model Category {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  adminId     String
-  createdAt   DateTime @default(now())
-
-  admin       User         @relation(fields: [adminId], references: [id])
+  id          String       @id @default(uuid())
+  name        String       @unique
   discussions Discussion[]
-
-  @@map("categories")
 }
 
 model Discussion {
-  id         String           @id @default(uuid())
-  userId     String?
-  categoryId String
-  title      String
-  content    String
-  status     PublishStatus    @default(Published)
-  isFlagged  Boolean          @default(false)
-  isDeleted  Boolean          @default(false)
-  moderation ModerationStatus @default(Pending)
-  createdAt  DateTime         @default(now())
-
-  user     User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
-  category Category           @relation(fields: [categoryId], references: [id])
-  answers  Answer[]
-  comments Comment[]
-  votes    DiscussionVote[]
-  reports  DiscussionReport[]
-
-  // RELATION FIX - TAMBAHKAN INI
-  bookmarks Bookmark[] // Relasi ke Bookmark
-
-  @@map("discussions")
-}
-
-model Answer {
-  id             String           @id @default(uuid())
-  discussionId   String
-  userId         String?
-  content        String
-  isExpertAnswer Boolean          @default(false)
-  isVerified     Boolean          @default(false)
-  isFlagged      Boolean          @default(false)
-  isDeleted      Boolean          @default(false)
-  moderation     ModerationStatus @default(Pending)
-
+  id        String   @id @default(uuid())
+  title     String
+  content   String
+  isHidden  Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  discussion Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
-  user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId     String
+  categoryId String
 
-  votes    AnswerVote[]
-  reports  AnswerReport[]
+  user     User     @relation(fields: [userId], references: [id])
+  category Category @relation(fields: [categoryId], references: [id])
+
   comments Comment[]
-
-  @@map("answers")
+  votes    Vote[]
+  reports  Report[]
 }
 
 model Comment {
-  id String @id @default(uuid())
-
-  discussionId String
-  answerId     String? // komentar bisa menempel ke jawaban (nullable)
-  userId       String?
-  content      String
-
-  isFlagged  Boolean          @default(false)
-  isDeleted  Boolean          @default(false)
-  moderation ModerationStatus @default(Pending)
-
+  id        String   @id @default(uuid())
+  content   String
+  isHidden  Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  discussion Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
-  answer     Answer?    @relation(fields: [answerId], references: [id], onDelete: Cascade)
-  user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  reports CommentReport[]
-
-  @@map("comments")
-}
-
-////////////////////
-/// VOTING & REPUTATION
-////////////////////
-
-model DiscussionVote {
-  id           String   @id @default(uuid())
   userId       String
   discussionId String
-  type         VoteType
-  createdAt    DateTime @default(now())
 
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  discussion Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id])
+  discussion Discussion @relation(fields: [discussionId], references: [id])
+
+  reports Report[]
+}
+
+model Vote {
+  id    String @id @default(uuid())
+  value Int
+
+  userId       String
+  discussionId String
+
+  user       User       @relation(fields: [userId], references: [id])
+  discussion Discussion @relation(fields: [discussionId], references: [id])
 
   @@unique([userId, discussionId])
-  @@map("discussion_votes")
 }
 
-model AnswerVote {
-  id        String   @id @default(uuid())
-  userId    String
-  answerId  String
-  type      VoteType
-  createdAt DateTime @default(now())
-
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  answer Answer @relation(fields: [answerId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, answerId])
-  @@map("answer_votes")
-}
-
-model Reputation {
-  id        String   @id @default(uuid())
-  userId    String   @unique
-  score     Int      @default(0)
-  level     String?
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("reputations")
-}
-
-model ReputationHistory {
-  id        String   @id @default(uuid())
-  userId    String
-  delta     Int
+model Report {
+  id        String       @id @default(uuid())
   reason    String
-  sourceId  String?
-  source    String
+  status    ReportStatus @default(PENDING)
+  createdAt DateTime     @default(now())
+
+  reporterId   String
+  discussionId String?
+  commentId    String?
+
+  reporter   User        @relation(fields: [reporterId], references: [id])
+  discussion Discussion? @relation(fields: [discussionId], references: [id])
+  comment    Comment?    @relation(fields: [commentId], references: [id])
+}
+
+model ReputationLog {
+  id        String   @id @default(uuid())
+  point     Int
+  reason    String
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("reputation_history")
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 }
 
-////////////////////
-/// REPORT & MODERATION
-////////////////////
-
-model DiscussionReport {
-  id           String         @id @default(uuid())
-  reporterId   String
-  discussionId String
-  reason       String
-  aiScore      Int?
-  priority     ReportPriority
-  status       ReportStatus   @default(Pending)
-  createdAt    DateTime       @default(now())
-
-  discussion  Discussion   @relation(fields: [discussionId], references: [id], onDelete: Cascade)
-  reporter    User         @relation(fields: [reporterId], references: [id], onDelete: Cascade)
-  moderations Moderation[]
-
-  @@map("discussion_reports")
+enum Role {
+  USER
+  EXPERT
+  MODERATOR
+  ADMIN
 }
 
-model AnswerReport {
-  id         String         @id @default(uuid())
-  reporterId String
-  answerId   String
-  reason     String
-  aiScore    Int?
-  priority   ReportPriority
-  status     ReportStatus   @default(Pending)
-  createdAt  DateTime       @default(now())
-
-  answer      Answer       @relation(fields: [answerId], references: [id], onDelete: Cascade)
-  reporter    User         @relation(fields: [reporterId], references: [id], onDelete: Cascade)
-  moderations Moderation[]
-
-  @@map("answer_reports")
-}
-
-model CommentReport {
-  id         String         @id @default(uuid())
-  reporterId String
-  commentId  String
-  reason     String
-  aiScore    Int?
-  priority   ReportPriority
-  status     ReportStatus   @default(Pending)
-  createdAt  DateTime       @default(now())
-
-  comment     Comment      @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  reporter    User         @relation(fields: [reporterId], references: [id], onDelete: Cascade)
-  moderations Moderation[]
-
-  @@map("comment_reports")
-}
-
-model Moderation {
-  id          String           @id @default(uuid())
-  moderatorId String
-  action      ModerationAction
-  source      String
-  note        String?
-  createdAt   DateTime         @default(now())
-
-  discussionReportId String?
-  answerReportId     String?
-  commentReportId    String?
-
-  discussionReport DiscussionReport? @relation(fields: [discussionReportId], references: [id])
-  answerReport     AnswerReport?     @relation(fields: [answerReportId], references: [id])
-  commentReport    CommentReport?    @relation(fields: [commentReportId], references: [id])
-
-  moderator User @relation(fields: [moderatorId], references: [id])
-
-  @@map("moderations")
-}
-
-////////////////////
-/// EXPERT & PAKAR APPLICATION
-////////////////////
-
-model Pakar {
-  id        String             @id @default(uuid())
-  userId    String             @unique
-  expertise String
-  document  String
-  status    VerificationStatus @default(Pending)
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("pakar")
-}
-
-model PakarApplication {
-  id                String    @id @default(cuid())
-  userId            String
-  field             String
-  reason            String
-  yearsOfExperience Int?
-  qualifications    String?
-  portfolioUrl      String?
-  references        String?
-
-  // status            String    @default("pending") // pending, approved, rejected
-  status VerificationStatus @default(Pending)
-
-  adminNotes        String?
-  rejectionReason   String?
-  reviewedAt        DateTime?
-  canReapplyAfter   DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([status])
-  @@index([createdAt])
-  @@map("pakar_applications")
-}
-
-////////////////////
-/// NOTIFICATION
-////////////////////
-
-model Notification {
-  id        String              @id @default(uuid())
-  userId    String
-  title     String
-  message   String
-  channel   NotificationChannel
-  isSent    Boolean             @default(false)
-  createdAt DateTime            @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("notifications")
-}
-
-model UserChannelPreference {
-  id      String              @id @default(uuid())
-  userId  String
-  channel NotificationChannel
-  active  Boolean             @default(true)
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, channel])
-  @@map("user_channel_preferences")
-}
-
-////////////////////
-/// BOOKMARK
-////////////////////
-
-model Bookmark {
-  id           String   @id @default(uuid())
-  userId       String
-  discussionId String
-  createdAt    DateTime @default(now())
-
-  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  discussion Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, discussionId])
-  @@map("bookmarks")
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  REJECTED
 }
