@@ -1,35 +1,23 @@
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { getUser } from '../lib/auth'
+import { useContext } from 'react'
+import { AuthContext } from '../context/AuthContext'
 
 export default function Nav() {
-  const [mounted, setMounted] = useState(false)
-  const [user, setUser] = useState(null)
-
-  useEffect(() => {
-    setMounted(true)
-    setUser(getUser())
-  }, [])
-
-  // ⛔ Cegah SSR / hydration mismatch
-  if (!mounted) return null
+  const { token, logout } = useContext(AuthContext)
 
   return (
-    <nav style={{ padding: '1rem', borderBottom: '1px solid #ddd' }}>
+    <nav className="flex gap-4 p-4 border-b">
       <Link href="/">Home</Link>
 
-      {user ? (
+      {token ? (
         <>
-          {' | '}
+          <Link href="/create">Buat Diskusi</Link>
           <Link href="/dashboard">Dashboard</Link>
-          {' | '}
-          <Link href="/logout">Logout</Link>
+          <button onClick={logout}>Logout</button>
         </>
       ) : (
         <>
-          {' | '}
           <Link href="/login">Login</Link>
-          {' | '}
           <Link href="/register">Register</Link>
         </>
       )}

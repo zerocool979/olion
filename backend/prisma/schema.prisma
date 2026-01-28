@@ -33,25 +33,32 @@ model Profile {
 model Category {
   id          String       @id @default(uuid())
   name        String       @unique
+  parentId  String?
+  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryTree")
   discussions Discussion[]
 }
 
 model Discussion {
-  id        String   @id @default(uuid())
-  title     String
-  content   String
-  isHidden  Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id          String @id @default(uuid())
+  title       String
+  content     String
 
-  userId     String
-  categoryId String
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
 
-  user     User     @relation(fields: [userId], references: [id])
-  category Category @relation(fields: [categoryId], references: [id])
+  mode        DiscussionMode
+  discipline  DisciplineLevel
 
-  comments Comment[]
-  votes    Vote[]
-  reports  Report[]
+  userId      String
+  user        User @relation(fields: [userId], references: [id])
+
+  comments    Comment[]
+  votes       Vote[]
+  reports     Report[]
+
+  isHidden    Boolean @default(false)
+  createdAt  DateTime @default(now())
 }
 
 model Comment {
@@ -118,4 +125,20 @@ enum ReportStatus {
   PENDING
   RESOLVED
   REJECTED
+}
+
+enum DiscussionMode {
+  INFORMATIF
+  KLARIFIKATIF
+  EKSPLORATIF
+  EVALUATIF
+  ARGUMENTATIF
+  PRAKTIS
+}
+
+enum DisciplineLevel {
+  BEBAS
+  RASIONAL
+  AKADEMIK
+  PROFESIONAL
 }

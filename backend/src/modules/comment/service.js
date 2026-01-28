@@ -1,6 +1,11 @@
 const prisma = require('../../config/prisma')
 
-exports.create = (content, discussionId, userId) =>
+exports.create = (data, userId) =>
   prisma.comment.create({
-    data: { content, discussionId, userId }
+    data: {
+      content: data.content,
+      discussionId: data.discussionId,
+      userId
+    },
+    include: { user: true }
   })

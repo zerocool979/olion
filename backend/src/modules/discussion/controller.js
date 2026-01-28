@@ -12,3 +12,12 @@ exports.list = async (req, res, next) => {
     res.json(await service.list())
   } catch (e) { next(e) }
 }
+
+exports.detail = async (req, res, next) => {
+  try {
+    const d = await service.detail(req.params.id)
+    if (!d) return res.status(404).json({ message: 'Discussion not found' })
+    res.json(d)
+  } catch (e) { next(e) }
+}
+

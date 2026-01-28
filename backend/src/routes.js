@@ -3,6 +3,7 @@ const auth = require('./middlewares/auth')
 const role = require('./middlewares/role')
 
 const authCtrl = require('./modules/auth/controller')
+const categoryCtrl = require('./modules/category/controller')
 const discussionCtrl = require('./modules/discussion/controller')
 const commentCtrl = require('./modules/comment/controller')
 const voteCtrl = require('./modules/vote/controller')
@@ -12,7 +13,10 @@ const adminCtrl = require('./modules/admin/controller')
 router.post('/auth/register', authCtrl.register)
 router.post('/auth/login', authCtrl.login)
 
+router.get('/categories', categoryCtrl.list)
+
 router.get('/discussions', discussionCtrl.list)
+router.get('/discussions/:id', discussionCtrl.detail)
 router.post('/discussions', auth, discussionCtrl.create)
 
 router.post('/comments', auth, commentCtrl.create)

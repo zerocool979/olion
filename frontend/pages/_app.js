@@ -1,20 +1,15 @@
 import '../styles/globals.css'
 import { AuthProvider, AuthContext } from '../context/AuthContext'
-import { useContext, useEffect } from 'react'
-import { useRouter } from 'next/router'
 import Nav from '../components/Nav'
+import { useContext } from 'react'
+import { useRouter } from 'next/router'
 
 function Guard({ children }) {
   const { token } = useContext(AuthContext)
   const router = useRouter()
 
-  useEffect(() => {
-    if (!token && router.pathname.startsWith('/dashboard')) {
-      router.push('/login')
-    }
-  }, [token, router])
-
   if (!token && router.pathname.startsWith('/dashboard')) {
+    if (typeof window !== 'undefined') router.push('/login')
     return null
   }
 
