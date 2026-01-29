@@ -36,3 +36,14 @@ Owner/Maintainer: **beel**
 
 ### Fixed
 - -
+
+## [v0.1.0] - 2026-01-29
+### Added
+- `01-initiation/01-project-charter.md`
+- dokumen Project Charter untuk memulai proyek OLION
+
+### Changed
+- -
+
+### Fixed
+- -
