@@ -11,8 +11,7 @@ Dokumentasi ini dipakai sebagai:
 ---
 
 ## Owner / Maintainer
-- Alias: **beel**
-- Role: Solo Developer (Fullstack)
+- **beel**
 
 ---
 
