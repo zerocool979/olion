@@ -2,8 +2,6 @@
 
 Dokumen ini adalah peta utama (single source of truth) untuk seluruh dokumentasi proyek **OLION**.
 
-Owner/Maintainer: **beel** (Solo Fullstack)
-
 ---
 
 ## Legend Status
