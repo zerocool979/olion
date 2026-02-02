@@ -47,3 +47,16 @@ Owner/Maintainer: **beel**
 
 ### Fixed
 - -
+
+## [v0.1.1] - 2026-02-03
+### Added
+- `02-requirements/01-brd-business-requirement-document.md`
+- dokumen BRD untuk memulai proyek OLION
+- `02-requirements/02-srs-software-requirement-specification.md`
+- dokumen SRS untuk memulai proyek OLION
+
+### Changed
+- PATCH: `01-initiation/01-project-charter.md`
+
+### Fixed
+- -
