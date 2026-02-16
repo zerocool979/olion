@@ -60,3 +60,16 @@ Owner/Maintainer: **beel**
 
 ### Fixed
 - -
+
+## [v0.1.2] - 2026-02-16
+### Added
+- `01-initiation/02-proposal-proyek.docx`
+- dokumen Proposal proyek OLION (Academic POV)
+- 
+- 
+
+### Changed
+- 
+
+### Fixed
+- -
