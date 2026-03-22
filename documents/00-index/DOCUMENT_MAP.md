@@ -15,9 +15,9 @@ Dokumen ini adalah peta utama (single source of truth) untuk seluruh dokumentasi
 
 | No | Dokumen | File/Folder | Status | Catatan |
 |---:|--------|-------------|:------:|--------|
-| 01 | Project Charter | `01-initiation/01-project-charter.md` | 🟥 TODO | Ringkas 2–5 halaman |
-| 02 | Proposal Proyek | `01-initiation/02-proposal-proyek.docx` | 🟥 TODO | Format akademik |
-| 03 | BRD (Business Requirement Document) | `02-requirements/01-brd-business-requirement-document.md` | 🟥 TODO | Bahasa bisnis/non-teknis |
+| 01 | Project Charter | `01-initiation/01-project-charter.md` | 🟨 TODO | Ringkas 2–5 halaman |
+| 02 | Proposal Proyek | `01-initiation/02-proposal-proyek.docx` | 🟨 TODO | Format akademik |
+| 03 | BRD (Business Requirement Document) | `02-requirements/01-brd-business-requirement-document.md` | 🟨 TODO | Bahasa bisnis/non-teknis |
 | 04 | SRS (Software Requirement Specification) | `02-requirements/02-srs-software-requirement-specification.md` | 🟥 TODO | FR + NFR + prioritas |
 | 05 | Feature Breakdown + MVP | `02-requirements/03-feature-breakdown-mvp.md` | 🟥 TODO | Modul + DoD |
 | 06 | Diagram Konteks (DFD Level 0) | `03-analysis-design/01-diagram-konteks-dfd-level-0/` | 🟥 TODO | `diagram.png` + `notes.md` |

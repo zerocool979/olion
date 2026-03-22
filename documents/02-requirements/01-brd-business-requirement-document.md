@@ -35,11 +35,11 @@
 
 ### 1.1 Purpose of the Document
 
-This Business Requirement Document (BRD) aims to define the business needs, scope, and main expectations of the OLION system as a basis for development before entering the technical specification (SRS) stage.
+Dokumen Persyaratan Bisnis (BRD) ini bertujuan untuk mendefinisikan kebutuhan bisnis, ruang lingkup, dan harapan utama dari sistem OLION sebagai dasar pengembangan sebelum memasuki tahap spesifikasi teknis (SRS).
 
 ### 1.2 Document Overview
 
-This BRD explains the business background, key issues, project objectives, system scope, stakeholder needs, and high-level business requirements that must be met by the OLION system.
+BRD ini menjelaskan latar belakang bisnis, isu-isu utama, tujuan proyek, ruang lingkup sistem, kebutuhan pemangku kepentingan, dan persyaratan bisnis tingkat tinggi yang harus dipenuhi oleh sistem OLION.
 
 ---
 
@@ -76,18 +76,20 @@ OLION diarahkan untuk membangun budaya diskusi yang berbasis argumen rasional, r
 OLION berfokus pada pembentukan ruang diskusi yang aman, terkurasi, dan memiliki kontrol kualitas yang jelas untuk menekan intimidasi, perundungan, serta perilaku diskusi yang destruktif.
 
 ### 3.2 Success Criteria
-Keberhasilan tujuan proyek OLION dapat diukur melalui indikator berikut:
-1. Weekly Active Users (WAU): jumlah pengguna aktif mingguan
-2. Jumlah diskusi per minggu: volume aktivitas diskusi
-3. Rasio diskusi terjawab: persentase diskusi yang memiliki respons bermakna
-4. Upvote/Downvote Ratio pada jawaban: indikator kualitas kontribusi dan penerimaan komunitas
+OLION dinyatakan berhasil jika:
+1. Fitur utama berjalan end-to-end:
+   register/login → buat diskusi → jawab/komentar → voting → report → modera>
+2. Role-based access berjalan sesuai aturan (User/Expert/Moderator/Admin)
+3. API terdokumentasi dan dapat diuji
+4. Test case inti minimal PASS (auth, diskusi, vote, report, moderasi)
+5. Sistem dapat dideploy dan dijalankan stabil
 
 ### 3.3 Minimum MVP Success Target
-OLION dianggap berhasil pada tahap MVP jika mencapai minimal:
-1. 30 user aktif mingguan (WAU)
-2. 80–100 diskusi pada fase MVP
-3. 65–70% diskusi terjawab
-4. Upvote/Downvote ratio jawaban > 2:1
+Keberhasilan tujuan proyek OLION pada tahap MVP dapat diukur melalui indikator berikut, jika mencapai minimal:
+1. Weekly Active Users (WAU): jumlah pengguna aktif mingguan: 30 user aktif mingguan (WAU)
+2. Jumlah diskusi per minggu: volume aktivitas diskusi: 80–100 diskusi pada fase MVP
+3. Rasio diskusi terjawab: persentase diskusi yang memiliki respons bermakna: 65–70% diskusi terjawab
+4. Upvote/Downvote Ratio pada jawaban: indikator kualitas kontribusi dan penerimaan komunitas: Upvote/Downvote ratio jawaban > 2:1
 
 ---
 
@@ -179,7 +181,7 @@ OLION diusulkan sebagai platform diskusi berbasis web dengan identitas pseudonym
 
 1. BR-01 — Ruang Diskusi Aman Secara Sosial
 - Deskripsi: Sistem harus menyediakan ruang diskusi yang mengurangi fear of judgment dan tekanan sosial agar pengguna berani bertanya/berpendapat.
-- Stakeholder: User, Expert
+- Stakeholder: User, Expert, Moderator, Admin
 
 2. BR-02 — Pseudonimitas sebagai Identitas Publik Utama
 - Deskripsi: Sistem harus menggunakan pseudonym sebagai identitas publik utama dalam seluruh aktivitas diskusi, dengan anonimitas terkontrol.
@@ -187,7 +189,7 @@ OLION diusulkan sebagai platform diskusi berbasis web dengan identitas pseudonym
 
 3. BR-03 — Pseudonym Default Generate + Editable
 - Deskripsi: Sistem harus dapat menghasilkan pseudonym secara otomatis saat registrasi dan memungkinkan pengguna mengubah pseudonym sesuai aturan yang ditentukan.
-- Stakeholder: User
+- Stakeholder: User, Admin
 
 4. BR-04 — Autentikasi Wajib untuk Membuat Konten
 - Deskripsi: Sistem harus mewajibkan pengguna login untuk membuat diskusi, jawaban, dan komentar demi menjaga akuntabilitas.
@@ -211,7 +213,7 @@ OLION diusulkan sebagai platform diskusi berbasis web dengan identitas pseudonym
 
 9. BR-09 — Navigasi dan Akses Informasi yang Mudah
 - Deskripsi: Sistem harus menyediakan daftar diskusi, detail diskusi, dan alur baca yang jelas agar pengguna mudah memahami konteks diskusi.
-- Stakeholder: User
+- Stakeholder: User, Expert
 
 10. BR-10 — Pencarian Diskusi (Search)
 - Deskripsi: Sistem harus menyediakan fitur pencarian berbasis kata kunci agar pengguna dapat menemukan diskusi relevan sesuai minat.
@@ -223,7 +225,7 @@ OLION diusulkan sebagai platform diskusi berbasis web dengan identitas pseudonym
 
 12. BR-12 — Mekanisme Voting untuk Kontrol Kualitas
 - Deskripsi: Sistem harus menyediakan voting pada konten (diskusi/jawaban/komentar) sebagai sinyal kualitas dan mekanisme kurasi komunitas.
-- Stakeholder: User, Expert, Admin
+- Stakeholder: User, Expert, Moderator, Admin
 
 13. BR-13 — Reputasi Pengguna (Basic)
 - Deskripsi: Sistem harus menerapkan reputasi dasar untuk memberi pengakuan kontribusi dan mendorong partisipasi positif.
@@ -231,7 +233,7 @@ OLION diusulkan sebagai platform diskusi berbasis web dengan identitas pseudonym
 
 14. BR-14 — Mendorong Kontribusi Berkualitas (Quality-Driven Participation)
 - Deskripsi: Sistem harus mendorong pengguna untuk menulis kontribusi yang rasional dan bermakna, bukan sekadar opini dangkal.
-- Stakeholder: User, Expert, Admin
+- Stakeholder: User, Expert, Moderator, Admin
 
 15. BR-15 — Pelaporan Konten (Report)
 - Deskripsi: Sistem harus menyediakan fitur report untuk memungkinkan pengguna melaporkan konten bermasalah demi menjaga ruang diskusi tetap aman.
@@ -247,7 +249,7 @@ OLION diusulkan sebagai platform diskusi berbasis web dengan identitas pseudonym
 
 18. BR-18 — Prioritas Penanganan Laporan
 - Deskripsi: Sistem harus membantu moderator memprioritaskan laporan agar beban moderasi tetap terkontrol dan kasus penting ditangani lebih cepat.
-- Stakeholder: Moderator
+- Stakeholder: Moderator, Admin
 
 19. BR-19 — Verified Expert sebagai Sumber Kredibilitas
 - Deskripsi: Sistem harus menyediakan status Verified Expert untuk meningkatkan kredibilitas jawaban dan memperkuat kualitas diskusi.
@@ -259,7 +261,7 @@ OLION diusulkan sebagai platform diskusi berbasis web dengan identitas pseudonym
 
 21. BR-21 — Proses Approval/Reject Verifikasi oleh Admin
 - Deskripsi: Sistem harus memungkinkan admin melakukan approval/reject terhadap pengajuan verifikasi pakar sesuai kriteria yang ditetapkan.
-- Stakeholder: Admin
+- Stakeholder: Expert, Admin
 
 22. BR-22 — Label Pakar Ditampilkan Secara Konsisten
 - Deskripsi: Sistem harus menampilkan label Verified Expert pada profil dan kontribusi pakar agar pengguna mudah mengenali otoritas keahlian.
@@ -271,7 +273,7 @@ OLION diusulkan sebagai platform diskusi berbasis web dengan identitas pseudonym
 
 24. BR-24 — Ekosistem Diskusi yang Tertib dan Terukur
 - Deskripsi: Sistem harus menjaga ekosistem diskusi tetap tertib melalui aturan, kontrol kualitas, dan penegakan moderasi.
-- Stakeholder: Admin, Moderator
+- Stakeholder: User, Expert, Moderator, Admin
 
 25. BR-25 — Panel Admin/Moderator untuk Operasional Platform
 - Deskripsi: Sistem harus menyediakan panel khusus untuk admin/moderator guna menjalankan fungsi pengelolaan platform secara efisien.
@@ -279,11 +281,11 @@ OLION diusulkan sebagai platform diskusi berbasis web dengan identitas pseudonym
 
 26. BR-26 — Manajemen User oleh Admin
 - Deskripsi: Sistem harus memungkinkan admin melakukan pengelolaan user (melihat data user, role, dan tindakan administratif sesuai kebijakan).
-- Stakeholder: Admin
+- Stakeholder: User, Admin
 
-27. BR-27 — Manajemen Kategori oleh Admin (Jika Ada)
+27. BR-27 — Manajemen Kategori oleh Admin
 - Deskripsi: Sistem harus memungkinkan admin mengelola kategori diskusi untuk menjaga struktur informasi dan navigasi pengguna.
-- Stakeholder: Admin
+- Stakeholder: User, Expert, Admin
 
 28. BR-28 — Transparansi dan Akuntabilitas Moderasi
 - Deskripsi: Sistem harus menjaga proses moderasi dapat dipertanggungjawabkan agar keputusan moderasi tidak bersifat sewenang-wenang.
@@ -291,27 +293,27 @@ OLION diusulkan sebagai platform diskusi berbasis web dengan identitas pseudonym
 
 29. BR-29 — Dokumentasi API untuk Kemudahan Integrasi & Testing
 - Deskripsi: Sistem harus menyediakan dokumentasi API agar endpoint dapat dipahami, diuji, dan dipelihara dengan baik.
-- Stakeholder: beel (Developer), Admin
+- Stakeholder: Developer, Admin
 
 30. BR-30 — Test Plan, Test Cases, dan Evidence
 - Deskripsi: Sistem harus memiliki dokumen pengujian yang membuktikan fitur inti berjalan sesuai kebutuhan.
-- Stakeholder: beel (Developer), Admin
+- Stakeholder: Developer, Admin
 
 31. BR-31 — Deployment Guide Dasar
 - Deskripsi: Sistem harus memiliki panduan deployment dasar agar aplikasi dapat dijalankan di environment yang tersedia (local/VPS/Docker).
-- Stakeholder: beel (Developer)
+- Stakeholder: Developer
 
 32. BR-32 — Stabilitas Sistem untuk Rilis MVP
 - Deskripsi: Sistem harus dapat berjalan stabil pada fitur inti end-to-end sebagai syarat rilis MVP.
-- Stakeholder: User, Admin, beel (Developer)
+- Stakeholder: User, Moderator, Admin, Developer
 
 33. BR-33 — Konsistensi Dokumen dengan Implementasi
 - Deskripsi: Seluruh dokumentasi harus sinkron dengan implementasi aktual (API, database schema, role permission).
-- Stakeholder: beel (Developer), Admin
+- Stakeholder: Developer, Admin
 
 34. BR-34 — Mendukung Evaluasi Keberhasilan MVP
 - Deskripsi: Sistem harus memungkinkan evaluasi keberhasilan MVP berdasarkan metrik utama (WAU, diskusi/minggu, rasio terjawab, vote ratio).
-- Stakeholder: Admin, beel (Developer)
+- Stakeholder: Admin, Developer
 
 ---
 
