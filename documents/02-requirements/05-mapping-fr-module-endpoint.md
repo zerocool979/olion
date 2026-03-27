@@ -1,630 +1,589 @@
----
-
 # Mapping FR → Module → Endpoint
 
 **Project Name:** OLION
-**Document Type:** FR Mapping to Module & API Endpoint
-**Owner/Developer:** beel (Solo Fullstack)
-**Version:** 1.0
-**Last Update:** 2026-01-28
+**Document Type:** Functional Requirement Mapping to Backend Module & REST Endpoint
+**Owner:** beel
+**Version:** 1.0 (MVP Ready)
+**Status:** Implementation Reference
+**Last Updated:** 2026-03-27
 
 ---
 
-## 1) Tujuan Dokumen
+# 1. Purpose of This Document
 
-Dokumen ini memetakan **Functional Requirements (FR)** dari SRS ke:
+Dokumen ini berfungsi sebagai referensi implementasi teknis yang menghubungkan:
 
-* **Module Backend**
-* **Endpoint REST API**
-* **Auth (Public / Authenticated / Role)**
-* **Catatan rules MVP** (pseudonym, edit window, soft delete, dsb)
+* Functional Requirement (FR)
+* Backend Module
+* REST API Endpoint
+* Access Scope (Public / Authenticated / Role-based)
+* Critical Business Rules (MVP Constraints)
 
-Dokumen ini dipakai sebagai acuan implementasi backend & sinkronisasi frontend.
+Dokumen ini harus digunakan sebagai:
+
+* acuan implementasi backend
+* referensi integrasi frontend
+* dasar validasi API coverage
+* referensi QA saat menyusun test cases
+
+Setiap FR yang tercantum di SRS harus memiliki endpoint atau rule enforcement yang jelas pada dokumen ini.
 
 ---
 
-## 2) Konvensi API OLION (Standar)
+# 2. Global API Conventions
 
-### 2.1 Base Path
+## 2.1 Base Path
 
-* Base API: `/api`
+```
+/api
+```
 
-### 2.2 Auth Header
+## 2.2 Authentication Header
 
-* Access token dikirim via:
+Semua endpoint yang memerlukan autentikasi menggunakan:
 
-  * `Authorization: Bearer <access_token>`
+```
+Authorization: Bearer <access_token>
+```
 
-### 2.3 Standard Response Format
+## 2.3 Standard Response Format
 
-Semua endpoint wajib konsisten:
+Seluruh endpoint mengikuti format response konsisten:
 
 ```json
 {
   "success": true,
-  "message": "string",
+  "message": "Operation completed",
   "data": {},
   "errors": []
 }
 ```
 
-### 2.4 Roles
+## 2.4 Access Scope Definition
 
-* **Public**: tidak login
-* **Auth**: semua user login (User/Expert/Moderator/Admin)
-* **Moderator+**: Moderator dan Admin
-* **Admin only**: hanya Admin
-
----
-
-## 3) Mapping FR → Module → Endpoint
-
----
-
-# A) Auth & Account Module
-
-### FR-01 — Register
-
-**Module:** `auth`
-**Endpoint:** `POST /api/auth/register`
-**Access:** Public
-**Rules:**
-
-* password min 10 char
-* pseudonym auto-generate `society_XXXX`
+| Scope      | Description            |
+| ---------- | ---------------------- |
+| Public     | Tidak memerlukan login |
+| Auth       | Semua user login       |
+| Moderator+ | Moderator dan Admin    |
+| Admin      | Hanya Admin            |
+| System     | Middleware enforcement |
 
 ---
 
-### FR-02 — Login (access + refresh)
-
-**Module:** `auth`
-**Endpoint:** `POST /api/auth/login`
-**Access:** Public
-**Output:**
-
-* accessToken (15 min)
-* refreshToken (30 days)
+# 3. Functional Mapping — MVP Scope
 
 ---
 
-### FR-03 — Logout (revoke refresh token)
+# A. Authentication & Account Module
 
-**Module:** `auth`
-**Endpoint:** `POST /api/auth/logout`
-**Access:** Auth
-**Rules:**
+## FR-01 — User Registration
 
-* refresh token revoked server-side
+Module: `auth`
 
----
+```
+POST /api/auth/register
+```
 
-### FR-04 — Generate pseudonym default
+Access: Public
 
-**Module:** `auth` / `user`
-**Endpoint:** (implicit in register)
-**Access:** Public
-**Rules:**
+Key Rules:
 
-* format: `society_XXXX`
-* unique
+* Password minimal 10 karakter
+* Pseudonym dibuat otomatis
+* Email harus unik
 
 ---
 
-### FR-05 — Update pseudonym (max 3x lifetime)
+## FR-02 — Login (Access + Refresh Token)
 
-**Module:** `user`
-**Endpoint:** `PATCH /api/users/me/pseudonym`
-**Access:** Auth
-**Rules:**
+Module: `auth`
 
-* unique
-* allowed chars: alnum + `_`
-* max 3 changes total
+```
+POST /api/auth/login
+```
 
----
+Access: Public
 
-### FR-06 — RBAC enforcement
+Output:
 
-**Module:** `middlewares/auth` + `middlewares/role`
-**Endpoint:** (all protected endpoints)
-**Access:** System rule
-**Rules:**
-
-* role-based guard for Admin/Moderator endpoints
+* accessToken (15 menit)
+* refreshToken (30 hari)
 
 ---
 
-### FR-07 — Suspended/Banned user is read-only
+## FR-03 — Logout
 
-**Module:** `user` + `middlewares/auth`
-**Endpoint:** (enforced on write endpoints)
-**Access:** System rule
-**Rules:**
+Module: `auth`
 
-* banned/suspended cannot create/edit/vote/report
+```
+POST /api/auth/logout
+```
 
----
+Access: Auth
 
-### FR-44 (tambahan dari MVP) — Forgot Password Request
+Key Rules:
 
-**Module:** `auth`
-**Endpoint:** `POST /api/auth/forgot-password`
-**Access:** Public
-**Rules:**
-
-* rate limit 5 req/min/IP
+* Refresh token harus di-revoke server-side
 
 ---
 
-### FR-45 (tambahan dari MVP) — Reset Password
+## FR-04 — Default Pseudonym Generation
 
-**Module:** `auth`
-**Endpoint:** `POST /api/auth/reset-password`
-**Access:** Public
-**Rules:**
+Module: `auth`, `user`
 
-* reset token must be valid
+Triggered on:
 
----
+```
+POST /api/auth/register
+```
 
----
+Key Rules:
 
-# B) Category Module
+Format pseudonym:
 
-### FR-18 — Category support (if active)
+```
+society_XXXX
+```
 
-**Module:** `category`
-**Endpoint (Public/Auth):**
-
-* `GET /api/categories` (Public)
-* `GET /api/categories/:id` (Public)
-
-**Endpoint (Admin only):**
-
-* `POST /api/categories`
-* `PATCH /api/categories/:id`
-* `DELETE /api/categories/:id`
-
-**Rules:**
-
-* category wajib dipilih saat create diskusi
+Must be unique.
 
 ---
 
----
+## FR-05 — Update Pseudonym
 
-# C) Discussion Module
+Module: `user`
 
-### FR-08 — Create discussion
+```
+PATCH /api/users/me/pseudonym
+```
 
-**Module:** `discussion`
-**Endpoint:** `POST /api/discussions`
-**Access:** Auth
-**Rules:**
+Access: Auth
 
-* category wajib
-* status default: `OPEN`
-* text-only, link allowed
+Constraints:
 
----
-
-### FR-09 — List discussions (pagination)
-
-**Module:** `discussion`
-**Endpoint:** `GET /api/discussions?page=1&limit=20`
-**Access:** Public
-**Rules:**
-
-* default limit = 20
+* Maksimal 3 perubahan seumur hidup
+* Karakter: alphanumeric + underscore
+* Harus unik
 
 ---
 
-### FR-10 — Get discussion detail
+## FR-06 — Role-Based Access Control (RBAC)
 
-**Module:** `discussion`
-**Endpoint:** `GET /api/discussions/:id`
-**Access:** Public
-**Output includes:**
+Module:
 
-* discussion detail
-* answers list
-* comments list (threaded or flat)
+```
+middlewares/auth
+middlewares/role
+```
 
----
+Scope:
 
-### FR-11 — Update discussion (edit window 24h)
+All protected endpoints.
 
-**Module:** `discussion`
-**Endpoint:** `PATCH /api/discussions/:id`
-**Access:** Auth (Owner only)
-**Rules:**
+Behavior:
 
-* editable ≤ 24 jam sejak created_at
+* Endpoint dibatasi berdasarkan role
+* Unauthorized request harus ditolak
 
 ---
 
-### FR-12 — Soft delete discussion
+## FR-07 — Suspended/Banned User Restriction
 
-**Module:** `discussion`
-**Endpoint:** `DELETE /api/discussions/:id`
-**Access:** Auth (Owner only)
-**Rules:**
+Module:
 
-* soft delete only
+```
+user
+middlewares/auth
+```
 
----
+Behavior:
 
-### FR-17 — Search discussions (keyword)
+User dengan status banned/suspended:
 
-**Module:** `discussion`
-**Endpoint:** `GET /api/discussions/search?q=keyword&page=1&limit=20`
-**Access:** Public
-**Rules:**
-
-* Postgres FTS
+* Tidak dapat membuat konten
+* Tidak dapat voting
+* Tidak dapat report
 
 ---
 
-### FR-46 (tambahan dari MVP) — Update status discussion (OPEN/SOLVED)
+## FR-44 — Forgot Password Request
 
-**Module:** `discussion`
-**Endpoint:** `PATCH /api/discussions/:id/status`
-**Access:** Auth (Owner only)
-**Rules:**
+Module: `auth`
 
-* allowed: OPEN, SOLVED
+```
+POST /api/auth/forgot-password
+```
 
----
-
----
-
-# D) Answer Module
-
-### FR-13 — Create answer
-
-**Module:** `answer`
-**Endpoint:** `POST /api/discussions/:id/answers`
-**Access:** Auth
-**Rules:**
-
-* text-only
+Access: Public
 
 ---
 
-### FR-15 — Update answer (edit window 24h)
+## FR-45 — Reset Password
 
-**Module:** `answer`
-**Endpoint:** `PATCH /api/answers/:id`
-**Access:** Auth (Owner only)
-**Rules:**
+Module: `auth`
 
-* editable ≤ 24 jam
+```
+POST /api/auth/reset-password
+```
 
----
-
-### FR-16 — Soft delete answer
-
-**Module:** `answer`
-**Endpoint:** `DELETE /api/answers/:id`
-**Access:** Auth (Owner only)
-**Rules:**
-
-* soft delete
+Access: Public
 
 ---
 
----
+# B. Discussion Module
 
-# E) Comment Module
+## FR-08 — Create Discussion
 
-### FR-14 — Create comment (on discussion/answer)
+Module: `discussion`
 
-**Module:** `comment`
-**Endpoint options:**
+```
+POST /api/discussions
+```
 
-* `POST /api/discussions/:id/comments`
-* `POST /api/answers/:id/comments`
-  **Access:** Auth
-  **Rules:**
-* text-only
+Access: Auth
 
----
+Rules:
 
-### FR-15 — Update comment (edit window 24h)
-
-**Module:** `comment`
-**Endpoint:** `PATCH /api/comments/:id`
-**Access:** Auth (Owner only)
-**Rules:**
-
-* editable ≤ 24 jam
+* Author pseudonym digunakan sebagai identity publik
 
 ---
 
-### FR-16 — Soft delete comment
+## FR-09 — Get Discussion List
 
-**Module:** `comment`
-**Endpoint:** `DELETE /api/comments/:id`
-**Access:** Auth (Owner only)
-**Rules:**
+Module: `discussion`
 
-* soft delete
+```
+GET /api/discussions?page=1&limit=20
+```
 
----
-
----
-
-# F) Vote Module
-
-### FR-19 — Vote discussion + answer
-
-**Module:** `vote`
-**Endpoint:**
-
-* `POST /api/discussions/:id/votes`
-* `POST /api/answers/:id/votes`
-  **Access:** Auth
-  **Payload:**
-* `{ "type": "UP" | "DOWN" }`
+Access: Public
 
 ---
 
-### FR-20 — 1 user 1 vote per content
+## FR-10 — Get Discussion Detail
 
-**Module:** `vote`
-**Endpoint:** (enforced on vote create/update)
-**Access:** System rule
-**Rules:**
+Module: `discussion`
 
-* unique constraint (user_id + target_type + target_id)
+```
+GET /api/discussions/:id
+```
 
----
-
-### FR-21 — Undo vote
-
-**Module:** `vote`
-**Endpoint options:**
-
-* `DELETE /api/discussions/:id/votes`
-* `DELETE /api/answers/:id/votes`
-  **Access:** Auth
+Access: Public
 
 ---
 
-### FR-22 — Score vote per content
+## FR-11 — Update Discussion
 
-**Module:** `vote`
-**Endpoint:** (included in detail response)
-**Access:** Public
-**Rules:**
+Module: `discussion`
 
-* score = upvotes - downvotes
+```
+PATCH /api/discussions/:id
+```
 
----
+Access: Auth (Owner)
 
-### FR-23 — Reputation basic
+Rules:
 
-**Module:** `reputation`
-**Endpoint options:**
-
-* `GET /api/users/:id/reputation` (Public)
-* `GET /api/users/me/reputation` (Auth)
-
-**Rules:**
-
-* reputasi dipengaruhi upvote & downvote
+* Edit hanya dalam 24 jam
 
 ---
 
----
+## FR-12 — Delete Discussion (Soft Delete)
 
-# G) Report & Moderation Module
+Module: `discussion`
 
-### FR-24 — Report content
+```
+DELETE /api/discussions/:id
+```
 
-**Module:** `report`
-**Endpoint:**
+Access: Auth (Owner)
 
-* `POST /api/reports`
-  **Access:** Auth (non-banned only)
-  **Payload:**
-* targetType: `DISCUSSION | ANSWER | COMMENT`
-* targetId: string
-* reason: `SPAM | BULLYING | HATE | MISINFO | OTHER`
-* note: optional
+Behavior:
+
+Soft delete only.
 
 ---
 
-### FR-26 — Report masuk moderation queue
+# C. Answer Module
 
-**Module:** `report`
-**Endpoint:** (implicit in report create)
-**Access:** System rule
-**Rules:**
+## FR-13 — Create Answer
 
-* default status: `OPEN`
+Module: `answer`
 
----
+```
+POST /api/answers
+```
 
-### FR-27 — Moderator/Admin lihat daftar report
-
-**Module:** `report`
-**Endpoint:** `GET /api/reports?status=OPEN&page=1&limit=20`
-**Access:** Moderator+
+Access: Auth
 
 ---
 
-### FR-28 — Hide content (moderation action)
+## FR-14 — Update Answer
 
-**Module:** `moderation`
-**Endpoint:** `POST /api/moderation/hide`
-**Access:** Moderator+
-**Payload:**
+```
+PATCH /api/answers/:id
+```
 
-* targetType
-* targetId
-* reason/note
-
-**Rules:**
-
-* konten hidden: publik tidak lihat
-* owner tetap bisa lihat
+Access: Auth (Owner)
 
 ---
 
-### FR-29 — Resolve report
+## FR-15 — Delete Answer
 
-**Module:** `report`
-**Endpoint:** `POST /api/reports/:id/resolve`
-**Access:** Moderator+
-**Rules:**
+```
+DELETE /api/answers/:id
+```
 
-* status report menjadi `RESOLVED`
+Access: Auth (Owner)
 
----
-
-### FR-30 — Warn user (optional minimal MVP)
-
-**Module:** `moderation`
-**Endpoint:** `POST /api/moderation/warn`
-**Access:** Moderator+
-**Payload:**
-
-* userId
-* message
+Soft delete required.
 
 ---
 
+# D. Comment Module
+
+## FR-16 — Create Comment
+
+Module: `comment`
+
+```
+POST /api/comments
+```
+
+Access: Auth
+
 ---
 
-# H) Expert Verification Module
+## FR-17 — Delete Comment
 
-### FR-31 — Submit expert verification request
+```
+DELETE /api/comments/:id
+```
 
-**Module:** `expert`
-**Endpoint:** `POST /api/expert/requests`
-**Access:** Auth
-**Payload:**
+Access: Auth (Owner)
 
-* document (file upload) — PDF/JPG/PNG max 5MB
+---
+
+# E. Voting Module
+
+## FR-18 — Vote Content
+
+Module: `vote`
+
+```
+POST /api/votes
+```
+
+Access: Auth
+
+Rules:
+
+* One vote per user per content
+
+---
+
+## FR-19 — Remove Vote
+
+```
+DELETE /api/votes/:id
+```
+
+Access: Auth
+
+---
+
+# F. Report & Moderation Module
+
+## FR-20 — Report Content
+
+Module: `report`
+
+```
+POST /api/reports
+```
+
+Access: Auth
+
+---
+
+## FR-21 — View Report Queue
+
+Module: `moderator`
+
+```
+GET /api/moderator/reports
+```
+
+Access: Moderator+
+
+---
+
+## FR-22 — Resolve Report
+
+```
+POST /api/moderator/reports/:id/resolve
+```
+
+Access: Moderator+
+
+---
+
+# G. Expert Verification Module
+
+## FR-32 — Submit Expert Request
+
+Module: `expert`
+
+```
+POST /api/expert/requests
+```
+
+Access: Auth
+
+Payload:
+
+* document (PDF/JPG/PNG max 5MB)
 * portfolioLink (required)
 
 ---
 
-### FR-33 — Admin approve/reject expert request
+## FR-33 — Approve / Reject Expert
 
-**Module:** `expert`
-**Endpoint (Admin only):**
+Module: `expert`
 
-* `POST /api/expert/requests/:id/approve`
-* `POST /api/expert/requests/:id/reject`
+```
+POST /api/expert/requests/:id/approve
+POST /api/expert/requests/:id/reject
+```
 
----
-
-### FR-34 — Admin revoke expert status
-
-**Module:** `expert`
-**Endpoint:** `POST /api/expert/:userId/revoke`
-**Access:** Admin only
+Access: Admin
 
 ---
 
-### FR-35 — Expert label shown on profile + answers
+## FR-34 — Revoke Expert Status
 
-**Module:** `user` + `answer`
-**Endpoint:** (included in response payload)
-**Access:** Public
-**Rules:**
+```
+POST /api/expert/:userId/revoke
+```
 
-* user profile includes `isExpert=true`
-* answer includes `author.isExpert=true`
+Access: Admin
 
 ---
 
----
+## FR-35 — Expert Badge Exposure
 
-# I) Admin & Moderator Panel Module
+Module: `user`, `answer`
 
-### FR-36 — Panel access by role
-
-**Module:** `admin` / `moderator`
-**Endpoint:** (frontend routing + RBAC)
-**Access:** Role-based
+Included in response payload.
 
 ---
 
-### FR-37 — Admin manage users (list)
+# H. Admin & Moderator Module
 
-**Module:** `admin`
-**Endpoint:** `GET /api/admin/users?page=1&limit=20`
-**Access:** Admin only
+## FR-37 — List Users
 
----
+Module: `admin`
 
-### FR-38 — Admin change user role
+```
+GET /api/admin/users?page=1&limit=20
+```
 
-**Module:** `admin`
-**Endpoint:** `PATCH /api/admin/users/:id/role`
-**Access:** Admin only
-**Payload:**
-
-* role: `USER | EXPERT | MODERATOR | ADMIN`
+Access: Admin
 
 ---
 
-### FR-39 — Admin manage categories
+## FR-38 — Change User Role
 
-**Module:** `admin` / `category`
-**Endpoint:** (lihat Category Module)
-**Access:** Admin only
+```
+PATCH /api/admin/users/:id/role
+```
 
----
-
----
-
-# J) Documentation, Testing, Deployment
-
-### FR-40 — Swagger API Documentation
-
-**Module:** `docs`
-**Endpoint:** `/api/docs` or `/api/swagger`
-**Access:** Public (recommended)
+Access: Admin
 
 ---
 
-### FR-41 — Test Plan + Test Cases
+## FR-39 — Manage Categories
 
-**Module:** `testing`
-**Repo Location:** `06-testing/` (atau sesuai struktur OLION)
-**Access:** Internal doc
+Module: `category`
 
----
+```
+POST /api/admin/categories
+PATCH /api/admin/categories/:id
+DELETE /api/admin/categories/:id
+```
 
-### FR-42 — Testing Evidence (screenshot + log)
-
-**Module:** `testing`
-**Repo Location:** `06-testing/evidence/`
-**Access:** Internal doc
+Access: Admin
 
 ---
 
-### FR-43 — Deployment guide + docker
+# I. Documentation & Deployment Module
 
-**Module:** `deployment`
-**Repo Location:** `07-deployment/`
-**Access:** Internal doc
+## FR-40 — API Documentation Access
 
----
+Module: `docs`
 
-## 4) Catatan Penting MVP (Rules Summary)
+```
+GET /api/docs
+```
 
-* Edit konten maksimal **24 jam**
-* Delete user = **soft delete**
-* Voting hanya untuk **diskusi + jawaban**
-* Report untuk semua konten, moderasi minimal hide + resolve
-* Expert verification: dokumen + link portofolio wajib
-* Auth: access token 15m, refresh token 30d, rotation ON
-* Admin identity view hanya via audit mode + audit log
+Access: Public
 
 ---
 
+## FR-41 — Test Plan Repository
+
+Location:
+
+```
+07-testing/
+```
+
+---
+
+## FR-42 — Test Evidence Storage
+
+Location:
+
+```
+07-testing/evidence/
+```
+
+---
+
+## FR-43 — Deployment Guide
+
+Location:
+
+```
+08-release-ops/
+```
+
+---
+
+# 4. MVP Operational Constraints (Mandatory Rules)
+
+Semua implementasi harus mematuhi aturan berikut:
+
+* Edit window maksimal 24 jam
+* Delete menggunakan soft delete
+* Voting hanya pada discussion dan answer
+* Semua moderasi harus tercatat dalam audit log
+* Refresh token rotation wajib aktif
+* Identity exposure hanya melalui audit mode
+* Semua endpoint protected wajib RBAC-guarded
+
+---
+
+# 5. Implementation Readiness Summary
+
+Dokumen ini dianggap **READY FOR IMPLEMENTATION** apabila:
+
+* Seluruh FR memiliki module mapping
+* Seluruh endpoint memiliki access scope jelas
+* Semua business rule kritikal telah ditentukan
+* Tidak ada FR tanpa jalur implementasi
+
+Status Saat Ini:
+
+**IMPLEMENTATION READY — MVP BASELINE**

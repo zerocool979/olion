@@ -1,317 +1,451 @@
 # Feature Breakdown MVP
 
-**Project Name:** OLION
-**Document Type:** Feature Breakdown MVP
-**Owner/Developer:** beel (Solo Fullstack)
-**Version:** 1.0
-**Last Update:** 2026-01-28
+**Project Name:** OLION  
+**Document Type:** Feature Breakdown MVP  
+**Owner:** beel  
+**Version:** 1.0  
+**Last Update:** 2026-03-27  
 
 ---
 
-## 1) Tujuan MVP (Outcome)
+# 1. Tujuan MVP
 
-MVP OLION ditujukan untuk mencapai hasil berikut (bukan sekadar fitur):
+Minimum Viable Product (MVP) OLION dirancang untuk menghadirkan platform diskusi berbasis reputasi yang stabil, aman, dan terstruktur.
 
-1. **Meningkatkan partisipasi diskusi yang aman dan berkelanjutan**
-2. **Meningkatkan kualitas dan kedalaman kontribusi pengetahuan**
-3. **Menciptakan ekosistem diskusi yang tertib dan minim intimidasi**
+Fokus utama MVP adalah memastikan seluruh alur utama sistem dapat berjalan secara end-to-end, mulai dari autentikasi pengguna hingga moderasi konten.
 
----
+Tujuan utama MVP:
 
-## 2) Success Metrics MVP (Target Minimal)
-
-Target keberhasilan MVP OLION dinyatakan tercapai jika minimal memenuhi:
-
-* **≥ 30 Weekly Active Users (WAU)**
-* **≥ 80–100 diskusi** dalam fase MVP
-* **≥ 65–70% diskusi terjawab** (punya respons bermakna)
-* **Upvote/Downvote ratio > 2:1** pada jawaban
+1. Menyediakan ruang diskusi yang aman dan terstruktur
+2. Mendorong kontribusi pengetahuan yang berkualitas
+3. Menjaga kualitas konten melalui sistem voting dan moderasi
+4. Menyediakan kontrol administratif dasar untuk menjaga stabilitas sistem
 
 ---
 
-## 3) Prinsip MVP (Rules of MVP)
+# 2. Target Keberhasilan MVP
 
-Agar MVP selesai dan siap produksi, maka disepakati prinsip berikut:
+MVP dianggap berhasil jika memenuhi indikator berikut:
 
-* MVP fokus pada **end-to-end flow**:
-  register/login → buat diskusi → jawab/komentar → voting → report → moderasi
-* UI cukup **fungsional & jelas**, bukan final polishing
-* Sistem reputasi dibuat **basic**, tanpa badge/level
-* Moderasi dibuat **manual & terkontrol**, bukan AI otomatis
-* Semua modul harus sinkron dengan:
-
-  * database schema
-  * API endpoint
-  * RBAC permission
-  * test plan & evidence
+- ≥ 30 Weekly Active Users (WAU)
+- ≥ 80 diskusi aktif selama fase MVP
+- ≥ 65% diskusi memiliki minimal satu jawaban
+- ≥ 50% konten menerima voting
+- ≥ 90% laporan (report) diproses dalam waktu 24 jam
+- Sistem berjalan stabil dengan error rate API < 2%
 
 ---
 
-## 4) Feature Breakdown MVP
+# 3. Prinsip Pengembangan MVP
 
-### A) Autentikasi & Akun
+Pengembangan MVP mengikuti prinsip berikut:
 
-**Tujuan:** memastikan hanya user login yang bisa berkontribusi, dengan identitas publik pseudonym.
-
-**Sub-fitur minimal:**
-
-* Register menggunakan **email + password**
-* Login menghasilkan **JWT access token + refresh token**
-* Logout
-* Pseudonym default auto-generate format: `society_XXXX` (acak huruf+angka)
-* User dapat edit pseudonym **maksimal 3x seumur akun**
-* Forgot password (reset password flow)
-
-**Batas MVP (tidak dibuat dulu):**
-
-* Social login (Google/GitHub)
-* MFA/2FA
-* Anonymous posting tanpa akun
-
-**Definition of Done (DoD):**
-
-* Register/Login/Logout berjalan end-to-end
-* Access token + refresh token berjalan stabil
-* Endpoint protected menggunakan middleware RBAC
-* Pseudonym unik & tervalidasi formatnya
-* Edit pseudonym enforce limit max 3x
-* Forgot password bekerja dengan token reset
-* Test case inti auth minimal PASS
+- Fitur difokuskan pada alur utama sistem, bukan kelengkapan maksimal
+- Setiap fitur memiliki integrasi jelas dengan database dan API
+- Validasi data dilakukan di sisi backend
+- Kontrol akses berbasis role diterapkan pada seluruh endpoint
+- Aktivitas penting dicatat dalam sistem logging dasar
+- Pengujian dilakukan untuk memastikan stabilitas fitur inti
 
 ---
 
-### B) Forum Diskusi (Core Knowledge Flow)
-
-**Tujuan:** menyediakan ruang diskusi terstruktur dan mudah diakses.
-
-**Sub-fitur minimal:**
-
-* CRUD Diskusi (create, read/list, update, delete)
-* Diskusi wajib memiliki **kategori**
-* List diskusi + pagination
-* Detail diskusi (isi diskusi + jawaban + komentar)
-* Search diskusi by keyword
-* Status diskusi: **OPEN / SOLVED**
-* Jawaban pada diskusi
-* Komentar pada diskusi/jawaban
-
-**Aturan MVP (disepakati):**
-
-* Konten MVP **text-only**, link diperbolehkan
-* Edit diskusi/jawaban/komentar maksimal **24 jam**
-* Delete konten oleh user = **soft delete**
-* Diskusi boleh dibuat meskipun belum ada jawaban
-
-**Batas MVP (tidak dibuat dulu):**
-
-* Rich text editor advanced
-* Attachment upload (gambar/file)
-* Bookmark/follow thread
-* Tagging kompleks
-
-**Definition of Done (DoD):**
-
-* User bisa create diskusi (wajib kategori)
-* User bisa jawab + komentar
-* List & detail diskusi berjalan stabil
-* Search bekerja
-* Status OPEN/SOLVED bisa diubah sesuai aturan
-* Soft delete tidak menampilkan konten ke publik
-* Edit time limit 24 jam enforce di backend
-* Test case inti diskusi minimal PASS
+# 4. Breakdown Fitur MVP
 
 ---
 
-### C) Voting & Reputasi (Quality Control Basic)
+# MODULE A — Authentication & Account Management
 
-**Tujuan:** mendorong kontribusi berkualitas dan mengurangi noise.
+Modul ini mengelola identitas pengguna serta proses autentikasi.
 
-**Sub-fitur minimal:**
+## Fitur Utama
 
-* Voting berlaku untuk: **diskusi + jawaban**
-* Upvote + Downvote aktif
-* Vote dapat di-undo (batal/ganti vote)
-* Perhitungan score vote untuk konten
-* Reputasi basic berdasarkan upvote & downvote
+### A1 — Registrasi Pengguna
 
-**Batas MVP (tidak dibuat dulu):**
+Pengguna dapat membuat akun menggunakan email dan password.
 
-* Voting untuk komentar
-* Badge/level user
-* Sistem ranking kompleks / leaderboard
+Fungsi utama:
 
-**Definition of Done (DoD):**
+- Pendaftaran menggunakan email unik
+- Password disimpan dalam bentuk hash
+- Sistem secara otomatis membuat pseudonym unik
+- Role default pengguna adalah `user`
 
-* Voting diskusi & jawaban berjalan
-* 1 user hanya bisa 1 vote per konten
-* Undo vote berjalan benar
-* Reputasi update sesuai aturan (basic)
-* Test case voting minimal PASS
+Data utama:
 
----
-
-### D) Report & Moderasi (Safety Layer)
-
-**Tujuan:** menjaga OLION tetap menjadi ruang aman dari bullying, spam, dan intimidasi.
-
-**Sub-fitur minimal:**
-
-* Report untuk: **diskusi + jawaban + komentar**
-* Hanya user **non-banned** yang boleh report
-* Reason report fixed list + note opsional:
-
-  * Spam
-  * Bullying/Harassment
-  * Hate Speech
-  * Misinformation
-  * Other
-* Moderation queue untuk report
-* Aksi moderasi minimal:
-
-  * hide content
-  * resolve report
-* Jika konten di-hide:
-
-  * publik tidak bisa lihat
-  * owner tetap bisa lihat
-
-**Batas MVP (tidak dibuat dulu):**
-
-* AI moderation otomatis penuh
-* Auto-ban otomatis berdasarkan report count
-* Appeal system / dispute resolution
-
-**Definition of Done (DoD):**
-
-* Report bisa dibuat & masuk queue
-* Moderator/Admin bisa lihat queue
-* Hide content bekerja sesuai aturan visibility
-* Resolve report mengubah status report
-* Semua aksi tercatat minimal untuk audit (log sederhana)
-* Test case report & moderasi minimal PASS
+- email
+- password_hash
+- pseudonym
+- role
+- status
+- created_at
 
 ---
 
-### E) Verified Expert
+### A2 — Login
 
-**Tujuan:** menghadirkan kontribusi kredibel dari pakar untuk memperkuat kualitas diskusi.
+Pengguna dapat masuk ke sistem menggunakan email dan password.
 
-**Sub-fitur minimal:**
+Output login:
 
-* User dapat mengajukan expert verification dengan:
+- Access token (JWT)
+- Refresh token
 
-  * dokumen (sertifikat/CV/dll)
-  * link portofolio (wajib)
-* Status request: **pending → approved/rejected → revoked**
-* Approve/reject hanya oleh **Admin**
-* Label expert muncul pada:
-
-  * profil
-  * jawaban
-* Expert tetap dapat membuat diskusi seperti user biasa
-
-**Batas MVP (tidak dibuat dulu):**
-
-* Multi-level expert tier
-* Verified organization
-* Sistem review peer expert
-
-**Definition of Done (DoD):**
-
-* Request expert bisa dibuat dan disimpan
-* Admin bisa approve/reject/revoke
-* Label expert muncul pada profil & jawaban
-* Role/flag expert enforce di backend
-* Test case expert verification minimal PASS
+Access token digunakan untuk autentikasi request API, sedangkan refresh token digunakan untuk memperbarui sesi login.
 
 ---
 
-### F) Admin & Moderator Panel
+### A3 — Logout
 
-**Tujuan:** menyediakan kontrol sistem yang cukup untuk menjaga kualitas dan keamanan platform.
-
-**Sub-fitur minimal:**
-
-* Moderator:
-
-  * boleh hide content
-  * boleh resolve report
-* Admin panel minimal mencakup:
-
-  * user management
-  * expert verification
-  * report queue
-* Admin dapat edit role user manual
-* CRUD kategori hanya oleh **Admin**
-
-**Batas MVP (tidak dibuat dulu):**
-
-* Analytics dashboard kompleks
-* Bulk actions skala besar
-* Workflow moderation multi-step
-
-**Definition of Done (DoD):**
-
-* Panel Admin/Moderator bisa diakses sesuai RBAC
-* Admin bisa kelola user & role
-* Admin bisa kelola kategori
-* Moderator bisa proses report (hide + resolve)
-* Test case panel permission minimal PASS
+Logout mengakhiri sesi aktif pengguna dengan menonaktifkan refresh token.
 
 ---
 
-### G) Dokumentasi, Testing, Deployment
+### A4 — Reset Password
 
-**Tujuan:** memastikan sistem bisa dipakai, diuji, dan dideploy dengan standar minimum produksi.
+Pengguna dapat melakukan reset password melalui email.
 
-**Sub-fitur minimal:**
+Alur:
 
-* API Documentation menggunakan **Swagger**
-* Test plan + test cases untuk fitur inti
-* Evidence testing berupa **screenshot + log**
-* Deployment target: **local + docker**
-* File `.env.example` tersedia
+1. Pengguna meminta reset password
+2. Sistem mengirim token reset
+3. Pengguna membuat password baru
+4. Password diperbarui di database
 
-**Batas MVP (tidak dibuat dulu):**
-
-* CI/CD pipeline penuh
-* Performance testing skala besar
-* Auto-deploy ke cloud
-
-**Definition of Done (DoD):**
-
-* Swagger dapat diakses dan sinkron dengan endpoint
-* Test cases inti minimal PASS
-* Evidence testing tersimpan rapi
-* Docker build & docker compose bisa run aplikasi
-* `.env.example` tersedia dan valid
+Token reset memiliki batas waktu valid.
 
 ---
 
-## 5) Urutan Implementasi
+### A5 — Manajemen Pseudonym
 
-Urutan pengerjaan MVP OLION yang paling efisien:
+Pengguna dapat mengubah pseudonym dalam batas tertentu.
 
-1. Auth + RBAC + pseudonym + token (access/refresh)
-2. Forum diskusi + kategori + status OPEN/SOLVED
-3. Jawaban + komentar
-4. Voting + reputasi basic
-5. Report + moderation queue + hide/resolve
-6. Verified expert (request + approval)
-7. Admin/Moderator panel (user mgmt + report queue + expert verification)
-8. Swagger + testing evidence + docker deployment
+Batasan:
+
+- Maksimal 3 kali perubahan pseudonym selama masa akun
 
 ---
 
-## 6) Output MVP (Deliverables Minimal)
+# MODULE B — Forum Discussion
 
-MVP OLION dinyatakan siap rilis jika deliverables berikut terpenuhi:
+Modul inti yang menyediakan ruang diskusi.
 
-1. Frontend Web Application (role-based UI)
+---
+
+## Fitur Utama
+
+### B1 — Membuat Diskusi
+
+Pengguna dapat membuat diskusi baru.
+
+Setiap diskusi wajib memiliki:
+
+- Judul
+- Konten
+- Kategori
+
+Konten dalam MVP berbasis teks.
+
+---
+
+### B2 — Daftar Diskusi
+
+Sistem menampilkan daftar diskusi dengan dukungan:
+
+- Pagination
+- Filter kategori
+- Pencarian berdasarkan kata kunci
+
+---
+
+### B3 — Detail Diskusi
+
+Halaman detail diskusi menampilkan:
+
+- Konten diskusi
+- Daftar jawaban
+- Komentar terkait
+
+---
+
+### B4 — Update Diskusi
+
+Pengguna dapat mengubah diskusi dalam waktu maksimal 24 jam setelah dibuat.
+
+---
+
+### B5 — Hapus Diskusi
+
+Penghapusan dilakukan menggunakan metode soft delete.
+
+Diskusi tidak tampil ke publik namun tetap tersimpan di database.
+
+---
+
+### B6 — Jawaban Diskusi
+
+Pengguna dapat memberikan jawaban pada diskusi.
+
+Setiap jawaban terkait langsung dengan diskusi.
+
+---
+
+### B7 — Komentar
+
+Komentar dapat ditambahkan pada:
+
+- Diskusi
+- Jawaban
+
+---
+
+# MODULE C — Voting & Reputation
+
+Modul ini membantu menjaga kualitas konten melalui sistem voting.
+
+---
+
+## Fitur Utama
+
+### C1 — Voting Konten
+
+Voting tersedia untuk:
+
+- Diskusi
+- Jawaban
+
+Jenis voting:
+
+- Upvote
+- Downvote
+
+Setiap pengguna hanya dapat memberikan satu vote pada satu konten.
+
+---
+
+### C2 — Pembatalan Vote
+
+Pengguna dapat membatalkan atau mengganti vote yang telah diberikan.
+
+---
+
+### C3 — Reputasi Pengguna
+
+Reputasi dihitung berdasarkan interaksi voting terhadap konten pengguna.
+
+Reputasi digunakan sebagai indikator kontribusi pengguna.
+
+---
+
+# MODULE D — Report & Moderation
+
+Modul ini berfungsi menjaga keamanan dan kualitas konten.
+
+---
+
+## Fitur Utama
+
+### D1 — Report Konten
+
+Pengguna dapat melaporkan konten berupa:
+
+- Diskusi
+- Jawaban
+- Komentar
+
+Kategori laporan:
+
+- Spam
+- Harassment
+- Hate Speech
+- Misinformation
+- Other
+
+---
+
+### D2 — Moderation Queue
+
+Moderator dapat melihat daftar laporan yang masuk.
+
+Queue berisi:
+
+- Detail konten
+- Alasan laporan
+- Status laporan
+
+---
+
+### D3 — Hide Content
+
+Moderator dapat menyembunyikan konten bermasalah.
+
+Efek:
+
+- Konten tidak tampil ke publik
+- Pemilik konten tetap dapat melihatnya
+
+---
+
+### D4 — Resolve Report
+
+Moderator dapat menandai laporan sebagai selesai.
+
+Status laporan diperbarui dalam sistem.
+
+---
+
+# MODULE E — Verified Expert
+
+Modul ini memungkinkan identifikasi pengguna dengan keahlian tertentu.
+
+---
+
+## Fitur Utama
+
+### E1 — Pengajuan Expert
+
+Pengguna dapat mengajukan verifikasi dengan:
+
+- Dokumen pendukung
+- Link portofolio
+
+Status permintaan:
+
+- Pending
+- Approved
+- Rejected
+- Revoked
+
+---
+
+### E2 — Persetujuan Expert
+
+Admin dapat menyetujui atau menolak permintaan.
+
+Jika disetujui:
+
+- Role pengguna diperbarui menjadi `expert`
+- Label expert tampil di profil dan jawaban
+
+---
+
+# MODULE F — Admin & Moderator Panel
+
+Modul ini menyediakan kontrol administratif sistem.
+
+---
+
+## Fitur Utama
+
+### F1 — Manajemen Pengguna
+
+Admin dapat:
+
+- Melihat daftar pengguna
+- Mengubah role
+- Menonaktifkan akun
+
+---
+
+### F2 — Manajemen Kategori
+
+Admin dapat:
+
+- Membuat kategori
+- Mengubah kategori
+- Menghapus kategori
+
+Kategori digunakan sebagai klasifikasi diskusi.
+
+---
+
+### F3 — Role Management
+
+Role yang tersedia:
+
+- user
+- expert
+- moderator
+- admin
+
+Setiap role memiliki hak akses yang berbeda.
+
+---
+
+# MODULE G — System Foundation
+
+Komponen pendukung sistem.
+
+---
+
+## Fitur Utama
+
+### G1 — Dokumentasi API
+
+Seluruh endpoint tersedia dalam dokumentasi API menggunakan OpenAPI / Swagger.
+
+Dokumentasi harus selalu sesuai dengan implementasi API.
+
+---
+
+### G2 — Deployment Docker
+
+Aplikasi dapat dijalankan menggunakan Docker.
+
+File minimal:
+
+- Dockerfile
+- docker-compose.yml
+- .env.example
+
+---
+
+### G3 — Logging
+
+Aktivitas penting dicatat dalam sistem logging.
+
+Contoh aktivitas:
+
+- Login pengguna
+- Voting
+- Moderasi konten
+
+Logging digunakan untuk kebutuhan audit dan troubleshooting.
+
+---
+
+# 5. Urutan Implementasi
+
+Urutan pengembangan:
+
+1. Authentication & RBAC
+2. Category Management
+3. Discussion System
+4. Answer System
+5. Comment System
+6. Voting System
+7. Report & Moderation
+8. Verified Expert
+9. Admin Panel
+10. API Documentation
+11. Deployment Setup
+
+---
+
+# 6. Deliverables MVP
+
+MVP OLION dianggap siap digunakan ketika komponen berikut tersedia:
+
+1. Frontend Web Application
 2. Backend REST API
-3. Database schema + migration/seed
-4. Dokumentasi API (Swagger)
-5. Testing report + evidence
-6. Deployment package (local + docker)
+3. Database schema
+4. API Documentation
+5. Test cases dasar
+6. Docker deployment package
+7. Basic system logging
 
 ---
+
+# Document Status
+
+Status: **Finalized**  
+Readiness: **Ready for System Design & Implementation**

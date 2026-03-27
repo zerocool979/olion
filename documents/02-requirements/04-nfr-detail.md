@@ -1,250 +1,322 @@
-
-# Non-Functional Requirements Detail (NFR)
+# Non-Functional Requirements (NFR) — Detail
 
 **Project Name:** OLION
-**Document Type:** NFR Detail
-**Owner/Developer:** beel (Solo Fullstack)
+**Document Type:** Non-Functional Requirements (NFR) Detail
+**Owner:** beel
 **Version:** 1.0
 **Last Update:** 2026-01-28
+**Status:** Implementation Standard
 
-## 1) Tujuan Dokumen
+---
 
-Dokumen ini mendefinisikan **Non-Functional Requirements (NFR)** OLION yang:
+# 1. Purpose
 
-* **tajam & terukur**
-* bisa dipakai sebagai standar implementasi
-* bisa diverifikasi lewat testing dan evidence
+Dokumen ini menetapkan standar **Non-Functional Requirements (NFR)** untuk sistem OLION yang bersifat:
 
-## 2) NFR — Security & Authentication
+* terukur
+* dapat diverifikasi
+* langsung dapat diimplementasikan
+* selaras dengan proses engineering nyata
 
-### NFR-S01 — Password Policy
+Seluruh requirement pada dokumen ini dimaksudkan sebagai **engineering contract**, bukan sekadar guideline konseptual.
 
-* Password minimal **10 karakter**
-* Tidak ada aturan kompleksitas wajib (cukup panjang)
+---
 
-**Acceptance Criteria:**
+# 2. Security & Authentication
 
-* Sistem menolak password < 10 karakter
-* Sistem menerima password panjang tanpa memaksa simbol/huruf besar
+## NFR-S01 — Password Policy
 
-**Verification:**
+Password pengguna harus memenuhi aturan berikut:
 
-* Test case register: password 9 char → FAIL
-* Test case register: password 10 char → PASS
+* Minimum panjang: **10 karakter**
+* Tidak diwajibkan kombinasi karakter kompleks
+* Tidak boleh disimpan dalam bentuk plaintext
 
-### NFR-S02 — Password Storage
+**Acceptance Criteria**
 
-* Password harus disimpan menggunakan hashing **Argon2**
-* Tidak boleh menyimpan password dalam bentuk plaintext
+* Password dengan panjang < 10 karakter ditolak
+* Password ≥ 10 karakter diterima
 
-**Acceptance Criteria:**
+**Verification**
 
-* Database hanya menyimpan hash argon2
+* Register dengan password 9 karakter → ditolak
+* Register dengan password 10 karakter → diterima
+
+---
+
+## NFR-S02 — Password Storage Standard
+
+Semua password harus disimpan menggunakan algoritma hashing modern.
+
+**Implementation Standard**
+
+* Algoritma: **Argon2id**
+* Salt wajib digunakan
+* Password tidak boleh dicatat di log
+
+**Acceptance Criteria**
+
+* Database hanya menyimpan hash
 * Tidak ada endpoint yang mengembalikan password
 
-**Verification:**
+---
 
-* Inspect database: format hash argon2
-* Static check: tidak ada log password
+## NFR-S03 — Token Lifecycle Security
 
-### NFR-S03 — Token Security (JWT + Refresh Token)
+Authentication menggunakan JWT dengan mekanisme refresh token.
 
-* Sistem menggunakan:
+**Token Policy**
 
-  * **Access Token expiry: 15 menit**
-  * **Refresh Token expiry: 30 hari**
-* Refresh token menggunakan **rotation** (refresh token selalu diganti setiap refresh)
+* Access Token expiry: **15 menit**
+* Refresh Token expiry: **30 hari**
+* Refresh Token menggunakan **rotation**
 
-**Acceptance Criteria:**
+**Acceptance Criteria**
 
-* Access token expired → request protected endpoint ditolak
-* Refresh token valid → dapat generate token baru
-* Refresh token lama tidak valid setelah rotation
+* Access token expired → request ditolak
+* Refresh token lama tidak valid setelah rotasi
 
-**Verification:**
+---
 
-* Test refresh flow end-to-end
-* Cek invalidation refresh token lama
+## NFR-S04 — Logout Token Revocation
 
-### NFR-S04 — Logout Behavior
+Logout harus mencabut token pada sisi server.
 
-* Logout harus melakukan **revoke refresh token di server**
-* Logout bukan hanya “hapus token di client”
+**Acceptance Criteria**
 
-**Acceptance Criteria:**
+* Refresh token tidak dapat digunakan kembali setelah logout
 
-* Setelah logout, refresh token tidak dapat digunakan lagi
+---
 
-**Verification:**
+## NFR-S05 — Authentication Rate Limiting
 
-* Login → logout → refresh → harus FAIL
+Endpoint autentikasi harus memiliki pembatasan permintaan.
 
-### NFR-S05 — Rate Limiting (Auth Protection)
+**Rate Limit**
 
-* Endpoint auth harus dibatasi minimal:
+* Login: 5 request/menit/IP
+* Forgot password: 5 request/menit/IP
 
-  * **5 request/menit per IP** (untuk login/forgot password)
+**Acceptance Criteria**
 
-**Acceptance Criteria:**
+* Melebihi limit menghasilkan HTTP 429
 
-* Jika melebihi limit, server mengembalikan error (429 Too Many Requests)
+---
 
-**Verification:**
+## NFR-S06 — Password Reset Security
 
-* Stress test ringan auth endpoint → limit aktif
+Reset password harus menggunakan mekanisme token aman.
 
-## 3) NFR — Privacy & Pseudonymity
+**Requirements**
 
-### NFR-P01 — Controlled Pseudonymity
+* Token bersifat unik
+* Token expiry maksimal: **15 menit**
+* Token hanya dapat digunakan satu kali
+* Token tidak disimpan dalam bentuk plaintext
 
-* Identitas publik utama user adalah **pseudonym**
-* Sistem tidak menampilkan identitas asli di area publik
+---
 
-**Acceptance Criteria:**
+## NFR-S07 — Security Middleware Enforcement
 
-* Profil publik dan konten hanya menampilkan pseudonym
-* Email tidak tampil di UI publik
+Semua kontrol keamanan harus ditempatkan pada middleware.
 
-**Verification:**
+**Mandatory Middleware**
 
-* UI check: list diskusi/jawaban/komentar hanya pseudonym
+* Authentication middleware
+* Authorization middleware
+* Validation middleware
+* Rate limiting middleware
+* Sanitization middleware
 
-### NFR-P02 — Admin Identity Access via Audit Mode
+Implementasi tidak diperbolehkan langsung di controller.
 
-* Admin boleh melihat identitas asli user hanya melalui **audit mode**
-* Semua akses audit mode wajib **tercatat dalam audit log**
+---
 
-**Acceptance Criteria:**
+## NFR-S08 — HTTP Security Headers
 
-* Audit mode action tercatat: siapa, kapan, target user, alasan/tujuan
+Response server wajib menyertakan security headers berikut:
 
-**Verification:**
+* Content-Security-Policy
+* X-Frame-Options
+* X-Content-Type-Options
+* Strict-Transport-Security
 
-* Trigger audit mode → audit log muncul
+---
 
-### NFR-P03 — Expert Document Storage Privacy
+# 3. Privacy & Identity Control
 
-* Dokumen verifikasi expert harus disimpan di **S3-compatible/cloud storage**
-* Dokumen tidak boleh diekspos sebagai public file tanpa kontrol akses
+## NFR-P01 — Pseudonym-Based Identity
 
-**Acceptance Criteria:**
+Identitas publik pengguna harus berbasis pseudonym.
 
-* File expert tidak dapat diakses publik tanpa otorisasi
-* Link akses bersifat aman (private / signed URL / protected route)
+**Rules**
 
-**Verification:**
+* Email tidak ditampilkan di area publik
+* Username publik tidak mengandung data sensitif
 
-* Coba akses URL tanpa token → FAIL
+---
 
-## 4) NFR — Performance & Scalability
+## NFR-P02 — Admin Audit Mode Access
 
-### NFR-PS01 — API Response Time Target
+Admin dapat melihat identitas asli hanya melalui audit mode.
 
-* Target performa API: **p95 ≤ 500ms** untuk endpoint inti MVP
+**Audit Requirements**
 
-**Endpoint inti mencakup:**
+* Semua akses tercatat
+* Menyimpan actor, target, timestamp, alasan
 
-* auth
-* list diskusi
-* detail diskusi
-* create diskusi/jawaban/komentar
+---
+
+## NFR-P03 — Secure Document Storage
+
+Dokumen verifikasi expert harus disimpan secara aman.
+
+**Storage Rules**
+
+* Menggunakan storage private (S3-compatible)
+* Tidak boleh public access
+* Menggunakan signed URL
+
+---
+
+## NFR-P04 — Storage Lifecycle Policy
+
+Dokumen memiliki lifecycle policy.
+
+**Retention Policy**
+
+* Active storage: 180 hari
+* Archive storage: hingga 365 hari
+
+---
+
+# 4. Performance & Scalability
+
+## NFR-PS01 — API Response Performance
+
+Target latency untuk endpoint inti:
+
+**Target:**
+
+p95 ≤ **500ms**
+
+Endpoint inti meliputi:
+
+* authentication
+* discussion list
+* discussion detail
 * voting
-* report
-* moderation actions
+* reporting
 
-**Acceptance Criteria:**
+---
 
-* p95 latency memenuhi target pada kondisi normal
+## NFR-PS02 — Concurrency Capacity
 
-**Verification:**
+Sistem harus mampu menangani:
 
-* Load test ringan / benchmark lokal dengan dataset wajar
+**≥ 100 concurrent users**
 
-### NFR-PS02 — Concurrency Target
+Tanpa crash atau peningkatan error signifikan.
 
-* MVP harus mampu melayani minimal **100 concurrent users**
+---
 
-**Acceptance Criteria:**
+## NFR-PS03 — Pagination Standard
 
-* Sistem tetap stabil, tidak crash, dan error rate tetap rendah
+Semua endpoint list harus menggunakan pagination.
 
-**Verification:**
+**Default Pagination**
 
-* Basic concurrency test (k6 / artillery / simple script)
+* limit: 20 item
+* parameter: page, limit
 
-### NFR-PS03 — Pagination Standard
+---
 
-* Default pagination untuk list endpoint: **20 items/page**
+## NFR-PS04 — Search Implementation Strategy
 
-**Acceptance Criteria:**
+Search menggunakan database full-text search.
 
-* Endpoint list diskusi selalu paginated
-* Parameter page/limit tervalidasi
+**Technology**
 
-**Verification:**
+* PostgreSQL Full-Text Search
+* GIN index wajib digunakan
 
-* Test list diskusi page=1 limit=20 → PASS
+---
 
-### NFR-PS04 — Search Strategy (MVP)
+## NFR-PS05 — Database Index Policy
 
-* Search diskusi menggunakan **Postgres Full-Text Search (FTS)**
+Index wajib tersedia pada kolom berikut:
 
-**Acceptance Criteria:**
+* user_id
+* discussion_id
+* created_at
+* vote_target_id
 
-* Query keyword menghasilkan hasil relevan
-* Search tidak menggunakan full scan tanpa index
+---
 
-**Verification:**
+## NFR-PS06 — Performance Measurement Standard
 
-* Test search keyword umum & spesifik
-* Review query plan (opsional)
+Pengukuran performa harus menggunakan tool standar.
 
-## 5) NFR — Availability & Data Protection
+**Tooling**
 
-### NFR-A01 — Uptime Target MVP
+* k6
 
-* Target availability MVP: **99% uptime**
+**Metric Minimum**
 
-**Acceptance Criteria:**
+* p50 latency
+* p95 latency
+* throughput
+* error rate
 
-* Sistem dapat dijalankan stabil pada deployment target (local + docker)
+---
 
-**Verification:**
+# 5. Availability & Data Protection
 
-* Smoke test saat deployment
-* Monitoring sederhana (manual check)
+## NFR-A01 — Availability Target
 
-### NFR-A02 — Database Backup
+Target availability sistem:
 
-* Backup database dilakukan **harian (daily)**
+**≥ 99% uptime**
 
-**Acceptance Criteria:**
+---
 
-* Tersedia prosedur backup dan restore yang bisa dijalankan
+## NFR-A02 — Database Backup Strategy
 
-**Verification:**
+Backup harus dilakukan secara otomatis.
 
-* Dokumentasi backup ada
-* Uji restore minimal 1x pada environment testing
+**Schedule**
 
-### NFR-A03 — Soft Delete Retention
+* Daily backup
 
-* Data soft delete **tidak dipurge selama MVP**
+---
 
-**Acceptance Criteria:**
+## NFR-A03 — Disaster Recovery Target
 
-* Konten soft delete tidak muncul di publik
-* Data masih ada untuk kebutuhan audit/moderasi
+Standar recovery harus ditentukan.
 
-**Verification:**
+**Recovery Targets**
 
-* Soft delete → konten hilang dari publik → admin masih bisa akses (jika diperlukan)
+* RPO ≤ 24 jam
+* RTO ≤ 2 jam
 
-## 6) NFR — Error Handling & API Consistence
+---
 
-### NFR-E01 — Standard API Response Format
+## NFR-A04 — Soft Delete Policy
 
-Semua endpoint API wajib mengikuti format:
+Data yang dihapus tidak dihapus permanen.
+
+**Rules**
+
+* Tidak muncul di publik
+* Tetap tersedia untuk audit
+
+---
+
+# 6. API Behavior & Error Handling
+
+## NFR-E01 — Standard Response Format
+
+Semua API response harus mengikuti struktur berikut:
 
 ```json
 {
@@ -255,175 +327,199 @@ Semua endpoint API wajib mengikuti format:
 }
 ```
 
-**Acceptance Criteria:**
+---
 
-* Semua response sukses dan gagal konsisten
-* Validation error masuk ke `errors`
+## NFR-E02 — Input Validation & Sanitization
 
-**Verification:**
+Semua input harus divalidasi pada backend.
 
-* Test beberapa endpoint sukses/gagal → format konsisten
+**Rules**
 
-### NFR-E02 — Validation & Sanitization
+* Invalid payload ditolak
+* Error message tidak mengandung informasi internal
 
-* Semua input harus divalidasi di backend
-* Sistem menolak payload invalid dengan error yang jelas (tanpa membocorkan internal)
+---
 
-**Acceptance Criteria:**
+## NFR-E03 — API Versioning Policy
 
-* Tidak ada crash karena input aneh
-* Error message aman dan informatif
+Semua endpoint harus memiliki versi.
 
-**Verification:**
+**Format**
 
-* Test invalid payload (empty, long text, wrong type)
+```
+/api/v1/...
+```
 
-## 7) NFR — Logging, Auditability, Observability
+Breaking change harus dibuat pada versi baru.
 
-### NFR-L01 — Request & Error Logging
+---
 
-Sistem wajib mencatat minimal:
+## NFR-E04 — Error Language Standard
 
-* request log (method, path, status, latency)
-* error log (stack trace internal tidak ditampilkan ke user)
+Semua pesan error menggunakan:
 
-**Acceptance Criteria:**
+**English only**
 
-* Error tercatat di server log
-* Client menerima message aman
+---
 
-**Verification:**
+# 7. Logging, Auditability & Observability
 
-* Trigger error → log muncul → client dapat response aman
+## NFR-L01 — Structured Logging
 
-### NFR-L02 — Request ID (Traceability)
+Semua log harus menggunakan format JSON.
 
-* Setiap request harus memiliki **request id**
-* Request id ikut muncul pada log untuk tracking
+**Mandatory Fields**
 
-**Acceptance Criteria:**
+* timestamp
+* request_id
+* method
+* path
+* status
+* latency_ms
+* user_id (optional)
 
-* Request id ada di log
-* Bisa menelusuri error berdasarkan request id
+---
 
-**Verification:**
+## NFR-L02 — Request Traceability
 
-* Cek log output request
+Setiap request harus memiliki request ID unik.
 
-### NFR-L03 — Audit Log untuk Aksi Sensitif
+Digunakan untuk:
 
-Aksi berikut wajib masuk audit log:
+* tracing error
+* debugging
+* performance review
 
-* moderasi: hide content, resolve report
-* admin role change
-* expert approve/reject/revoke
-* audit-mode identity view
+---
 
-**Acceptance Criteria:**
+## NFR-L03 — Audit Log Policy
 
-* Audit log menyimpan: actor, action, target, timestamp, metadata
+Aksi sensitif harus dicatat.
 
-**Verification:**
+**Mandatory Audit Actions**
 
-* Lakukan aksi → audit log tercatat
+* moderation action
+* role change
+* expert approval
+* identity audit access
 
-## 8) NFR — Usability & Compatibility
+---
 
-### NFR-U01 — UI Responsiveness
+## NFR-O01 — Monitoring & Health Check
 
-* UI bersifat **desktop-first tapi responsif**
-* Tetap usable di mobile browser
+Sistem harus menyediakan monitoring dasar.
 
-**Acceptance Criteria:**
+**Required Components**
 
-* Layout tidak rusak di layar kecil
-* Navigasi diskusi tetap jelas
+* /health endpoint
+* uptime monitoring
+* error counter
 
-**Verification:**
+---
 
-* Manual test responsive (desktop + mobile)
+# 8. Usability & Compatibility
 
-### NFR-U02 — Browser Support
+## NFR-U01 — Responsive Interface
 
-OLION harus mendukung browser modern:
+UI harus tetap usable pada:
 
-* Chrome latest
-* Firefox latest
-* Edge latest
+* Desktop
+* Tablet
+* Mobile browser
 
-**Acceptance Criteria:**
+---
 
-* Fitur inti berjalan pada 3 browser tersebut
+## NFR-U02 — Browser Compatibility
 
-**Verification:**
+Browser yang didukung:
 
-* Smoke test UI di 3 browser
+* Chrome (latest)
+* Firefox (latest)
+* Edge (latest)
 
-## 9) NFR — Maintainability & Development Standards
+---
 
-### NFR-M01 — Code Quality Rules
+# 9. Maintainability & Development Standards
 
-MVP wajib menerapkan:
+## NFR-M01 — Code Quality Enforcement
+
+Project harus menggunakan:
 
 * linting
-* formatter
+* formatting
 * commit convention
 
-**Acceptance Criteria:**
+---
 
-* Repo punya config lint/format (eslint/prettier atau setara)
-* Commit message mengikuti pola yang konsisten
+## NFR-M02 — Environment Standardization
 
-**Verification:**
+Semua environment harus menggunakan container.
 
-* Run lint/format check
-* Review commit history
+**Technology**
 
-## 10) NFR — File Upload Constraints (Expert Docs)
+* Docker
+* docker-compose
 
-### NFR-F01 — File Type Restrictions
+**Environment Types**
 
-Dokumen verifikasi expert hanya boleh:
+* local
+* staging
+* production
+
+---
+
+## NFR-M03 — Testing Coverage Standard
+
+Testing wajib memenuhi target minimum.
+
+**Coverage Target**
+
+* Unit test ≥ 70%
+* Critical flow = 100%
+
+**Critical Flow**
+
+* login
+* refresh token
+* create discussion
+* voting
+
+---
+
+# 10. File Upload Constraints
+
+## NFR-F01 — File Type Restriction
+
+Format file yang diizinkan:
 
 * PDF
 * JPG
 * PNG
 
-**Acceptance Criteria:**
+---
 
-* Upload file selain format di atas ditolak
+## NFR-F02 — File Size Limit
 
-**Verification:**
+Ukuran maksimal file:
 
-* Upload `.exe`/`.zip` → FAIL
-* Upload `.pdf` → PASS
-
-### NFR-F02 — File Size Limit
-
-* Maksimal ukuran file upload: **5MB**
-
-**Acceptance Criteria:**
-
-* Upload > 5MB ditolak dengan error yang jelas
-
-**Verification:**
-
-* Upload 6MB → FAIL
-* Upload 4MB → PASS
-
-## 11) Catatan Implementasi (Guidance)
-
-Dokumen ini menjadi standar untuk:
-
-* implementasi backend middleware & security
-* struktur response API
-* logging & audit trail
-* standar testing evidence
-
-Seluruh NFR harus selaras dengan:
-
-* `02-srs-software-requirement-specification.md`
-* `03-feature-breakdown-mvp.md`
-* `05-mapping-fr-module-endpoint.md`
+**5MB**
 
 ---
+
+# 11. Engineering Alignment Notes
+
+Dokumen ini menjadi referensi implementasi untuk:
+
+* middleware security
+* database indexing
+* logging strategy
+* monitoring setup
+* testing framework
+
+Dokumen ini harus selaras dengan:
+
+* Software Requirement Specification (SRS)
+* Feature Breakdown MVP
+* Module–Endpoint Mapping
+
+Setiap perubahan NFR wajib dicatat pada CHANGELOG proyek.
