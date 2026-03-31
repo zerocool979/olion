@@ -19,42 +19,91 @@ Maintainer: **beel**
 
 # [Unreleased]
 
+# [v0.1.3] — 2026-03-31
+
 ## Added
 
-- Domain Model inti sistem OLION  
-  (`03-analysis-design/01-domain-model.md`)
-
-- Diagram Konteks (DFD Level 0) awal  
-  (`03-analysis-design/01-diagram-konteks-dfd-level-0/diagram.png`)
-
-- Dokumentasi penjelasan Diagram Konteks  
+- Dokumentasi final **Diagram Konteks (DFD Level 0)**
   (`03-analysis-design/01-diagram-konteks-dfd-level-0/notes.md`)
+
+- Validated **Context Diagram visualization**
+  (`03-analysis-design/01-diagram-konteks-dfd-level-0/'DFD LEVEL 0 Olion SYSTEM.drawio.png'`)
+
+- Standarisasi struktur dokumentasi pada folder:
+
+```
+03-analysis-design/
+└── 01-diagram-konteks-dfd-level-0/
+├── diagram.drawio
+├── 'DFD LEVEL 0 Olion SYSTEM.drawio.png'
+└── notes.md
+```
 
 ## Changed
 
-[2026-03-27] Updated Context Diagram — Modified Data Flow: Notification Message.
+### Context Diagram (DFD Level 0) — Full Refinement
 
-Perubahan dilakukan untuk menyederhanakan aliran data notifikasi pada Diagram Konteks (DFD Level 0).  
-Alur lama yang memisahkan beberapa jalur pesan notifikasi disederhanakan menjadi satu aliran terpadu untuk meningkatkan konsistensi model dan mengurangi redundansi antar proses eksternal.
+Dilakukan penyempurnaan menyeluruh terhadap artefak Diagram Konteks untuk meningkatkan:
+
+- konsistensi model
+- keterbacaan diagram
+- ketepatan definisi data flow
+- keselarasan dengan Domain Model
+- kesiapan ekspansi menuju DFD Level 1
+
+Perubahan utama:
+
+- Penulisan ulang penuh **notes.md** dengan bahasa profesional dan tanpa ambiguitas
+- Standarisasi terminologi data flow agar selaras dengan Domain Model
+- Penyederhanaan struktur narasi deskripsi aktor eksternal
+- Penambahan definisi formal untuk setiap data flow utama
+- Revisi struktur dokumentasi agar siap digunakan sebagai referensi teknis lanjutan
+- Penyelarasan definisi input/output antar entitas eksternal
+- Penegasan batas sistem (system boundary clarity)
+- Penyesuaian gaya dokumentasi agar sesuai standar dokumentasi analisis sistem
+
+Perubahan ini meningkatkan kualitas dokumentasi tanpa mengubah aktor utama sistem.
+
+## Fixed
+
+- Inkonsistensi label data flow pada dokumentasi awal
+- Ambiguitas pada deskripsi interaksi eksternal
+- Ketidaksinkronan istilah antara Domain Model dan Context Diagram
+- Struktur narasi yang sebelumnya berpotensi menimbulkan interpretasi ganda
+
+---
+
+# [v0.1.2] — 2026-03-27
+
+## Changed
+
+### Context Diagram — Notification Flow Simplification
+
+Dilakukan penyederhanaan aliran **Notification Message** pada Diagram Konteks (DFD Level 0).
+
+Tujuan perubahan:
+
+- mengurangi redundansi
+- meningkatkan konsistensi visual
+- menyederhanakan representasi komunikasi sistem
 
 Detail perubahan:
 
 - Penyederhanaan alur **Notification Message**
-- Penggabungan jalur notifikasi serupa menjadi satu aliran utama
-- Penyesuaian label data flow agar konsisten dengan Domain Model
-- Penyelarasan terminologi antara entitas eksternal dan sistem inti
-- Revisi visual diagram untuk meningkatkan keterbacaan model
+- Penggabungan beberapa jalur notifikasi serupa
+- Penyesuaian label data flow
+- Penyelarasan terminologi antar entitas
 
-Perubahan ini tidak mengubah struktur aktor eksternal, namun mempengaruhi representasi aliran data yang berkaitan dengan notifikasi sistem.
+Perubahan ini tidak mengubah struktur aktor eksternal sistem.
 
 ## Fixed
 
-- Penyesuaian minor pada label data flow untuk menjaga konsistensi penamaan antar artefak analisis
-- Perbaikan inkonsistensi terminologi antara Domain Model dan Context Diagram
+- Penyesuaian minor pada label data flow
+- Perbaikan inkonsistensi terminologi
 
 ---
 
-# [v0.1.2] - 2026-02-16
+# [v0.1.2] — 2026-02-16
 
 ## Added
 
@@ -71,15 +120,15 @@ Perubahan ini tidak mengubah struktur aktor eksternal, namun mempengaruhi repres
 
 ---
 
-# [v0.1.1] - 2026-02-03
+# [v0.1.1] — 2026-02-03
 
 ## Added
 
 - `02-requirements/01-brd-business-requirement-document.md`  
-  Dokumen Business Requirement.
+  Business Requirement Document.
 
 - `02-requirements/02-srs-software-requirement-specification.md`  
-  Dokumen Software Requirement.
+  Software Requirement Specification.
 
 ## Changed
 
@@ -91,24 +140,16 @@ Perubahan ini tidak mengubah struktur aktor eksternal, namun mempengaruhi repres
 
 ---
 
-# [v0.1.0] - 2026-01-29
+# [v0.1.0] — 2026-01-29
 
 ## Added
 
 - `01-initiation/01-project-charter.md`  
-  Dokumen Project Charter sebagai fondasi awal proyek OLION.
-
-## Changed
-
-- Tidak ada.
-
-## Fixed
-
-- Tidak ada.
+  Project Charter sebagai fondasi awal proyek.
 
 ---
 
-# [v0.1.0] - 2026-01-28
+# [v0.0.1] — 2026-01-28
 
 ## Added
 
@@ -118,17 +159,18 @@ Perubahan ini tidak mengubah struktur aktor eksternal, namun mempengaruhi repres
 
 - Struktur awal repository dokumentasi OLION.
 
-## Changed
-
-- Tidak ada.
-
-## Fixed
-
-- Tidak ada.
-
 ---
 
 # Closing Note
 
-CHANGELOG ini berfungsi sebagai rekam jejak evolusi dokumentasi proyek.  
-Setiap pembaruan model analisis, diagram sistem, maupun struktur artefak wajib dicatat untuk menjaga integritas dokumentasi dan mendukung proses audit maupun implementasi teknis di fase berikutnya.
+CHANGELOG ini merupakan rekam jejak resmi evolusi dokumentasi proyek OLION.
+
+Setiap perubahan pada:
+
+- model sistem
+- diagram analisis
+- struktur data
+- arsitektur
+- maupun artefak desain
+
+**wajib dicatat** dalam dokumen ini untuk menjaga integritas dokumentasi, mendukung proses audit, dan memastikan kesiapan implementasi teknis pada fase berikutnya.

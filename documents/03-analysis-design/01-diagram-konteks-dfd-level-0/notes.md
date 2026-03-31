@@ -1,344 +1,239 @@
 # Context Diagram — DFD Level 0  
 **System Name:** OLION  
 **Document ID:** OLION-ANL-DFD0  
-**Version:** 1.0  
+**Version:** 2.0  
 **Status:** Approved for Level-1 Expansion  
 **Authoring Phase:** System Analysis  
-**Last Updated:** 2026-03-27
+**Last Updated:** 2026-03-31  
 
 ---
 
-# 1. Document Purpose
+# 1. Purpose
 
-Dokumen ini mendefinisikan **Context Diagram (DFD Level 0)** untuk sistem **OLION** sebagai representasi tertinggi dari interaksi eksternal sistem.
+Dokumen ini mendefinisikan **Context Diagram (DFD Level 0)** untuk sistem **OLION** sebagai representasi tingkat tertinggi dari interaksi antara sistem dan entitas eksternal.
 
-Tujuan utama dokumen ini adalah:
+Tujuan utama dokumen ini:
 
-- Mendefinisikan **batas sistem (system boundary)**
-- Mengidentifikasi **entitas eksternal**
-- Menentukan **aliran data utama**
-- Menjadi dasar validasi sebelum pengembangan **DFD Level 1**
-- Menjaga konsistensi desain terhadap domain sistem
+- Menetapkan batas sistem (**system boundary**)  
+- Mengidentifikasi seluruh entitas eksternal  
+- Mendefinisikan aliran data utama  
+- Menjadi referensi resmi sebelum pengembangan **DFD Level 1**  
+- Menjaga konsistensi antar artefak analisis  
 
-Dokumen ini harus dibaca sebagai referensi resmi untuk seluruh artefak analisis berikutnya.
+Dokumen ini merupakan referensi formal untuk seluruh model proses lanjutan.
 
 ---
 
 # 2. System Overview
 
-**OLION** adalah platform diskusi digital yang dirancang untuk memfasilitasi interaksi terstruktur antar pengguna dalam lingkungan berbasis komunitas.
+**OLION** merupakan platform diskusi komunitas berbasis pengetahuan yang mendukung interaksi antara pengguna umum, pakar, moderator, dan administrator dalam lingkungan digital terstruktur.
 
 Fungsi utama sistem meliputi:
 
-- Manajemen akun pengguna
-- Pembuatan dan pengelolaan diskusi
-- Interaksi berbasis komentar dan voting
-- Moderasi konten komunitas
-- Konfigurasi sistem oleh administrator
-- Publikasi konten edukatif oleh pakar
-- Distribusi notifikasi kepada pengguna
+- Manajemen akun pengguna  
+- Pengelolaan diskusi dan komentar  
+- Sistem reputasi dan badge  
+- Moderasi konten komunitas  
+- Publikasi konten edukatif  
+- Monitoring aktivitas sistem  
+- Pengelolaan konfigurasi dan backup  
+- Penyediaan analitik dan statistik sistem  
 
-Pada **Context Level**, sistem direpresentasikan sebagai: `[ OLION SYSTEM ]` Tanpa pemecahan proses internal.
+Pada **Context Level**, seluruh sistem direpresentasikan sebagai satu proses tunggal:
 
----
+**[ Sistem OLION ]**
 
-# 3. System Boundary Definition
-
-System boundary mendefinisikan ruang lingkup tanggung jawab sistem OLION.
-
-## 3.1 Included in System
-
-Komponen berikut berada dalam tanggung jawab sistem:
-
-- Authentication Management
-- User Account Management
-- Discussion Management
-- Comment Management
-- Voting Mechanism
-- Content Moderation Logic
-- Role-Based Access Control (RBAC)
-- Activity Logging
-- Data Storage Management
-- Notification Trigger Generation
-- Expert Content Handling
-
-Semua proses di atas terjadi **di dalam OLION SYSTEM**.
+Tidak terdapat proses internal pada level ini.
 
 ---
 
-## 3.2 Excluded from System
+# 3. External Entities
 
-Komponen berikut berada di luar tanggung jawab sistem:
-
-- Email infrastructure eksternal
-- Push notification provider
-- Network delivery mechanism
-- External infrastructure monitoring
-- Hosting platform
-
-Komponen ini direpresentasikan sebagai **external entities**.
+Diagram konteks OLION melibatkan empat entitas eksternal utama.
 
 ---
 
-# 4. External Entities Definition
+# 3.1 Pengguna Umum
 
-Diagram konteks OLION melibatkan lima entitas eksternal utama.
+Pengguna Umum merupakan entitas utama yang berinteraksi langsung dengan sistem untuk aktivitas diskusi komunitas.
 
-Setiap entitas memiliki tanggung jawab dan pola interaksi berbeda.
+## Data Flow — Pengguna Umum → Sistem OLION
 
----
+**Data Email, Password, & Preferensi Minat Belajar**  
+Digunakan untuk autentikasi dan personalisasi akun.
 
-# 4.1 User
+**Pertanyaan Baru, Kategori Topik, Jawaban & Komentar**  
+Digunakan untuk membuat dan memperbarui diskusi.
 
-User merupakan entitas utama yang berinteraksi langsung dengan sistem untuk menjalankan aktivitas diskusi.
-
-User dapat berupa pengguna terdaftar yang memiliki akses sesuai peran yang diberikan.
-
-## Responsibilities
-
-User berinteraksi dengan sistem untuk:
-
-- Melakukan autentikasi akun
-- Membuat topik diskusi
-- Mengirim komentar
-- Memberikan voting
-- Melaporkan pelanggaran
-- Mengakses rekomendasi diskusi
-- Menerima notifikasi aktivitas
-
-## Data Flow — User → OLION
-
-- **User Account Data**  
-  Digunakan untuk autentikasi dan pengelolaan akun.
-
-- **Discussion Data**  
-  Digunakan untuk membuat atau memperbarui diskusi.
-
-- **Interaction Data**  
-  Digunakan untuk voting, komentar, dan interaksi lainnya.
-
-- **Report Data**  
-  Digunakan untuk melaporkan konten pelanggaran.
+**Upvote/Downvote, Laporan Pelanggaran, Alasan Pelanggaran**  
+Digunakan untuk interaksi komunitas dan pelaporan pelanggaran.
 
 ---
 
-## Data Flow — OLION → User
+## Data Flow — Sistem OLION → Pengguna Umum
 
-- **Authentication Result**  
-  Status autentikasi pengguna.
+**Saran Diskusi Relevan, Topik Trending**  
+Digunakan untuk rekomendasi diskusi.
 
-- **Discussion Information**  
-  Informasi diskusi yang tersedia.
+**Skor Reputasi, Badge Pencapaian**  
+Digunakan untuk menampilkan reputasi pengguna.
 
-- **Recommendation Data**  
-  Rekomendasi diskusi relevan.
+**Pemberitahuan Aktivitas, Alert Diskusi Baru**  
+Digunakan untuk notifikasi aktivitas komunitas.
 
----
-
-# 4.2 Moderator
-
-Moderator bertanggung jawab menjaga kualitas konten komunitas.
-
-Moderator memiliki hak akses tambahan untuk melakukan tindakan moderasi.
-
-## Responsibilities
-
-Moderator bertugas untuk:
-
-- Meninjau laporan pelanggaran
-- Menghapus konten melanggar
-- Mengunci diskusi
-- Menegakkan aturan komunitas
+**Konfirmasi Laporan, Status Tindakan**  
+Digunakan untuk memberikan hasil tindak lanjut laporan.
 
 ---
 
-## Data Flow — Moderator → OLION
+# 3.2 Pakar
 
-- **Moderation Action**  
-  Perintah moderasi terhadap konten atau diskusi.
+Pakar merupakan entitas yang memiliki keahlian khusus dan berkontribusi terhadap konten edukatif dalam sistem.
 
----
+## Data Flow — Pakar → Sistem OLION
 
-## Data Flow — OLION → Moderator
+**Dokumen Keahlian, CV & Sertifikat**  
+Digunakan untuk verifikasi kompetensi pakar.
 
-- **Moderation Report**  
-  Informasi laporan pelanggaran yang harus ditinjau.
+**Jawaban Ahli, Referensi Pendukung**  
+Digunakan untuk memberikan jawaban berbasis keahlian.
 
----
-
-# 4.3 Administrator
-
-Administrator bertanggung jawab terhadap stabilitas dan konfigurasi sistem.
-
-Administrator memiliki kontrol tertinggi terhadap sistem.
-
-## Responsibilities
-
-Administrator melakukan:
-
-- Konfigurasi sistem
-- Pengelolaan parameter operasional
-- Monitoring kondisi sistem
+**Konten Edukatif, Materi Pembelajaran**  
+Digunakan untuk publikasi materi pembelajaran.
 
 ---
 
-## Data Flow — Administrator → OLION
+## Data Flow — Sistem OLION → Pakar
 
-- **System Configuration**  
-  Parameter konfigurasi sistem.
+**Dashboard Khusus, Pertanyaan Relevan**  
+Digunakan untuk menampilkan pertanyaan sesuai bidang keahlian.
 
----
-
-## Data Flow — OLION → Administrator
-
-- **System Report**  
-  Informasi status dan kondisi sistem.
+**Analisis Kontribusi, Impact Pembelajaran**  
+Digunakan untuk memantau dampak kontribusi pakar.
 
 ---
 
-# 4.4 Pakar (Expert)
+# 3.3 Moderator
 
-Pakar merupakan entitas khusus yang memiliki otoritas untuk menyediakan konten edukatif atau keahlian.
+Moderator bertanggung jawab menjaga kualitas komunitas serta menegakkan aturan penggunaan sistem.
 
-Pakar memberikan nilai tambah terhadap kualitas informasi dalam sistem.
+## Data Flow — Moderator → Sistem OLION
 
-## Responsibilities
+**Aksi Penghapusan, Peringatan Pengguna**  
+Digunakan untuk melakukan tindakan moderasi.
 
-Pakar bertugas untuk:
+**Keputusan Moderasi, Status Pelaporan**  
+Digunakan untuk menetapkan hasil moderasi.
 
-- Menyediakan konten berbasis keahlian
-- Memberikan kontribusi edukatif
-- Memperbarui materi pengetahuan
-
----
-
-## Data Flow — Pakar → OLION
-
-- **Expert Content**  
-  Materi berbasis keahlian yang dikirimkan ke sistem.
+**Filter Pencapaian, Parameter Pemantauan**  
+Digunakan untuk pengaturan pemantauan aktivitas.
 
 ---
 
-## Data Flow — OLION → Pakar
+## Data Flow — Sistem OLION → Moderator
 
-- **Contribution Report**  
-  Informasi performa dan kontribusi konten pakar.
+**Overview Aktivitas, Statistik Pelanggaran**  
+Digunakan untuk pemantauan kondisi komunitas.
 
----
-
-# 4.5 Notification Service
-
-Notification Service merupakan sistem eksternal yang bertugas mengirimkan notifikasi kepada pengguna.
-
-Layanan ini bertindak sebagai media distribusi pesan sistem.
-
-## Responsibilities
-
-Notification Service bertanggung jawab untuk:
-
-- Menerima pesan notifikasi dari OLION
-- Mengirimkan pesan kepada pengguna
-- Mengelola proses delivery
+**Notifikasi Urgent, Flag Konten Bermasalah**  
+Digunakan untuk memberi peringatan pelanggaran prioritas.
 
 ---
 
-## Data Flow — OLION → Notification Service
+# 3.4 Administrator
 
-- **Notification Message**  
-  Pesan notifikasi yang dikirimkan sistem.
+Administrator bertanggung jawab terhadap konfigurasi sistem dan monitoring performa operasional.
 
----
+## Data Flow — Administrator → Sistem OLION
 
-## Data Flow — Notification Service → User
+**Konfigurasi Sistem, Pengaturan Kategori**  
+Digunakan untuk pengaturan parameter sistem.
 
-- **Delivered Notification**  
-  Notifikasi yang telah dikirim kepada pengguna.
+**Permintaan Backup, Parameter Backup**  
+Digunakan untuk memulai proses backup data.
 
----
-
-# 5. Primary Interaction Model
-
-Semua interaksi antara entitas eksternal dan sistem OLION mengikuti prinsip berikut:
-
-1. Semua permintaan masuk melalui OLION SYSTEM
-2. Tidak ada komunikasi langsung antar entitas eksternal
-3. Semua notifikasi dikirim melalui Notification Service
-4. Semua operasi dikontrol melalui mekanisme otorisasi
-
-Model ini menjaga konsistensi sistem terhadap prinsip keamanan dan kontrol akses.
+**Kriteria Laporan, Periode Waktu**  
+Digunakan untuk menghasilkan laporan analitik.
 
 ---
 
-# 6. Context Diagram Structural Rules
+## Data Flow — Sistem OLION → Administrator
 
-Diagram konteks yang terkait dengan dokumen ini harus memenuhi aturan berikut:
+**Report Analitik, Data Statistik**  
+Digunakan untuk evaluasi performa sistem.
 
-- Hanya satu proses utama:  
-  **OLION SYSTEM**
-
-- Semua entitas eksternal harus berada di luar system boundary.
-
-- Semua data flow harus memiliki:
-
-  - Nama eksplisit
-  - Arah jelas
-  - Sumber dan tujuan valid
-
-- Tidak boleh ada data store pada level konteks.
-
-- Tidak boleh ada proses internal tambahan.
-
-Diagram yang tidak memenuhi aturan ini dianggap tidak valid.
+**Overview Sistem, Metrics Performa**  
+Digunakan untuk monitoring kondisi sistem.
 
 ---
 
-# 7. Design Assumptions
+# 4. System Boundary Rules
 
-Beberapa asumsi yang digunakan dalam penyusunan diagram:
+Context Diagram harus memenuhi aturan berikut:
 
-1. Semua pengguna menggunakan antarmuka aplikasi resmi.
-2. Semua interaksi melewati backend OLION.
-3. Sistem menggunakan model RBAC.
-4. Tidak ada peer-to-peer communication.
-5. Notification Service tersedia sebagai komponen eksternal.
+- Hanya terdapat satu proses utama:  
+  **Sistem OLION**
 
-Jika asumsi berubah, diagram harus diperbarui.
+- Semua entitas eksternal berada di luar system boundary
 
----
+- Semua data flow harus:
 
-# 8. Design Constraints
+  - Memiliki nama eksplisit  
+  - Memiliki arah jelas  
+  - Memiliki sumber dan tujuan valid  
 
-Batasan desain yang mempengaruhi diagram:
+- Tidak diperbolehkan terdapat:
 
-- Sistem harus mendukung multi-role user
-- Semua data harus tersimpan secara terpusat
-- Semua request diproses melalui API layer
-- Semua log aktivitas harus dicatat
-- Notification delivery berada di luar sistem
+  - Data Store  
+  - Sub-process  
+  - Proses tambahan  
 
-Constraint ini harus konsisten dengan requirement specification.
+Diagram yang melanggar aturan ini dinyatakan tidak valid.
 
 ---
 
-# 9. Validation Checklist
+# 5. Interaction Principles
 
-Diagram dianggap valid jika seluruh kondisi berikut terpenuhi:
+Semua interaksi mengikuti prinsip berikut:
 
-- Semua entitas eksternal terdefinisi
-- Semua data flow memiliki label
-- Tidak ada proses tambahan selain OLION
-- Semua arah flow valid
-- Semua flow memiliki tujuan jelas
-- Tidak ada komunikasi antar external entity
-- Tidak ada data store pada context level
-
-Checklist ini harus diverifikasi sebelum lanjut ke Level 1.
+1. Seluruh komunikasi harus melalui **Sistem OLION**  
+2. Tidak terdapat komunikasi langsung antar entitas eksternal  
+3. Semua request diproses oleh sistem  
+4. Semua response berasal dari sistem  
+5. Sistem bertindak sebagai pusat pengendali seluruh aktivitas  
 
 ---
 
-# 10. Relationship to Next Artifacts
+# 6. Design Assumptions
 
-Context Diagram menjadi dasar untuk pengembangan:
+Asumsi yang digunakan:
+
+1. Semua pengguna menggunakan aplikasi resmi.  
+2. Semua interaksi diproses melalui backend OLION.  
+3. Sistem menggunakan Role-Based Access Control (RBAC).  
+4. Semua aktivitas dicatat sebagai log sistem.  
+5. Tidak terdapat komunikasi peer-to-peer antar pengguna.
+
+---
+
+# 7. Validation Checklist
+
+Diagram dinyatakan valid apabila:
+
+- Semua entitas eksternal terdefinisi  
+- Semua data flow memiliki label eksplisit  
+- Tidak terdapat proses tambahan selain Sistem OLION  
+- Semua arah data flow benar  
+- Tidak terdapat komunikasi antar external entity  
+- Tidak terdapat data store pada context level  
+
+Checklist ini wajib diverifikasi sebelum pengembangan DFD Level 1.
+
+---
+
+# 8. Relationship to Next Models
+
+Context Diagram menjadi dasar pengembangan:
 
 - DFD Level 1  
 - Use Case Diagram  
@@ -346,22 +241,20 @@ Context Diagram menjadi dasar untuk pengembangan:
 - System Architecture  
 - Security Model  
 
-Kesalahan pada tahap ini akan mempengaruhi keseluruhan desain sistem.
-
-Validasi harus dilakukan sebelum transisi ke tahap berikutnya.
+Kesalahan pada level ini akan berdampak pada seluruh model lanjutan.
 
 ---
 
-# 11. Revision Policy
+# 9. Revision Policy
 
-Perubahan pada diagram harus dicatat secara formal dalam: `documents/00-index/CHANGELOG.md`
-Dengan format: `[DATE] Updated Context Diagram — Modified Data Flow: Notification Message`
+Setiap perubahan pada diagram harus dicatat dalam: `documents/00-index/CHANGELOG.md`
+Dengan format: `[DATE] Updated Context Diagram — Modified Data Flow: <Flow Name>`
 Semua perubahan harus memiliki alasan teknis yang jelas.
 
 ---
 
 # Closing Statement
 
-Context Diagram OLION mendefinisikan batas interaksi sistem secara eksplisit dan menjadi fondasi utama bagi seluruh proses analisis sistem.
+Context Diagram OLION mendefinisikan seluruh interaksi eksternal sistem secara eksplisit dan menjadi fondasi utama dalam pengembangan model proses selanjutnya.
 
-Konsistensi antara diagram ini, domain model, serta requirement specification merupakan syarat mutlak sebelum pengembangan model proses yang lebih rinci dilakukan.
+Dokumen ini harus digunakan sebagai referensi resmi sebelum pengembangan **DFD Level 1** dilakukan.
