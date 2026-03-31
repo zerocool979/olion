@@ -1,6 +1,7 @@
+
 # CHANGELOG — OLION Documentation
 
-Dokumen ini mencatat seluruh perubahan signifikan yang terjadi pada artefak dokumentasi proyek OLION.  
+Dokumen ini mencatat seluruh perubahan signifikan yang terjadi pada artefak dokumentasi proyek OLION.
 Setiap perubahan yang berdampak pada model sistem, struktur data, atau alur proses wajib dicatat untuk menjaga traceability antar fase.
 
 Format versi yang digunakan:
@@ -21,42 +22,181 @@ Maintainer: **beel**
 
 ---
 
+# [v0.1.5] — 2026-04-01
+
+## Added
+
+### Recommendation Engine (Process 8.0)
+
+Penambahan proses **8.0 — Recommendation Engine** pada DFD Level 1 sebagai layer intelligence untuk personalisasi sistem.
+
+Cakupan utama:
+
+- Personalized Discussion Feed
+- Expert Recommendation Feed
+- Behavior & Interaction Aggregation
+- Integrasi sinyal reputasi dan moderasi
+- Trigger notifikasi berbasis rekomendasi
+
+Karakteristik:
+
+- Read-heavy (tidak mengubah data utama)
+- Berbasis agregasi multi-source data
+- Mendukung future ML integration
+
+---
+
+### DFD Level 2 — Initial Structure
+
+Ditambahkan folder baru untuk pengembangan **DFD Level 2** sebagai dekomposisi lanjutan dari seluruh proses Level 1.
+
+Lokasi:
+
+```
+
+03-analysis-design/
+└── 03-dfd-level-2/
+└── notes.md
+
+```
+
+
+Tujuan:
+
+- memecah proses 1.0–8.0 menjadi sub-process detail
+- menjadi dasar desain API, event, dan database
+- meningkatkan granularitas analisis sistem
+
+Status:
+
+🟨 DRAFT — dalam tahap penyusunan awal
+
+---
+
+## Changed
+
+### DFD Level 1 — Finalization & Structural Enhancement
+
+DFD Level 1 disempurnakan dan dinyatakan **final (DONE)** setelah integrasi penuh Recommendation Engine.
+
+Perubahan utama:
+
+- Penambahan proses 8.0 Recommendation Engine
+- Integrasi aliran data dari:
+  - 2.0 Manajemen Diskusi
+  - 3.0 Sistem Reputasi
+  - 4.0 Moderasi Konten
+  - 5.0 Manajemen Pakar
+- Penambahan output:
+  - Personalized Feed → Pengguna
+  - Expert Feed → Pakar
+  - Recommendation Metrics → Administrasi
+  - Trigger → Notifikasi Real-Time
+- Optimalisasi relasi dengan data store:
+  - D1, D2, D3, D6, D7
+
+Dampak:
+
+- peningkatan relevansi konten
+- konsistensi aliran data antar proses
+- kesiapan arsitektur berbasis event & analytics
+
+---
+
+### notes.md — Full Rewrite (DFD Level 1)
+
+Dokumentasi DFD Level 1 ditulis ulang secara menyeluruh.
+
+Penyempurnaan:
+
+- definisi formal semua proses (1.0–8.0)
+- struktur input/output yang eksplisit
+- penambahan signal-based flow
+- konsistensi terminologi lintas modul
+- alignment penuh dengan diagram terbaru
+
+Dokumen kini siap sebagai baseline:
+
+- DFD Level 2
+- API Design
+- Event-driven Architecture
+
+---
+
+### DOCUMENT_MAP.md — Status Update
+
+Dilakukan sinkronisasi status dokumentasi:
+
+- DFD Level 1 → 🟩 DONE
+- Penambahan DFD Level 2 → 🟨 DRAFT
+- Penyesuaian struktur numbering Analysis & Design
+
+---
+
+## Fixed
+
+- Missing data flow ke layer rekomendasi pada versi sebelumnya
+- Ambiguitas hubungan antar proses analitik
+- Inkonsistensi terminologi data flow
+- Redundansi aliran notifikasi
+- Ketidakterhubungan antara modul diskusi, reputasi, dan rekomendasi
+
+---
+
+## Impact Summary
+
+Perubahan ini menandai evolusi sistem dari:
+
+**Content Platform → Intelligent Knowledge Platform**
+
+Implikasi:
+
+- sistem lebih adaptif dan kontekstual
+- peningkatan kompleksitas terkontrol
+- fondasi kuat untuk ML & personalization pipeline
+
+---
+
+## Status
+
+DFD Level 1:
+
+🟩 DONE
+
+DFD Level 2:
+
+🟨 DRAFT
+
+Siap untuk:
+
+- dekomposisi proses lanjutan
+- desain API granular
+- implementasi event-driven system
+
+---
+
 # [v0.1.4] — 2026-03-31
 
 ## Added
 
 ### DFD Level 1 — Initial Decomposition
 
-Ditambahkan artefak awal **DFD Level 1** sebagai hasil dekomposisi dari Diagram Konteks (DFD Level 0).
+Ditambahkan artefak awal DFD Level 1 sebagai hasil dekomposisi dari Diagram Konteks.
 
 Lokasi:
 
 ```
+
 03-analysis-design/
-└── 02-dfd-level-1/
-├── DFD LEVEL 1 Olion SYSTEM.drawio
-├── DFD LEVEL 1 Olion SYSTEM.drawio.png
+└── 03-dfd-level-2/
 └── notes.md
+
 ```
 
 
-Artefak ini mencakup:
+Status:
 
-- Identifikasi proses utama sistem
-- Dekomposisi interaksi eksternal menjadi proses internal
-- Representasi aliran data utama antar proses
-- Dokumentasi awal deskripsi proses Level 1
-- Fondasi untuk ekspansi ke Level 2 (jika diperlukan)
-
-DFD Level 1 saat ini berstatus:
-
-🟨 **DRAFT**
-
-Karena:
-
-- Struktur proses sudah terbentuk
-- Validasi detail proses masih berlangsung
-- Penyempurnaan deskripsi data flow masih memungkinkan
+🟨 DRAFT
 
 ---
 
@@ -64,25 +204,14 @@ Karena:
 
 ### DOCUMENT_MAP.md — Status Synchronization
 
-Dilakukan pembaruan **DOCUMENT_MAP.md** untuk mencerminkan kondisi aktual artefak Analysis & Design.
-
-Perubahan utama:
-
-- Penambahan referensi folder: (`03-analysis-design/02-dfd-level-1/`)
-- Status dokumen: DFD Level 1 → 🟨 DRAFT
-- Sinkronisasi progres fase: Requirements → Analysis Transition
-
-Perubahan ini memastikan:
-
-- konsistensi navigasi dokumentasi
-- akurasi status artefak
-- traceability antar fase
+- Penambahan referensi DFD Level 1
+- Sinkronisasi fase Requirements → Analysis
 
 ---
 
 ## Fixed
 
-- Tidak ada perbaikan bug dokumentasi pada versi ini.
+- Tidak ada
 
 ---
 
@@ -90,53 +219,20 @@ Perubahan ini memastikan:
 
 ## Added
 
-- Dokumentasi final **Diagram Konteks (DFD Level 0)**
-  (`03-analysis-design/01-diagram-konteks-dfd-level-0/notes.md`)
-
-- Validated **Context Diagram visualization**
-  (`03-analysis-design/01-diagram-konteks-dfd-level-0/'DFD LEVEL 0 Olion SYSTEM.drawio.png'`)
-
-- Standarisasi struktur dokumentasi pada folder:
-
-```
-03-analysis-design/
-└── 01-diagram-konteks-dfd-level-0/
-├── diagram.drawio
-├── 'DFD LEVEL 0 Olion SYSTEM.drawio.png'
-└── notes.md
-```
+- Dokumentasi final Diagram Konteks (DFD Level 0)
+- Visualisasi diagram tervalidasi
 
 ## Changed
 
-### Context Diagram (DFD Level 0) — Full Refinement
+### Context Diagram — Full Refinement
 
-Dilakukan penyempurnaan menyeluruh terhadap artefak Diagram Konteks untuk meningkatkan:
-
-- konsistensi model
-- keterbacaan diagram
-- ketepatan definisi data flow
-- keselarasan dengan Domain Model
-- kesiapan ekspansi menuju DFD Level 1
-
-Perubahan utama:
-
-- Penulisan ulang penuh **notes.md** dengan bahasa profesional dan tanpa ambiguitas
-- Standarisasi terminologi data flow agar selaras dengan Domain Model
-- Penyederhanaan struktur narasi deskripsi aktor eksternal
-- Penambahan definisi formal untuk setiap data flow utama
-- Revisi struktur dokumentasi agar siap digunakan sebagai referensi teknis lanjutan
-- Penyelarasan definisi input/output antar entitas eksternal
-- Penegasan batas sistem (system boundary clarity)
-- Penyesuaian gaya dokumentasi agar sesuai standar dokumentasi analisis sistem
-
-Perubahan ini meningkatkan kualitas dokumentasi tanpa mengubah aktor utama sistem.
+- standarisasi data flow
+- penyederhanaan narasi
+- peningkatan kejelasan boundary sistem
 
 ## Fixed
 
-- Inkonsistensi label data flow pada dokumentasi awal
-- Ambiguitas pada deskripsi interaksi eksternal
-- Ketidaksinkronan istilah antara Domain Model dan Context Diagram
-- Struktur narasi yang sebelumnya berpotensi menimbulkan interpretasi ganda
+- inkonsistensi label dan terminologi
 
 ---
 
@@ -144,29 +240,14 @@ Perubahan ini meningkatkan kualitas dokumentasi tanpa mengubah aktor utama siste
 
 ## Changed
 
-### Context Diagram — Notification Flow Simplification
+### Notification Flow Simplification
 
-Dilakukan penyederhanaan aliran **Notification Message** pada Diagram Konteks (DFD Level 0).
-
-Tujuan perubahan:
-
-- mengurangi redundansi
-- meningkatkan konsistensi visual
-- menyederhanakan representasi komunikasi sistem
-
-Detail perubahan:
-
-- Penyederhanaan alur **Notification Message**
-- Penggabungan beberapa jalur notifikasi serupa
-- Penyesuaian label data flow
-- Penyelarasan terminologi antar entitas
-
-Perubahan ini tidak mengubah struktur aktor eksternal sistem.
+- penyederhanaan alur notifikasi
+- pengurangan redundansi
 
 ## Fixed
 
-- Penyesuaian minor pada label data flow
-- Perbaikan inkonsistensi terminologi
+- minor inconsistency pada label
 
 ---
 
@@ -174,16 +255,7 @@ Perubahan ini tidak mengubah struktur aktor eksternal sistem.
 
 ## Added
 
-- `01-initiation/02-proposal-proyek.docx`  
-  Dokumen proposal proyek OLION untuk kebutuhan akademik.
-
-## Changed
-
-- Tidak ada perubahan struktur signifikan.
-
-## Fixed
-
-- Tidak ada.
+- Proposal proyek
 
 ---
 
@@ -191,19 +263,8 @@ Perubahan ini tidak mengubah struktur aktor eksternal sistem.
 
 ## Added
 
-- `02-requirements/01-brd-business-requirement-document.md`  
-  Business Requirement Document.
-
-- `02-requirements/02-srs-software-requirement-specification.md`  
-  Software Requirement Specification.
-
-## Changed
-
-- Revisi minor pada `01-initiation/01-project-charter.md`.
-
-## Fixed
-
-- Tidak ada.
+- BRD
+- SRS
 
 ---
 
@@ -211,8 +272,7 @@ Perubahan ini tidak mengubah struktur aktor eksternal sistem.
 
 ## Added
 
-- `01-initiation/01-project-charter.md`  
-  Project Charter sebagai fondasi awal proyek.
+- Project Charter
 
 ---
 
@@ -220,24 +280,14 @@ Perubahan ini tidak mengubah struktur aktor eksternal sistem.
 
 ## Added
 
-- `00-index/README.md`
-- `00-index/DOCUMENT_MAP.md`
-- `00-index/CHANGELOG.md`
-
-- Struktur awal repository dokumentasi OLION.
+- Struktur awal dokumentasi
+- DOCUMENT_MAP
+- CHANGELOG
 
 ---
 
 # Closing Note
 
-CHANGELOG ini merupakan rekam jejak resmi evolusi dokumentasi proyek OLION.
+CHANGELOG ini merupakan sumber kebenaran evolusi dokumentasi OLION.
 
-Setiap perubahan pada:
-
-- model sistem
-- diagram analisis
-- struktur data
-- arsitektur
-- maupun artefak desain
-
-**wajib dicatat** dalam dokumen ini untuk menjaga integritas dokumentasi, mendukung proses audit, dan memastikan kesiapan implementasi teknis pada fase berikutnya.
+Setiap perubahan pada model, arsitektur, maupun desain sistem harus dicatat untuk menjaga konsistensi, traceability, dan kesiapan implementasi.

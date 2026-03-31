@@ -1,29 +1,14 @@
 # Data Flow Diagram (DFD) Level 1 — OLION System
 
-Dokumen ini menjelaskan rincian proses internal sistem OLION pada **DFD Level 1**.  
-Diagram ini merupakan dekomposisi langsung dari **DFD Level 0 (Context Diagram)** dan memperlihatkan bagaimana sistem utama dipecah menjadi beberapa proses utama yang saling berinteraksi dengan data store dan entitas eksternal.
+Dokumen ini menjelaskan rincian proses internal sistem OLION pada **DFD Level 1** sebagai dekomposisi langsung dari **DFD Level 0 (Context Diagram)**.
 
-Tujuan dokumen ini adalah:
-
-- menjelaskan struktur proses internal sistem
-- mendefinisikan aliran data antar proses
-- mendokumentasikan hubungan antara proses dan data store
-- menyediakan referensi teknis untuk pengembangan DFD Level 2 dan desain sistem lanjutan
-- memastikan konsistensi dengan Domain Model dan DFD Level 0
-
-Dokumen ini harus digunakan sebagai referensi utama sebelum membuat diagram lanjutan seperti:
-
-- DFD Level 2
-- Activity Diagram
-- Sequence Diagram
-- Database Design
-- API Specification
+Dokumen ini menjadi referensi utama untuk desain lanjutan seperti DFD Level 2, arsitektur sistem, API, dan database.
 
 ---
 
 # Scope Sistem
 
-DFD Level 1 mencakup seluruh proses inti dalam sistem OLION, yaitu:
+DFD Level 1 mencakup seluruh proses inti:
 
 1. Manajemen Autentikasi  
 2. Manajemen Diskusi  
@@ -32,492 +17,299 @@ DFD Level 1 mencakup seluruh proses inti dalam sistem OLION, yaitu:
 5. Manajemen Pakar  
 6. Administrasi Sistem  
 7. Notifikasi Real-Time  
-
-Seluruh proses tersebut berinteraksi dengan berbagai data store dan entitas eksternal.
+8. Recommendation Engine  
 
 ---
 
 # External Entities
 
-Entitas eksternal adalah aktor yang berinteraksi langsung dengan sistem.
-
 ## Pengguna Umum
-
-Pengguna utama sistem yang dapat:
-
-- melakukan registrasi dan login
-- membuat diskusi
-- memberikan jawaban
-- melakukan voting
-- melaporkan konten
-- menerima notifikasi
-
-Interaksi utama:
-
 Mengirim:
-
-- Data Registrasi
-- Data Login
-- Diskusi / Jawaban
-- Vote (Upvote / Downvote)
-- Laporan Konten
+- Data Registrasi & Login  
+- Diskusi / Jawaban  
+- Vote  
+- Laporan  
 
 Menerima:
-
-- Notifikasi Sistem
-- Status Moderasi
-- Status Verifikasi
-- Informasi Diskusi
+- Notifikasi  
+- Status Moderasi  
+- Rekomendasi Diskusi  
+- Informasi Diskusi  
 
 ---
 
 ## Moderator
-
-Moderator bertanggung jawab terhadap pengawasan konten.
-
-Interaksi utama:
+Mengirim:
+- Tindakan Moderasi  
 
 Menerima:
-
-- Notifikasi Moderasi
-
-Mengirim:
-
-- Tindakan Moderasi
+- Notifikasi Moderasi  
 
 ---
 
 ## Pakar
-
-Pakar adalah pengguna terverifikasi yang memberikan jawaban yang memiliki kredibilitas tinggi.
-
-Interaksi utama:
-
 Mengirim:
-
-- Pengajuan Verifikasi
+- Pengajuan Verifikasi  
 
 Menerima:
-
-- Notifikasi Verifikasi
-- Status Verifikasi
+- Status Verifikasi  
+- Rekomendasi Pertanyaan  
 
 ---
 
 ## Administrator
-
-Administrator bertanggung jawab terhadap pengaturan sistem.
-
-Interaksi utama:
-
 Mengirim:
-
-- Konfigurasi Sistem
-- Perintah Administrasi
+- Konfigurasi Sistem  
 
 Menerima:
-
-- Laporan Sistem
+- Laporan Sistem  
+- Metrics & Analytics  
 
 ---
 
 ## AI Service
-
-AI Service digunakan untuk membantu proses deteksi otomatis terhadap konten.
-
-Interaksi utama:
-
-Mengirim:
-
-- Hasil Deteksi AI
+Digunakan untuk:
+- klasifikasi konten
+- flag konten bermasalah
+- prioritas moderasi
 
 ---
 
 # Data Stores
 
-Data store menyimpan data yang digunakan oleh proses sistem.
-
 ## D1 — User & Profil Anonim
-
-Menyimpan:
-
-- Data pengguna
-- Data login
-- Status verifikasi
-- Informasi profil anonim
-
-Digunakan oleh:
-
-- Manajemen Autentikasi
-- Manajemen Pakar
-- Administrasi Sistem
-
----
-
 ## D2 — Diskusi & Konten
-
-Menyimpan:
-
-- Diskusi
-- Jawaban
-- Konten pengguna
-
-Digunakan oleh:
-
-- Manajemen Diskusi
-- Moderasi Konten
-- Administrasi Sistem
-
----
-
 ## D3 — Voting & Reputasi
-
-Menyimpan:
-
-- Data voting
-- Nilai reputasi
-
-Digunakan oleh:
-
-- Sistem Reputasi
-
----
-
 ## D4 — Laporan & Moderation
-
-Menyimpan:
-
-- Laporan konten
-- Riwayat moderasi
-
-Digunakan oleh:
-
-- Moderasi Konten
-
----
-
 ## D5 — Pakar & Verifikasi
-
-Menyimpan:
-
-- Data pakar
-- Status verifikasi
-
-Digunakan oleh:
-
-- Manajemen Pakar
-
----
-
 ## D6 — Log Aktivitas
-
-Menyimpan:
-
-- Log sistem
-- Log notifikasi
-- Log moderasi
-
-Digunakan oleh:
-
-- Seluruh proses utama
-- Administrasi Sistem
-
----
-
 ## D7 — Kategori & Konfigurasi
-
-Menyimpan:
-
-- Data kategori
-- Konfigurasi sistem
-
-Digunakan oleh:
-
-- Manajemen Diskusi
-- Administrasi Sistem
 
 ---
 
 # Process Definitions
 
-Setiap proses merupakan bagian dari sistem utama yang menjalankan fungsi tertentu.
-
 ---
 
 # 1.0 — Manajemen Autentikasi
 
-Proses ini menangani autentikasi pengguna.
-
-Fungsi utama:
-
-- menerima data registrasi
-- menerima data login
-- memverifikasi kredensial
-- memperbarui status pengguna
-- menyimpan data pengguna
-
 Input:
-
 - Data Registrasi
 - Data Login
 
 Output:
-
 - Status Login
 - Update Status User
 
 Data Store:
-
-- D1 — User & Profil Anonim
+- D1
 
 ---
 
 # 2.0 — Manajemen Diskusi
 
-Proses ini menangani seluruh interaksi diskusi.
-
-Fungsi utama:
-
-- membuat diskusi
-- menyimpan jawaban
-- mengambil data diskusi
-- mengelola kategori
-- memicu notifikasi
-
 Input:
-
 - Diskusi
 - Jawaban
+- Data Kategori (D7)
 
 Output:
-
 - Data Diskusi
 - Trigger Notifikasi
+- Data ke Recommendation Engine
 
 Data Store:
-
-- D2 — Diskusi & Konten
-- D7 — Kategori & Konfigurasi
+- D2
+- D7
 
 ---
 
 # 3.0 — Sistem Reputasi
 
-Proses ini menghitung reputasi pengguna berdasarkan voting.
-
-Fungsi utama:
-
-- menerima vote
-- menghitung reputasi
-- menyimpan hasil reputasi
-
 Input:
-
-- Upvote
-- Downvote
+- Upvote / Downvote
 
 Output:
-
 - Data Reputasi
+- Reputation Signal → Recommendation Engine
 
 Data Store:
-
-- D3 — Voting & Reputasi
+- D3
 
 ---
 
 # 4.0 — Moderasi Konten
 
-Proses ini menangani pelaporan dan moderasi konten.
-
-Fungsi utama:
-
-- menerima laporan
-- memproses hasil deteksi AI
-- menerima tindakan moderator
-- menyimpan hasil moderasi
-- mengirim notifikasi
-
 Input:
-
-- Laporan Konten
-- Hasil AI Detection
-- Tindakan Moderasi
+- Laporan
+- AI Detection
+- Tindakan Moderator
 
 Output:
-
 - Status Moderasi
+- Moderation Signal → Recommendation Engine
 - Trigger Notifikasi
 
 Data Store:
-
-- D4 — Laporan & Moderation
-
-External Support:
-
-- AI Service
+- D4
 
 ---
 
 # 5.0 — Manajemen Pakar
 
-Proses ini menangani verifikasi pakar.
-
-Fungsi utama:
-
-- menerima pengajuan verifikasi
-- memproses status verifikasi
-- menyimpan data pakar
-
 Input:
-
 - Data Verifikasi
 
 Output:
-
 - Status Verifikasi
+- Expert Metadata → Recommendation Engine
 
 Data Store:
-
-- D5 — Pakar & Verifikasi
-- D1 — User & Profil Anonim
+- D5
+- D1
 
 ---
 
 # 6.0 — Administrasi Sistem
 
-Proses ini mengelola konfigurasi dan administrasi sistem.
-
-Fungsi utama:
-
-- menerima konfigurasi
-- melakukan backup data
-- menghasilkan laporan
-- mengelola kategori
-
 Input:
-
 - Konfigurasi Sistem
 
 Output:
-
 - Laporan Sistem
+- Recommendation Metrics
 - Backup Data
 
 Data Store:
-
-- D2 — Diskusi & Konten
-- D6 — Log Aktivitas
-- D7 — Kategori & Konfigurasi
+- D2
+- D6
+- D7
 
 ---
 
 # 7.0 — Notifikasi Real-Time
 
-Proses ini mengirim notifikasi kepada pengguna.
-
-Fungsi utama:
-
-- menerima trigger notifikasi
-- mengirim notifikasi
-- menyimpan log notifikasi
-
 Input:
-
 - Trigger Notifikasi
+- Recommendation Notification Trigger
 
 Output:
-
 - Notifikasi ke Pengguna
 - Notifikasi ke Moderator
 - Notifikasi ke Pakar
 
 Data Store:
+- D6
+
+---
+
+# 8.0 — Recommendation Engine
+
+Proses ini menghasilkan rekomendasi berbasis perilaku, reputasi, dan konten.
+
+## Fungsi Utama
+
+- membangun personalized feed
+- mengolah behavior & interaction data
+- mengolah sinyal reputasi & moderasi
+- menghasilkan rekomendasi diskusi & pakar
+- memicu notifikasi rekomendasi
+
+---
+
+## Input
+
+- Behavior Data (D6 Log Aktivitas)
+- User Profile Data (D1)
+- Discussion Content Data (D2)
+- Reputation Signal (D3)
+- Moderation Signal (4.0)
+- Expert Metadata (5.0)
+- Configuration / Weighting (D7)
+- Request Feed (Pengguna)
+
+---
+
+## Output
+
+- Personalized Discussion Feed → Pengguna
+- Expert Recommendation Feed → Pakar / Diskusi
+- Recommendation Metrics → Administrasi Sistem
+- Recommendation Notification Trigger → Notifikasi Real-Time
+
+---
+
+## Data Store
 
 - D6 — Log Aktivitas
+- D2 — Diskusi & Konten
+- D1 — User Profile
+- D7 — Konfigurasi
 
 ---
 
 # Key Data Flow Summary
 
-Ringkasan aliran data utama dalam sistem.
+## Recommendation Flow
 
-## Autentikasi Flow
-
-Pengguna Umum  
-→ Manajemen Autentikasi  
-→ D1 User & Profil  
-→ Status Login
-
----
-
-## Diskusi Flow
-
-Pengguna Umum  
-→ Manajemen Diskusi  
-→ D2 Diskusi  
-→ Notifikasi Real-Time
+Pengguna  
+→ (Request Feed)  
+→ Recommendation Engine  
+→ Personalized Feed  
+→ Pengguna  
 
 ---
 
-## Voting Flow
+## Signal Aggregation Flow
 
-Pengguna Umum  
-→ Sistem Reputasi  
-→ D3 Voting  
-→ Update Reputasi
-
----
-
-## Moderation Flow
-
-Pengguna Umum  
-→ Moderasi Konten  
-→ AI Service  
-→ Moderator  
-→ D4 Laporan
+Reputasi / Moderasi / Aktivitas  
+→ Recommendation Engine  
+→ Ranking & Scoring  
+→ Feed Output  
 
 ---
 
-## Verification Flow
+## Notification Flow (Extended)
 
-Pakar  
-→ Manajemen Pakar  
-→ D5 Pakar  
-→ Status Verifikasi
-
----
-
-## Notification Flow
-
-Semua Proses  
+Recommendation Engine  
+→ Trigger Notifikasi  
 → Notifikasi Real-Time  
-→ Pengguna
+→ Pengguna  
+
+---
+
+# Standard Status Definition
+
+Status Login:  
+{ success, failed }
+
+Status Moderasi:  
+{ pending, approved, rejected }
+
+Status Verifikasi:  
+{ submitted, under_review, verified, rejected }
+
+Status Notifikasi:  
+{ sent, delivered, read }
 
 ---
 
 # Design Integrity Notes
 
-DFD Level 1 ini memiliki karakteristik:
-
-- seluruh proses berasal dari dekomposisi Level 0
-- seluruh data store memiliki peran eksplisit
-- tidak terdapat aliran data langsung antar data store
-- seluruh interaksi eksternal melewati proses
-- seluruh proses memiliki input dan output jelas
-
-Model ini siap digunakan sebagai dasar:
-
-- DFD Level 2
-- Database Design
-- API Design
-- System Architecture
+- Tidak ada data flow langsung antar data store  
+- Semua proses memiliki input & output eksplisit  
+- Recommendation Engine bersifat **non-authoritative (read-heavy)**  
+- Tidak mengubah data utama (hanya konsumsi & output insight)  
+- Seluruh interaksi eksternal tetap melalui proses  
 
 ---
 
 # Closing Statement
 
-DFD Level 1 merupakan representasi detail dari perilaku internal sistem OLION.  
-Dokumen ini berfungsi sebagai referensi teknis utama untuk memahami bagaimana data mengalir di dalam sistem serta bagaimana setiap proses saling berinteraksi.
+Dengan penambahan **Recommendation Engine**, sistem OLION berevolusi dari sekadar platform diskusi menjadi **knowledge-driven adaptive system** yang mampu memberikan pengalaman personal berbasis data.
 
-Konsistensi dokumen ini dengan Domain Model dan DFD Level 0 sangat penting untuk menjaga integritas desain sistem pada tahap implementasi berikutnya.
+Model ini siap diturunkan ke:
+- DFD Level 2 (Recommendation Logic)
+- Machine Learning Pipeline Design
+- API Personalization Layer
+- Event-driven Architecture

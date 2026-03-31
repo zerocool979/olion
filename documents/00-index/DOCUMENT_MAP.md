@@ -58,16 +58,17 @@ Artefak berikut merupakan tulang punggung dokumentasi proyek.
 
 Fase ini menerjemahkan requirement menjadi model sistem teknis.
 
-| No | Dokumen                           | File / Folder                                        |  Status | Catatan Implementasi                   |
-| -: | --------------------------------- | ---------------------------------------------------- | :-----: | -------------------------------------- |
-| 08 | Domain Model                      | `03-analysis-design/01-domain-model.md`              | 🟩 DONE | Entitas inti sistem telah ditentukan   |
+| No | Dokumen                           | File / Folder                                        |  Status | Catatan Implementasi                                      |
+| -: | --------------------------------- | ---------------------------------------------------- | :-----: | --------------------------------------------------------- |
+| 08 | Domain Model                      | `03-analysis-design/01-domain-model.md`              | 🟩 DONE | Entitas inti sistem telah ditentukan                      |
 | 09 | Diagram Konteks (DFD Level 0)     | `03-analysis-design/01-diagram-konteks-dfd-level-0/` | 🟩 DONE | Diagram dan dokumentasi telah divalidasi dan siap ekspansi ke DFD Level 1 |
-| 10 | DFD Level 1                       | `03-analysis-design/02-dfd-level-1/`                 | 🟨 DRAFT | Detail proses utama sistem             |
-| 11 | Use Case Diagram & Spec           | `03-analysis-design/03-usecase/`                     | 🟥 TODO | Menjelaskan interaksi aktor            |
-| 12 | Activity Diagram                  | `03-analysis-design/04-activity-diagram/`            | 🟥 TODO | Menggambarkan workflow utama           |
-| 13 | ERD — Entity Relationship Diagram | `03-analysis-design/05-erd/`                         | 🟥 TODO | Fondasi desain database                |
-| 14 | Database Design                   | `03-analysis-design/06-database-design/`             | 🟥 TODO | Schema, dictionary, normalization      |
-| 15 | Sequence Diagram                  | `03-analysis-design/07-sequence-diagram/`            | 🟥 TODO | Flow komunikasi antar komponen         |
+| 10 | DFD Level 1                       | `03-analysis-design/02-dfd-level-1/`                 | 🟩 DONE | Detail proses utama sistem                                |
+| 11 | DFD Level 2                       | `03-analysis-design/03-dfd-level-2/`                 | 🟨 DRAFT | Dekomposisi detail tiap proses (1.0–8.0) ke sub-process   |
+| 12 | Use Case Diagram & Spec           | `03-analysis-design/04-usecase/`                     | 🟥 TODO | Menjelaskan interaksi aktor                               |
+| 13 | Activity Diagram                  | `03-analysis-design/05-activity-diagram/`            | 🟥 TODO | Menggambarkan workflow utama                              |
+| 14 | ERD — Entity Relationship Diagram | `03-analysis-design/06-erd/`                         | 🟥 TODO | Fondasi desain database                                   |
+| 15 | Database Design                   | `03-analysis-design/07-database-design/`             | 🟥 TODO | Schema, dictionary, normalization                         |
+| 16 | Sequence Diagram                  | `03-analysis-design/08-sequence-diagram/`            | 🟥 TODO | Flow komunikasi antar komponen                            |
 
 ---
 
