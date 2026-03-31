@@ -62,7 +62,7 @@ Fase ini menerjemahkan requirement menjadi model sistem teknis.
 | -: | --------------------------------- | ---------------------------------------------------- | :-----: | -------------------------------------- |
 | 08 | Domain Model                      | `03-analysis-design/01-domain-model.md`              | 🟩 DONE | Entitas inti sistem telah ditentukan   |
 | 09 | Diagram Konteks (DFD Level 0)     | `03-analysis-design/01-diagram-konteks-dfd-level-0/` | 🟩 DONE | Diagram dan dokumentasi telah divalidasi dan siap ekspansi ke DFD Level 1 |
-| 10 | DFD Level 1                       | `03-analysis-design/02-dfd-level-1/`                 | 🟥 TODO | Detail proses utama sistem             |
+| 10 | DFD Level 1                       | `03-analysis-design/02-dfd-level-1/`                 | 🟨 DRAFT | Detail proses utama sistem             |
 | 11 | Use Case Diagram & Spec           | `03-analysis-design/03-usecase/`                     | 🟥 TODO | Menjelaskan interaksi aktor            |
 | 12 | Activity Diagram                  | `03-analysis-design/04-activity-diagram/`            | 🟥 TODO | Menggambarkan workflow utama           |
 | 13 | ERD — Entity Relationship Diagram | `03-analysis-design/05-erd/`                         | 🟥 TODO | Fondasi desain database                |

@@ -19,6 +19,73 @@ Maintainer: **beel**
 
 # [Unreleased]
 
+---
+
+# [v0.1.4] — 2026-03-31
+
+## Added
+
+### DFD Level 1 — Initial Decomposition
+
+Ditambahkan artefak awal **DFD Level 1** sebagai hasil dekomposisi dari Diagram Konteks (DFD Level 0).
+
+Lokasi:
+
+```
+03-analysis-design/
+└── 02-dfd-level-1/
+├── DFD LEVEL 1 Olion SYSTEM.drawio
+├── DFD LEVEL 1 Olion SYSTEM.drawio.png
+└── notes.md
+```
+
+
+Artefak ini mencakup:
+
+- Identifikasi proses utama sistem
+- Dekomposisi interaksi eksternal menjadi proses internal
+- Representasi aliran data utama antar proses
+- Dokumentasi awal deskripsi proses Level 1
+- Fondasi untuk ekspansi ke Level 2 (jika diperlukan)
+
+DFD Level 1 saat ini berstatus:
+
+🟨 **DRAFT**
+
+Karena:
+
+- Struktur proses sudah terbentuk
+- Validasi detail proses masih berlangsung
+- Penyempurnaan deskripsi data flow masih memungkinkan
+
+---
+
+## Changed
+
+### DOCUMENT_MAP.md — Status Synchronization
+
+Dilakukan pembaruan **DOCUMENT_MAP.md** untuk mencerminkan kondisi aktual artefak Analysis & Design.
+
+Perubahan utama:
+
+- Penambahan referensi folder: (`03-analysis-design/02-dfd-level-1/`)
+- Status dokumen: DFD Level 1 → 🟨 DRAFT
+- Sinkronisasi progres fase: Requirements → Analysis Transition
+
+Perubahan ini memastikan:
+
+- konsistensi navigasi dokumentasi
+- akurasi status artefak
+- traceability antar fase
+
+---
+
+## Fixed
+
+- Tidak ada perbaikan bug dokumentasi pada versi ini.
+
+---
+
 # [v0.1.3] — 2026-03-31
 
 ## Added
