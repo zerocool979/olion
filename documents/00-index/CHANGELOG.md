@@ -22,7 +22,45 @@ Maintainer: **beel**
 
 ---
 
-# [v0.1.5] — 2026-04-01
+# [v0.0.1] — 2026-05-15
+
+## Added
+
+### 1. Documentation System Update (documents branch)
+
+- Penambahan dan penyempurnaan struktur dokumentasi proyek OLION
+- Update BRD dan SRS untuk sinkronisasi dengan implementasi sistem terbaru
+- Penambahan file dokumentasi versi final (BRD, SRS, SAD, STD)
+- Penataan ulang artefak analysis & design (DFD Level 0 dan supporting notes)
+- Penguatan DOCUMENT_MAP sebagai pusat navigasi dokumentasi
+
+---
+
+### 2. Backend System Refactor (backend branch)
+
+- Refactor arsitektur authentication system (JWT & middleware flow)
+- Peningkatan role-based access control (RBAC)
+- Penyempurnaan error handling middleware untuk konsistensi API response
+- Refactor modul discussion (controller & service layer)
+- Perbaikan konfigurasi Prisma schema dan database seed
+- Optimalisasi struktur routing API
+- Peningkatan struktur server initialization dan environment configuration
+
+---
+
+### 3. Frontend System Enhancement (frontend branch)
+
+- Peningkatan UI/UX flow pada seluruh halaman utama aplikasi
+- Refactor authentication context dan API handling layer
+- Perbaikan navigasi dan layout consistency
+- Penyempurnaan halaman dashboard, login, register, logout, create, report
+- Optimalisasi role-based pages (admin & moderator interface)
+- Perbaikan halaman discussion detail (`[id]`) untuk stabilitas rendering
+- Peningkatan global styling untuk konsistensi desain sistem
+
+---
+
+# [v0.0.1] — 2026-04-01
 
 ## Added
 
@@ -175,7 +213,7 @@ Siap untuk:
 
 ---
 
-# [v0.1.4] — 2026-03-31
+# [v0.0.1] — 2026-03-31
 
 ## Added
 
@@ -215,7 +253,7 @@ Status:
 
 ---
 
-# [v0.1.3] — 2026-03-31
+# [v0.0.1] — 2026-03-31
 
 ## Added
 
@@ -236,7 +274,7 @@ Status:
 
 ---
 
-# [v0.1.2] — 2026-03-27
+# [v0.0.1] — 2026-03-27
 
 ## Changed
 
@@ -251,7 +289,7 @@ Status:
 
 ---
 
-# [v0.1.2] — 2026-02-16
+# [v0.0.1] — 2026-02-16
 
 ## Added
 
@@ -259,7 +297,7 @@ Status:
 
 ---
 
-# [v0.1.1] — 2026-02-03
+# [v0.0.1] — 2026-02-03
 
 ## Added
 
@@ -268,7 +306,7 @@ Status:
 
 ---
 
-# [v0.1.0] — 2026-01-29
+# [v0.0.1] — 2026-01-29
 
 ## Added
 
