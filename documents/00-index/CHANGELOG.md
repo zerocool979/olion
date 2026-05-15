@@ -22,6 +22,40 @@ Maintainer: **beel**
 
 ---
 
+# [v0.0.1] — 2026-05-16
+
+## Added & Modified
+
+### Backend
+
+* Refactor modul **Category**: optimasi struktur controller untuk data kategori dan relasi discussion & subcategory
+* Penambahan/penyempurnaan endpoint search untuk mendukung filter berdasarkan kategori dan subkategori
+* Perbaikan routing API search dan discussion agar lebih konsisten dan terintegrasi
+* Optimalisasi service discussion (list & detail) dengan include relasi user, category, dan count engagement
+* Perbaikan integrasi Prisma schema terkait kategori dan relasi discussion
+
+### Frontend
+
+* Refactor halaman **Search** untuk menggunakan API backend (menggantikan dummy data)
+* Penambahan fitur filter:
+
+  * kategori
+  * subkategori
+  * keyword search
+  * sorting (relevan, terbaru, votes, komentar)
+* Sinkronisasi state URL query (`q`, `category`, `subcategory`, `sort`)
+* Perbaikan UI search result agar lebih dinamis dan real-time
+* Persiapan struktur UI untuk kategori hierarkis (category → subcategory)
+* Pemindahan styling ke `globals.css` dan `Nav.js` untuk konsistensi desain
+
+### Routing & API
+
+* Penambahan endpoint `/search` untuk filtering discussion berbasis query parameter
+* Perbaikan mapping route discussion dan category agar tidak conflict
+* Integrasi parameter search: `q`, `category`, `subcategory`, `sort`
+
+---
+
 # [v0.0.1] — 2026-05-15
 
 ## Added
