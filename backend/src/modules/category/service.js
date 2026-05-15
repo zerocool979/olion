@@ -1,4 +1,3 @@
-'use strict'
 const prisma = require('../../config/prisma')
 
 // ── Shared include block reused across queries ────────────────────────────────
@@ -15,7 +14,8 @@ const DISCUSSION_INCLUDE = {
 }
 
 // ── list ──────────────────────────────────────────────────────────────────────
-async function list({ skip = 0, take = 20 } = {}) {
+// Used by GET /discussions (dashboard, home).
+module.exports.list = async ({ skip = 0, take = 20 } = {}) => {
   return prisma.discussion.findMany({
     skip,
     take,
@@ -26,7 +26,7 @@ async function list({ skip = 0, take = 20 } = {}) {
 }
 
 // ── detail ────────────────────────────────────────────────────────────────────
-async function detail(id) {
+module.exports.detail = async (id) => {
   return prisma.discussion.findUnique({
     where: { id },
     include: {
@@ -42,7 +42,7 @@ async function detail(id) {
 }
 
 // ── create ────────────────────────────────────────────────────────────────────
-async function create(userId, categoryId, title, content, mode, discipline) {
+module.exports.create = async (userId, categoryId, title, content, mode, discipline) => {
   return prisma.discussion.create({
     data: { title, content, categoryId, userId, mode, discipline },
     include: DISCUSSION_INCLUDE,
@@ -50,38 +50,44 @@ async function create(userId, categoryId, title, content, mode, discipline) {
 }
 
 // ── search ────────────────────────────────────────────────────────────────────
-// Params:
-//   q           - full-text search on title + content (case-insensitive)
-//   category    - root category slug; expands to include all children
-//   subcategory - child category slug; takes precedence over category
-//   sort        - 'latest' | 'votes' | 'comments'
-//   skip / take - pagination
-async function search({
+// Supports:
+//   q           – full-text search on title + content (case-insensitive)
+//   category    – root category slug; expands to include all children
+//   subcategory – child category slug; takes precedence over category
+//   sort        – 'latest' | 'votes' | 'comments'
+//   skip/take   – pagination
+module.exports.search = async ({
   q = '',
   category = '',
   subcategory = '',
   sort = 'latest',
   skip = 0,
   take = 20,
-} = {}) {
+} = {}) => {
 
-  // Sorting
+  // ── Sorting ──────────────────────────────────────────────────────────────
   let orderBy
-  if (sort === 'votes') {
-    orderBy = { votes: { _count: 'desc' } }
-  } else if (sort === 'comments') {
-    orderBy = { comments: { _count: 'desc' } }
-  } else {
-    orderBy = { createdAt: 'desc' }
+  switch (sort) {
+    case 'votes':
+      orderBy = { votes: { _count: 'desc' } }
+      break
+    case 'comments':
+      orderBy = { comments: { _count: 'desc' } }
+      break
+    default:
+      orderBy = { createdAt: 'desc' }
   }
 
-  // Category filter — subcategory takes precedence
-  let categoryIdFilter
+  // ── Category filter ───────────────────────────────────────────────────────
+  // Priority: subcategory > category > none
+  let categoryIdFilter = undefined
 
   if (subcategory) {
+    // Exact match on child slug
     const sub = await prisma.category.findFirst({ where: { slug: subcategory } })
     if (sub) categoryIdFilter = { equals: sub.id }
   } else if (category) {
+    // Find parent + all its children so results include sub-topics
     const parent = await prisma.category.findFirst({
       where: { slug: category },
       include: { children: { select: { id: true } } },
@@ -92,19 +98,19 @@ async function search({
     }
   }
 
-  // Where clause
+  // ── Full-text where clause ────────────────────────────────────────────────
   const where = {
     isHidden: false,
     ...(q && {
       OR: [
-        { title:   { contains: q, mode: 'insensitive' } },
+        { title: { contains: q, mode: 'insensitive' } },
         { content: { contains: q, mode: 'insensitive' } },
       ],
     }),
     ...(categoryIdFilter && { categoryId: categoryIdFilter }),
   }
 
-  // Execute with count for pagination meta
+  // ── Execute ───────────────────────────────────────────────────────────────
   const [data, total] = await Promise.all([
     prisma.discussion.findMany({ skip, take, where, orderBy, include: DISCUSSION_INCLUDE }),
     prisma.discussion.count({ where }),
@@ -112,6 +118,3 @@ async function search({
 
   return { data, total }
 }
-
-// ── Exports ───────────────────────────────────────────────────────────────────
-module.exports = { list, detail, create, search }
