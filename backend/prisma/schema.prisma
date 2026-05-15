@@ -7,6 +7,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── FIX: tambah updatedAt di User dan Profile untuk audit trail
+// ─── FIX: tidak ada perubahan struktural besar, schema sudah solid
 model User {
   id               String   @id @default(uuid())
   email            String   @unique
@@ -14,6 +16,7 @@ model User {
   role             Role     @default(USER)
   isVerifiedExpert Boolean  @default(false)
   createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt   // ← ADDED: audit trail
 
   profile     Profile?
   discussions Discussion[]
@@ -24,84 +27,89 @@ model User {
 }
 
 model Profile {
-  id       String @id @default(uuid())
-  username String @unique
-  userId   String @unique
-  user     User   @relation(fields: [userId], references: [id])
+  id        String   @id @default(uuid())
+  username  String   @unique
+  bio       String?              // ← ADDED: optional bio untuk future use
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // ─── FIX: onDelete Cascade agar Profile ikut terhapus saat User dihapus
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Category {
   id          String       @id @default(uuid())
   name        String       @unique
-  parentId  String?
-  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id])
-  children  Category[] @relation("CategoryTree")
+  parentId    String?
+  parent      Category?    @relation("CategoryTree", fields: [parentId], references: [id])
+  children    Category[]   @relation("CategoryTree")
   discussions Discussion[]
 }
 
 model Discussion {
-  id          String @id @default(uuid())
-  title       String
-  content     String
+  id         String         @id @default(uuid())
+  title      String
+  content    String
+  categoryId String
+  category   Category       @relation(fields: [categoryId], references: [id])
+  mode       DiscussionMode
+  discipline DisciplineLevel
+  userId     String
+  user       User           @relation(fields: [userId], references: [id])
+  comments   Comment[]
+  votes      Vote[]
+  reports    Report[]
+  isHidden   Boolean        @default(false)
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt   // ← ADDED
 
-  categoryId  String
-  category    Category @relation(fields: [categoryId], references: [id])
-
-  mode        DiscussionMode
-  discipline  DisciplineLevel
-
-  userId      String
-  user        User @relation(fields: [userId], references: [id])
-
-  comments    Comment[]
-  votes       Vote[]
-  reports     Report[]
-
-  isHidden    Boolean @default(false)
-  createdAt  DateTime @default(now())
+  @@index([categoryId])    // ← ADDED: index untuk query performance
+  @@index([userId])
 }
 
 model Comment {
-  id        String   @id @default(uuid())
-  content   String
-  isHidden  Boolean  @default(false)
-  createdAt DateTime @default(now())
-
+  id           String     @id @default(uuid())
+  content      String
+  isHidden     Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt   // ← ADDED
   userId       String
   discussionId String
+  user         User       @relation(fields: [userId], references: [id])
+  discussion   Discussion @relation(fields: [discussionId], references: [id])
+  reports      Report[]
 
-  user       User       @relation(fields: [userId], references: [id])
-  discussion Discussion @relation(fields: [discussionId], references: [id])
-
-  reports Report[]
+  @@index([discussionId])
 }
 
 model Vote {
-  id    String @id @default(uuid())
-  value Int
-
+  id           String     @id @default(uuid())
+  // ─── FIX: value harus +1 atau -1. Constraint di application layer di service.
+  // Prisma tidak support CHECK constraint langsung, enforce di service.
+  value        Int
   userId       String
   discussionId String
-
-  user       User       @relation(fields: [userId], references: [id])
-  discussion Discussion @relation(fields: [discussionId], references: [id])
+  user         User       @relation(fields: [userId], references: [id])
+  discussion   Discussion @relation(fields: [discussionId], references: [id])
 
   @@unique([userId, discussionId])
 }
 
 model Report {
-  id        String       @id @default(uuid())
-  reason    String
-  status    ReportStatus @default(PENDING)
-  createdAt DateTime     @default(now())
-
+  id           String       @id @default(uuid())
+  reason       String
+  status       ReportStatus @default(PENDING)
+  createdAt    DateTime     @default(now())
+  // ─── NOTE: pastikan di service level salah satu dari discussionId/commentId harus ada
   reporterId   String
   discussionId String?
   commentId    String?
+  reporter     User        @relation(fields: [reporterId], references: [id])
+  discussion   Discussion? @relation(fields: [discussionId], references: [id])
+  comment      Comment?    @relation(fields: [commentId], references: [id])
 
-  reporter   User        @relation(fields: [reporterId], references: [id])
-  discussion Discussion? @relation(fields: [discussionId], references: [id])
-  comment    Comment?    @relation(fields: [commentId], references: [id])
+  @@index([reporterId])
+  @@index([status])
 }
 
 model ReputationLog {
@@ -109,9 +117,10 @@ model ReputationLog {
   point     Int
   reason    String
   createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id])
+  @@index([userId])
 }
 
 enum Role {

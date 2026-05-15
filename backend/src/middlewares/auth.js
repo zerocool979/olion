@@ -1,14 +1,15 @@
-const jwt = require('../utils/jwt')
+const jwt = require('jsonwebtoken')
+const { JWT_SECRET } = require('../config/env')
 
 module.exports = (req, res, next) => {
-  const header = req.headers.authorization
-  if (!header) return res.status(401).json({ message: 'Unauthorized' })
-
   try {
-    req.user = jwt.verify(header.split(' ')[1])
+    const token = req.headers.authorization?.split(' ')[1]
+    if (!token) return res.status(401).json({ error: 'No token' })
+    
+    const decoded = jwt.verify(token, JWT_SECRET)
+    req.userId = decoded.id
     next()
-  } catch {
-    res.status(401).json({ message: 'Invalid token' })
+  } catch (err) {
+    res.status(401).json({ error: 'Invalid token' })
   }
 }
-
