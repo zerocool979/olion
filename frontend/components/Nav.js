@@ -232,7 +232,19 @@ export default function Nav() {
               </>
             ) : (
               <>
-                <Link href="/login" className="btn-ghost" style={{ fontSize: '0.875rem' }}>
+                <Link href="/search" className="btn-ghost" style={{ fontSize: '0.875rem' }}>
+                  Search
+                </Link>
+                <Link href="/trending" className="btn-ghost" style={{ fontSize: '0.875rem' }}>
+                  Trending
+                </Link>
+                <Link href="/categories" className="btn-ghost" style={{ fontSize: '0.875rem' }}>
+                  Categories
+                </Link>
+                <Link href="/leaderboard" className="btn-ghost" style={{ fontSize: '0.875rem' }}>
+                  Leaderboard
+                </Link>
+                <Link href="/login" className="btn-outline" style={{ fontSize: '0.875rem' }}>
                   Login
                 </Link>
                 <Link href="/register" className="btn-outline" style={{ fontSize: '0.875rem' }}>
