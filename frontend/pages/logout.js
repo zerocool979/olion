@@ -1,13 +1,19 @@
-import { useEffect } from 'react'
+import { useEffect, useContext } from 'react'
 import { useRouter } from 'next/router'
+import { AuthContext } from '../context/AuthContext'
 
 export default function Logout() {
   const router = useRouter()
+  const { logout } = useContext(AuthContext)
 
   useEffect(() => {
-    localStorage.removeItem('token')
+    logout()
     router.replace('/login')
-  }, [router])
+  }, [router, logout])
 
-  return null
+  return (
+    <div className="p-8 text-center">
+      <p className="text-gray-600">Logging out...</p>
+    </div>
+  )
 }
