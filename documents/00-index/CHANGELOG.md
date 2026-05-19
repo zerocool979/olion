@@ -22,6 +22,69 @@ Maintainer: **beel**
 
 ---
 
+# [v0.0.1] — 2026-05-20
+
+## Added & Modified
+
+### Backend
+
+* Modul **leaderboard**: controller & service untuk menampilkan peringkat pengguna berdasarkan reputasi
+* Modul **stats**: endpoint ringkasan statistik platform (total diskusi, pengguna, komentar)
+* Modul **trending**: endpoint diskusi trending berdasarkan engagement terkini
+* Migrasi Prisma:
+  - `add_is_banned_to_user` — penambahan field `isBanned` pada model User
+  - `add_visibility_mode` — field `visibility` untuk mengatur mode publik/terbatas diskusi
+  - `add_comment_reply_and_vote` — dukungan vote pada komentar & fitur balasan komentar
+* Service baru: `leaderboard`, `stats`, `trending`
+* Update routes dan server untuk mengakomodasi endpoint baru
+* Perbaikan logika di service & controller:
+  - Auth: penanganan banned user saat login
+  - Category: dukungan visibility mode
+  - Comment: integrasi vote & reply
+  - Discussion: filter berdasarkan visibility
+  - Report: validasi tambahan
+  - Vote: logika vote untuk komentar
+* Update `package.json`, `package-lock.json`, `.env` config, `prisma.js`, `server.js`
+
+### Frontend
+
+* Komponen baru:
+  - `Avatar`, `CategoryCard`, `CategorySkeleton`, `DashboardRedirect`
+  - `DiscussionCard`, `DiscussionLink`, `EmptyState`, `FilterPill`
+  - `LeaderRow`, `LeaderSkeleton`, `ModeBadge`, `PodiumCard`, `RankBadge`
+  - `SkeletonCard`, `SkeletonStats`, `SonarRedirect`, `StatPill`
+  - `TrendingRow`, `TrendingSkeleton`
+  - Folder komponen: `bookmarks/`, `dashboard/`, `discussion.js`, `discussion/`,
+    `guidelines/`, `landing/`, `nav/`, `notifications/`, `profile/`
+* Halaman baru:
+  - `admin/`, `expert/`, `guest/`, `moderator/`, `user/`
+  - `community-guidelines.js`, `privacy.js`, `terms.js`
+* Library & hooks:
+  - `hooks/` — custom hooks untuk data fetching dan UI state
+  - `lib/getDiscussionRoute.js` — helper routing diskusi
+  - `lib/routes.js` — konfigurasi path terpusat
+  - `lib/timeAgo.js` — formatter waktu relatif
+* Update komponen & halaman existing:
+  - `Nav.js`, `api.js`, `next.config.js`, `_app.js`
+  - Semua halaman utama: `index`, `create`, `categories`, `dashboard`, `search`,
+    `trending`, `leaderboard`, `discussion/[id]`
+* Global styling diperbarui di `globals.css`
+
+## Removed
+
+* Halaman auth & notifikasi lama:
+  - `login.js`, `register.js`, `logout.js`, `notifications.js`, `report.js`
+* Halaman admin & moderator lama:
+  - `admin.js`, `moderator.js`
+
+### Routing & API
+
+* Penambahan endpoint `/search` untuk filtering discussion berbasis query parameter
+* Perbaikan mapping route discussion dan category agar tidak conflict
+* Integrasi parameter search: `q`, `category`, `subcategory`, `sort`
+
+---
+
 # [v0.0.1] — 2026-05-16
 
 ## Added & Modified
