@@ -19,6 +19,8 @@ logs/
 # OS
 .DS_Store
 
-# Python (jika ada)
-__pycache__/
-*.pyc
+# Prisma
+.prisma
+
+# file backup
+.bak
