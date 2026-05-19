@@ -60,7 +60,7 @@ module.exports = {
   me: async (req, res, next) => {
     try {
       // req.user di-set oleh auth middleware
-      const user = await authService.getMe(req.user.id)
+      const user = await authService.getMe(req.userId)
       return res.status(200).json({ user })
     } catch (err) {
       next(err)

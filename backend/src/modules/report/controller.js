@@ -2,7 +2,7 @@ const service = require('./service')
 
 exports.report = async (req, res, next) => {
   try {
-    const r = await service.create(req.body, req.user.id)
+    const r = await service.create(req.body, req.userId)
     res.json(r)
   } catch (e) { next(e) }
 }
