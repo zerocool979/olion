@@ -7,8 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ─── FIX: tambah updatedAt di User dan Profile untuk audit trail
-// ─── FIX: tidak ada perubahan struktural besar, schema sudah solid
 model User {
   id               String   @id @default(uuid())
   email            String   @unique
@@ -16,8 +14,8 @@ model User {
   role             Role     @default(USER)
   isVerifiedExpert Boolean  @default(false)
   createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt   // ← ADDED: audit trail
-
+  updatedAt        DateTime @updatedAt
+  isBanned   Boolean  @default(false)
   profile     Profile?
   discussions Discussion[]
   comments    Comment[]
@@ -29,10 +27,9 @@ model User {
 model Profile {
   id        String   @id @default(uuid())
   username  String   @unique
-  bio       String?              // ← ADDED: optional bio untuk future use
+  bio       String?
   userId    String   @unique
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  // ─── FIX: onDelete Cascade agar Profile ikut terhapus saat User dihapus
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -67,7 +64,7 @@ model Discussion {
   createdAt  DateTime       @default(now())
   updatedAt  DateTime       @updatedAt   // ← ADDED
 
-  @@index([categoryId])    // ← ADDED: index untuk query performance
+  @@index([categoryId])
   @@index([userId])
 }
 
@@ -76,27 +73,32 @@ model Comment {
   content      String
   isHidden     Boolean    @default(false)
   createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt   // ← ADDED
+  updatedAt    DateTime   @updatedAt
   userId       String
   discussionId String
+  parentId     String?
+  parent       Comment?               @relation("CommentReplies", fields: [parentId], references: [id])
+  replies      Comment[]              @relation("CommentReplies")
   user         User       @relation(fields: [userId], references: [id])
   discussion   Discussion @relation(fields: [discussionId], references: [id])
   reports      Report[]
+  votes        Vote[]
 
   @@index([discussionId])
 }
 
 model Vote {
   id           String     @id @default(uuid())
-  // ─── FIX: value harus +1 atau -1. Constraint di application layer di service.
-  // Prisma tidak support CHECK constraint langsung, enforce di service.
   value        Int
   userId       String
-  discussionId String
+  discussionId String?
+  commentId    String?
   user         User       @relation(fields: [userId], references: [id])
-  discussion   Discussion @relation(fields: [discussionId], references: [id])
-
+  discussion   Discussion? @relation(fields: [discussionId], references: [id])
+  comment      Comment?    @relation(fields: [commentId], references: [id])
+  createdAt    DateTime   @default(now())
   @@unique([userId, discussionId])
+  @@unique([userId, commentId])
 }
 
 model Report {
@@ -104,7 +106,6 @@ model Report {
   reason       String
   status       ReportStatus @default(PENDING)
   createdAt    DateTime     @default(now())
-  // ─── NOTE: pastikan di service level salah satu dari discussionId/commentId harus ada
   reporterId   String
   discussionId String?
   commentId    String?
@@ -141,6 +142,8 @@ enum ReportStatus {
 }
 
 enum DiscussionMode {
+  ANONYMOUS
+  IDENTIFIED
   INFORMATIF
   KLARIFIKATIF
   EKSPLORATIF
