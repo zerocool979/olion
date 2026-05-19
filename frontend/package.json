@@ -2,7 +2,7 @@
   "name": "olion-frontend",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -H localhost",
     "build": "next build",
     "start": "next start"
   },

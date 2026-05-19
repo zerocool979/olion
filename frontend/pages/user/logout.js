@@ -1,6 +1,6 @@
 import { useEffect, useContext } from 'react'
 import { useRouter } from 'next/router'
-import { AuthContext } from '../context/AuthContext'
+import { AuthContext } from '../../context/AuthContext'
 
 export default function Logout() {
   const router = useRouter()
@@ -8,7 +8,7 @@ export default function Logout() {
 
   useEffect(() => {
     logout()
-    router.replace('/login')
+    router.replace('/guest/login')
   }, [router, logout])
 
   return (

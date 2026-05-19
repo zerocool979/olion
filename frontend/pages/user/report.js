@@ -1,7 +1,7 @@
 import { useRouter } from 'next/router'
 import { useContext, useState } from 'react'
-import { AuthContext } from '../context/AuthContext'
-import api from '../lib/api'
+import { AuthContext } from '../../context/AuthContext'
+import api from '../../lib/api'
 
 export default function Report() {
   const router = useRouter()
@@ -20,7 +20,7 @@ export default function Report() {
 
     try {
       if (!token) {
-        router.push('/login')
+        router.push('/guest/login')
         return
       }
 
@@ -57,7 +57,7 @@ export default function Report() {
       <div className="max-w-md mx-auto p-8 text-center">
         <p className="text-gray-600 mb-4">Anda harus login untuk membuat laporan</p>
         <button
-          onClick={() => router.push('/login')}
+          onClick={() => router.push('/guest/login')}
           className="btn-primary"
         >
           Login

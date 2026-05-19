@@ -1,8 +1,8 @@
 import { useContext, useState } from 'react'
 import { useRouter } from 'next/router'
 import Link from 'next/link'
-import { AuthContext } from '../context/AuthContext'
-import api from '../lib/api'
+import { AuthContext } from '../../context/AuthContext'
+import api from '../../lib/api'
 
 export default function Login() {
   const { login } = useContext(AuthContext)
@@ -115,7 +115,6 @@ export default function Login() {
 
           {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            {/* Icon */}
             <div
               style={{
                 display: 'inline-flex',
@@ -135,7 +134,6 @@ export default function Login() {
               </svg>
             </div>
 
-            {/* Logo mark */}
             <div
               style={{
                 display: 'flex',
@@ -299,6 +297,22 @@ export default function Login() {
                   cursor: loading ? 'not-allowed' : 'text',
                 }}
               />
+              {/* ── LUPA PASSWORD (TAMBAHAN) ──────────────────────────────── */}
+              <div style={{ textAlign: 'right', marginTop: '0.4rem' }}>
+                <Link
+                  href="/guest/forgot-password"
+                  style={{
+                    fontSize: '0.78rem',
+                    color: '#596570',
+                    textDecoration: 'none',
+                    transition: 'color 150ms ease',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.color = '#a8b2bc'}
+                  onMouseLeave={e => e.currentTarget.style.color = '#596570'}
+                >
+                  Lupa password?
+                </Link>
+              </div>
             </div>
 
             {/* Submit */}
@@ -373,7 +387,7 @@ export default function Login() {
           <p style={{ textAlign: 'center', fontSize: '0.825rem', color: '#3d4851' }}>
             Belum punya akun?{' '}
             <Link
-              href="/register"
+              href="/guest/register"
               style={{
                 color: '#a8b2bc',
                 textDecoration: 'underline',
