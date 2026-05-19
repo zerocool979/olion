@@ -8,8 +8,8 @@ function Guard({ children }) {
   const { token } = useContext(AuthContext)
   const router = useRouter()
 
-  if (!token && router.pathname.startsWith('/dashboard')) {
-    if (typeof window !== 'undefined') router.push('/login')
+  if (!token && router.pathname.startsWith('/user/dashboard')) {
+    if (typeof window !== 'undefined') router.push('/guest/login')
     return null
   }
 
