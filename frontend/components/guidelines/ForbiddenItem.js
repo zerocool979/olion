@@ -6,3 +6,6 @@ export function ForbiddenItem({ icon, label }) {
     </div>
   )
 }
+
+
+

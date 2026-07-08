@@ -66,3 +66,6 @@ export default function DashboardRedirect({ message = 'Mengarahkan' }) {
     </div>
   )
 }
+
+
+

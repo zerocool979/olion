@@ -10,3 +10,6 @@ export default function ModeBadge({ mode }) {
 
   return <span className={className}>{label}</span>;
 }
+
+
+

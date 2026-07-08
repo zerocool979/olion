@@ -1,211 +1,157 @@
-import { useEffect, useState, useContext, useCallback } from 'react'
+/**
+ * pages/user/notifications.jsx  — Notifikasi
+ */
+import { useState, useEffect, useCallback, useContext } from 'react'
 import { AuthContext } from '../../context/AuthContext'
-import { useRouter } from 'next/router'
-import { ROUTES } from '../../lib/routes'
+import Link from 'next/link'
 import api from '../../lib/api'
-import { NotifItem, NotifSkeleton } from '../../components/notifications'
+import {
+  Avatar, StatPill, EmptyState,
+  ActivityItem, SkeletonCard, colors,
+} from '../../components/dashboard'
+import UserLayout from './_layout'
 
-const TYPE_META = {
-  VOTE: { tab: 'VOTE' },
-  DOWNVOTE: { tab: 'VOTE' },
-  ANSWER: { tab: 'ANSWER' },
-  MENTION: { tab: 'ANSWER' },
-  REPORT: { tab: 'OTHER' },
-  SYSTEM: { tab: 'OTHER' },
-}
-
-const TABS = [
-  { key: 'ALL',    label: 'Semua' },
-  { key: 'UNREAD', label: 'Belum Dibaca' },
-  { key: 'VOTE',   label: 'Upvote' },
-  { key: 'ANSWER', label: 'Komentar' },
-  { key: 'OTHER',  label: 'Lainnya' },
+const FILTERS = [
+  { val: 'all',      label: 'Semua' },
+  { val: 'unread',   label: 'Belum Dibaca' },
+  { val: 'mention',  label: 'Sebutan' },
+  { val: 'vote',     label: 'Vote' },
+  { val: 'comment',  label: 'Komentar' },
 ]
 
-export default function UserNotifications() {
-  const { user, loading: authLoading } = useContext(AuthContext)
-  const router = useRouter()
+function timeAgo(d) {
+  if (!d) return ''
+  const s = (Date.now() - new Date(d)) / 1000
+  if (s < 60) return 'baru saja'
+  if (s < 3600) return `${Math.floor(s / 60)}m`
+  if (s < 86400) return `${Math.floor(s / 3600)}j`
+  return `${Math.floor(s / 86400)}h`
+}
 
-  const [notifs,  setNotifs]  = useState([])
-  const [loading, setLoading] = useState(true)
-  const [tab,     setTab]     = useState('ALL')
-  const [marking, setMarking] = useState(false)
+const TYPE_ICON = {
+  vote:    '👍',
+  comment: '💬',
+  mention: '@',
+  follow:  '👥',
+  reply:   '↩️',
+  default: '🔔',
+}
 
-  useEffect(() => {
-    if (!authLoading && !user) router.replace(ROUTES.guest.login)
-  }, [user, authLoading, router])
+export default function Notifications() {
+  const { user } = useContext(AuthContext)
 
-  const fetchNotifs = useCallback(async () => {
-    if (!user) return
+  const [filter,       setFilter]       = useState('all')
+  const [notifs,       setNotifs]       = useState([])
+  const [loading,      setLoading]      = useState(true)
+  const [unreadCount,  setUnreadCount]  = useState(0)
+
+  const fetch = useCallback(() => {
     setLoading(true)
-    try {
-      const res = await api.get('/notifications')
-      const raw = res.data?.data ?? res.data ?? []
-      setNotifs(Array.isArray(raw) ? raw : [])
-    } catch {
-      setNotifs([])
-    } finally {
-      setLoading(false)
-    }
-  }, [user])
+    const params = filter === 'all' ? '/notifications?limit=30' : `/notifications?limit=30&type=${filter === 'unread' ? '' : filter}&unread=${filter === 'unread' ? 'true' : ''}`
+    api.get(params)
+      .then(r => {
+        const d = r.data?.data ?? r.data ?? []
+        setNotifs(Array.isArray(d) ? d : [])
+        setUnreadCount(Array.isArray(d) ? d.filter(n => !n.read).length : 0)
+      })
+      .catch(() => setNotifs([]))
+      .finally(() => setLoading(false))
+  }, [filter])
 
-  useEffect(() => { fetchNotifs() }, [fetchNotifs])
-
-  const markRead = async (id) => {
-    setNotifs(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n))
-    try { await api.patch(`/notifications/${id}/read`) } catch { /* optimistic */ }
-  }
+  useEffect(() => { if (user) fetch() }, [user, filter])
 
   const markAllRead = async () => {
-    setMarking(true)
     try {
-      await api.patch('/notifications/read-all')
-      setNotifs(prev => prev.map(n => ({ ...n, isRead: true })))
-    } catch { /* ignore */ } finally {
-      setMarking(false)
-    }
+      await api.post('/notifications/read-all')
+      setNotifs(prev => prev.map(n => ({ ...n, read: true })))
+      setUnreadCount(0)
+    } catch (err) { console.error(err) }
   }
 
-  const unreadCount = notifs.filter(n => !n.isRead).length
+  const markRead = async (id) => {
+    try {
+      await api.patch(`/notifications/${id}/read`)
+      setNotifs(prev => prev.map(n => n.id === id ? { ...n, read: true } : n))
+      setUnreadCount(c => Math.max(0, c - 1))
+    } catch (err) { console.error(err) }
+  }
 
-  const filtered = notifs.filter(n => {
-    if (tab === 'ALL')    return true
-    if (tab === 'UNREAD') return !n.isRead
-    const meta = TYPE_META[n.type] ?? TYPE_META.SYSTEM
-    return meta.tab === tab
-  })
-
-  if (authLoading) return null
+  const sidebar = (
+    <div style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 16, padding: '14px 16px' }}>
+      <span style={{ fontWeight: 700, fontSize: 15, color: colors.textPrimary, display: 'block', marginBottom: 12 }}>Ringkasan</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <StatPill icon="🔔" value={notifs.length} label="Total Notifikasi" />
+        <StatPill icon="📌" value={unreadCount}   label="Belum Dibaca" accent={unreadCount > 0 ? '#ef4444' : undefined} />
+      </div>
+      {unreadCount > 0 && (
+        <button onClick={markAllRead} style={{
+          marginTop: 12, width: '100%', padding: '8px 0',
+          background: colors.accent, color: '#fff', border: 'none',
+          borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+        }}>Tandai semua dibaca</button>
+      )}
+    </div>
+  )
 
   return (
-    <div className="page-shell">
-      <div className="page-grid-bg" />
-
-      <div className="page-content animate-fade-up" style={{ maxWidth: '720px' }}>
-        <div className="page-header stagger-1" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-          <div>
-            <h1 className="page-title">
-              Notifikasi
-              {unreadCount > 0 && (
-                <span style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginLeft: '0.6rem',
-                  minWidth: '22px',
-                  height: '22px',
-                  borderRadius: '99px',
-                  background: '#4ade80',
-                  color: '#080a0c',
-                  fontFamily: "'Syne', sans-serif",
-                  fontWeight: 800,
-                  fontSize: '0.7rem',
-                  padding: '0 0.4rem',
-                  verticalAlign: 'middle',
-                }}>
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </span>
-              )}
-            </h1>
-            <p className="page-subtitle">Aktivitas terbaru yang melibatkan akunmu.</p>
-          </div>
-
+    <UserLayout sidebar={sidebar}>
+      {/* Header */}
+      <div style={{ padding: '16px 16px 0', position: 'sticky', top: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 10, borderBottom: `1px solid ${colors.border}` }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: colors.textPrimary }}>Notifikasi</h1>
           {unreadCount > 0 && (
-            <button
-              onClick={markAllRead}
-              disabled={marking}
-              className="btn-ghost"
-              style={{ fontSize: '0.8rem', alignSelf: 'flex-start', marginTop: '2.5rem' }}
-            >
-              {marking ? 'Menandai...' : 'Tandai semua dibaca'}
+            <button onClick={markAllRead} style={{ background: 'none', border: `1px solid ${colors.border}`, borderRadius: 20, padding: '6px 14px', fontSize: 12, color: colors.accent, cursor: 'pointer' }}>
+              Tandai semua dibaca
             </button>
           )}
         </div>
-
-        <div className="animate-fade-up stagger-2" style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
-          {TABS.map(t => {
-            const count = t.key === 'UNREAD'
-              ? unreadCount
-              : t.key === 'ALL'
-              ? notifs.length
-              : notifs.filter(n => (TYPE_META[n.type] ?? TYPE_META.SYSTEM).tab === t.key).length
-            return (
-              <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
-                style={{
-                  padding: '0.35rem 0.875rem',
-                  borderRadius: '99px',
-                  fontSize: '0.78rem',
-                  fontFamily: "'Syne', sans-serif",
-                  fontWeight: 600,
-                  letterSpacing: '0.02em',
-                  border: `1px solid ${tab === t.key ? 'var(--border-strong)' : 'var(--border-default)'}`,
-                  background: tab === t.key ? 'rgba(255,255,255,0.1)' : 'transparent',
-                  color: tab === t.key ? 'var(--text-primary)' : 'var(--text-muted)',
-                  cursor: 'pointer',
-                  transition: 'all 160ms ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                }}
-              >
-                {t.label}
-                {count > 0 && (
-                  <span style={{
-                    background: tab === t.key ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.06)',
-                    borderRadius: '99px',
-                    padding: '0.05rem 0.4rem',
-                    fontSize: '0.65rem',
-                    color: tab === t.key ? 'var(--text-primary)' : 'var(--text-muted)',
-                  }}>
-                    {count}
-                  </span>
-                )}
-              </button>
-            )
-          })}
+        {/* Filter tabs */}
+        <div style={{ display: 'flex', gap: 0, overflowX: 'auto' }}>
+          {FILTERS.map(f => (
+            <button key={f.val} onClick={() => setFilter(f.val)} style={{
+              padding: '10px 14px', background: 'none', border: 'none', whiteSpace: 'nowrap',
+              borderBottom: filter === f.val ? `2px solid ${colors.accent}` : '2px solid transparent',
+              fontWeight: filter === f.val ? 700 : 400,
+              color: filter === f.val ? colors.textPrimary : colors.textSecondary,
+              fontSize: 13, cursor: 'pointer',
+            }}>{f.label}</button>
+          ))}
         </div>
-
-        <div className="animate-fade-up stagger-3" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          {loading
-            ? Array.from({ length: 6 }).map((_, i) => <NotifSkeleton key={i} />)
-            : filtered.length === 0
-              ? (
-                <div style={{ textAlign: 'center', padding: '4rem 1rem', background: 'rgba(14,17,20,0.5)', border: '1px solid var(--border-subtle)', borderRadius: '14px' }}>
-                  <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#596570" strokeWidth="1.5" strokeLinecap="round">
-                      <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                      <path d="M13.73 21a2 2 0 01-3.46 0"/>
-                    </svg>
-                  </div>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-                    {tab === 'UNREAD' ? 'Semua notifikasi sudah dibaca.' : 'Belum ada notifikasi.'}
-                  </p>
-                </div>
-              )
-              : filtered.map(n => (
-                  <NotifItem key={n.id} item={n} onRead={markRead} />
-                ))
-          }
-        </div>
-
-        {!loading && (
-          <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
-            <button
-              onClick={fetchNotifs}
-              className="btn-ghost"
-              style={{ fontSize: '0.78rem' }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <polyline points="23 4 23 10 17 10"/>
-                <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>
-              </svg>
-              Perbarui
-            </button>
-          </div>
-        )}
       </div>
-    </div>
+
+      {/* List */}
+      {loading
+        ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} variant="row" />)
+        : notifs.length === 0
+        ? <EmptyState icon="🔔" title="Tidak ada notifikasi" description="Kamu sudah up to date!" Link={Link} />
+        : notifs.map((n, i) => {
+            const actor   = n.actor?.profile ?? n.actor ?? {}
+            const typeIcon = TYPE_ICON[n.type] ?? TYPE_ICON.default
+            return (
+              <div key={n.id ?? i}
+                onClick={() => !n.read && markRead(n.id)}
+                style={{
+                  background: n.read ? 'transparent' : colors.bgElevated,
+                  borderBottom: `1px solid ${colors.border}`,
+                  cursor: 'pointer', transition: 'background 0.12s',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.background = colors.bgElevated)}
+                onMouseLeave={e => (e.currentTarget.style.background = n.read ? 'transparent' : colors.bgElevated)}
+              >
+                <ActivityItem
+                  avatar={<Avatar username={actor.username ?? typeIcon} size={36} />}
+                  primary={<span style={{ color: colors.textPrimary }}>{actor.username ?? 'Sistem'}</span>}
+                  secondary={n.message ?? n.text ?? n.type ?? ''}
+                  timestamp={timeAgo(n.createdAt)}
+                  unread={!n.read}
+                />
+              </div>
+            )
+          })
+      }
+    </UserLayout>
   )
 }
+
+
+

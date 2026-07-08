@@ -26,3 +26,6 @@ export function TrendingTopics({ topics }) {
     </section>
   )
 }
+
+
+

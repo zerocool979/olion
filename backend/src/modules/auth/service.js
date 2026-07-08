@@ -142,5 +142,72 @@ module.exports = {
     }
 
     return user
+  },
+
+  // ─── ADDED: GET /users/by-username/:username — public profile lookup
+  // username hidup di Profile, bukan User — query lewat relasi.
+  // Reputasi dihitung dari agregat ReputationLog, bukan field langsung.
+  getByUsername: async (username) => {
+    const profile = await prisma.profile.findUnique({
+      where: { username },
+      select: {
+        bio: true,
+        user: {
+          select: {
+            id: true,
+            role: true,
+            isVerifiedExpert: true,
+            createdAt: true,
+            _count: {
+              select: { discussions: true, votes: true }
+            }
+          }
+        }
+      }
+    })
+
+    if (!profile) return null
+
+    const repAgg = await prisma.reputationLog.aggregate({
+      where: { userId: profile.user.id },
+      _sum: { point: true }
+    })
+
+    return {
+      id: profile.user.id,
+      username,
+      bio: profile.bio,
+      role: profile.user.role,
+      isVerifiedExpert: profile.user.isVerifiedExpert,
+      createdAt: profile.user.createdAt,
+      reputation: repAgg._sum.point ?? 0,
+      _count: profile.user._count,
+    }
+  },
+
+  // ─── ADDED: PATCH /auth/password
+  changePassword: async (userId, oldPassword, newPassword) => {
+    const user = await prisma.user.findUnique({ where: { id: userId } })
+    if (!user) {
+      const err = new Error('User tidak ditemukan')
+      err.statusCode = 404
+      throw err
+    }
+
+    const valid = await bcrypt.compare(oldPassword, user.password)
+    if (!valid) {
+      const err = new Error('Password lama salah')
+      err.statusCode = 401
+      throw err
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 12)
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashed }
+    })
   }
 }
+
+
+

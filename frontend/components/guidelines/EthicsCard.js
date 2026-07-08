@@ -12,3 +12,6 @@ export function EthicsCard({ icon, title, desc, color, index }) {
     </div>
   )
 }
+
+
+

@@ -5,6 +5,7 @@
 
 import Head from 'next/head'
 import Link from 'next/link'
+import { colors, avatarPalette } from '../components/dashboard'
 
 const LAST_UPDATED = '15 Januari 2025'
 
@@ -17,7 +18,7 @@ const sections = [
       </svg>
     ),
     title: 'Data yang Dikumpulkan',
-    accent: '#60a5fa',
+    accent: colors.accent,
     items: [
       'Alamat email untuk autentikasi akun (tidak pernah ditampilkan publik)',
       'Username pseudonim yang kamu pilih sendiri',
@@ -35,7 +36,7 @@ const sections = [
       </svg>
     ),
     title: 'Anonimitas Pengguna',
-    accent: '#4ade80',
+    accent: '#00ba7c',
     content: 'OLION dirancang dengan prinsip privacy-by-default. Identitas aslimu tidak pernah dikaitkan dengan konten yang kamu posting secara publik.',
     items: [
       'Pseudonim otomatis — tidak ada nama asli yang diperlukan',
@@ -53,7 +54,7 @@ const sections = [
       </svg>
     ),
     title: 'Penggunaan Cookies',
-    accent: '#f59e0b',
+    accent: colors.gold,
     items: [
       'Session cookie untuk menjaga status login kamu',
       'Cookie preferensi untuk menyimpan pengaturan tampilan',
@@ -70,7 +71,7 @@ const sections = [
       </svg>
     ),
     title: 'Keamanan Data',
-    accent: '#a78bfa',
+    accent: avatarPalette[4].color,
     items: [
       'Password di-hash menggunakan bcrypt dengan salt rounds tinggi',
       'JWT token terenkripsi dengan expiry waktu terbatas',
@@ -88,7 +89,7 @@ const sections = [
       </svg>
     ),
     title: 'Kebijakan Moderator',
-    accent: '#fb923c',
+    accent: avatarPalette[5].color,
     content: 'Moderator memiliki akses terbatas yang diperlukan untuk menjaga keamanan komunitas.',
     items: [
       'Moderator hanya dapat melihat konten publik dan laporan yang masuk',
@@ -106,7 +107,7 @@ const sections = [
       </svg>
     ),
     title: 'Hak Pengguna',
-    accent: '#34d399',
+    accent: '#00ba7c',
     items: [
       'Hak akses data: minta salinan semua data yang kami simpan tentang kamu',
       'Hak penghapusan: minta penghapusan akun dan seluruh data terkait',
@@ -142,7 +143,7 @@ export default function PrivacyPage() {
           {/* ── Hero ── */}
           <header className="legal-hero">
             <div className="legal-hero__badge">
-              <span className="legal-hero__badge-dot" style={{ background: '#4ade80', boxShadow: '0 0 8px #4ade80' }} />
+              <span className="legal-hero__badge-dot" style={{ background: '#00ba7c', boxShadow: '0 0 8px rgba(0,186,124,0.4)' }} />
               Privasi &amp; Keamanan
             </div>
             <h1 className="legal-hero__title">

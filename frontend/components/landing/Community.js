@@ -54,3 +54,6 @@ export function Community({ stats }) {
     </section>
   )
 }
+
+
+

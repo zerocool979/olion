@@ -13,3 +13,6 @@ export function QualityChecklist({ items }) {
     </div>
   )
 }
+
+
+

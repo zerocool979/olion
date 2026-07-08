@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap');
+/* Font: system-ui stack — matches /user/* dashboard theme, no external font import needed */
 
 @tailwind base;
 @tailwind components;
@@ -6,19 +6,26 @@
 
 @layer base {
   :root {
-    --bg-base: #080a0c;
-    --bg-surface: #0e1114;
-    --bg-elevated: #141719;
-    --bg-overlay: #1a1d21;
-    --border-subtle: rgba(255,255,255,0.06);
-    --border-default: rgba(255,255,255,0.10);
-    --border-strong: rgba(255,255,255,0.18);
-    --text-primary: #f1f3f5;
-    --text-secondary: #a8b2bc;
-    --text-muted: #596570;
-    --accent-white: #ffffff;
-    --accent-glow: rgba(148, 163, 184, 0.15);
-    --radius-card: 14px;
+    /* Synced to /user/* dashboard tokens (components/dashboard/tokens.js) */
+    --bg-base: #000000;
+    --bg-surface: #16181c;
+    --bg-elevated: #16181c;
+    --bg-overlay: #1c1f23;
+    --border-subtle: #1c1f23;
+    --border-default: #2f3336;
+    --border-strong: #3e4144;
+    --text-primary: #e7e9ea;
+    --text-secondary: #71767b;
+    --text-muted: #71767b;
+    --accent-white: #1d9bf0;
+    --accent-hover: #1a8cd8;
+    --accent-soft: rgba(29,155,240,0.1);
+    --accent-glow: rgba(29, 155, 240, 0.18);
+    --like: #f91880;
+    --like-soft: rgba(249,24,128,0.1);
+    --gold: #ffd400;
+    --gold-soft: rgba(255,212,0,0.1);
+    --radius-card: 16px;
     --radius-btn: 8px;
   }
 
@@ -33,14 +40,14 @@
   body {
     background-color: var(--bg-base);
     color: var(--text-primary);
-    font-family: 'DM Sans', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     font-size: 15px;
     line-height: 1.6;
     min-height: 100vh;
   }
 
   h1, h2, h3, h4 {
-    font-family: 'Syne', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     letter-spacing: -0.02em;
     color: var(--text-primary);
   }
@@ -48,13 +55,13 @@
   a { cursor: pointer; color: inherit; text-decoration: none; }
 
   button {
-    font-family: 'DM Sans', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     cursor: pointer;
     transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   input, textarea, select {
-    font-family: 'DM Sans', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     background: var(--bg-elevated);
     border: 1px solid var(--border-default);
     border-radius: 8px;
@@ -82,7 +89,7 @@
   .page-shell {
     min-height: 100vh;
     background:
-      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(30,41,59,0.35) 0%, transparent 70%),
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(29,155,240,0.10) 0%, transparent 70%),
       var(--bg-base);
   }
 
@@ -114,7 +121,7 @@
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    font-family: 'Syne', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     font-weight: 600;
     font-size: 0.7rem;
     letter-spacing: 0.08em;
@@ -133,7 +140,7 @@
   }
 
   .page-title {
-    font-family: 'Syne', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     font-weight: 800;
     font-size: clamp(1.75rem, 4vw, 2.5rem);
     letter-spacing: -0.04em;
@@ -164,7 +171,7 @@
   }
 
   .stat-value {
-    font-family: 'Syne', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     font-weight: 700;
     font-size: 1.4rem;
     letter-spacing: -0.03em;
@@ -230,7 +237,7 @@
   }
 
   .category-card__name {
-    font-family: 'Syne', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     font-weight: 700;
     font-size: 0.975rem;
     color: var(--text-primary);
@@ -302,7 +309,7 @@
     border-radius: 12px;
     color: var(--text-primary);
     font-size: 0.95rem;
-    font-family: 'DM Sans', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     outline: none;
     transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
   }
@@ -328,7 +335,7 @@
     padding: 0.35rem 0.875rem;
     border-radius: 99px;
     font-size: 0.78rem;
-    font-family: 'Syne', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     font-weight: 600;
     letter-spacing: 0.02em;
     border: 1px solid var(--border-default);
@@ -357,7 +364,7 @@
     border-radius: 8px;
     color: var(--text-secondary);
     font-size: 0.78rem;
-    font-family: 'DM Sans', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     cursor: pointer;
     outline: none;
     margin-left: auto;
@@ -380,7 +387,7 @@
 
   .subcategory-label {
     font-size: 0.7rem;
-    font-family: 'Syne', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     font-weight: 600;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -414,7 +421,7 @@
   }
 
   .discussion-card__title {
-    font-family: 'Syne', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     font-weight: 600;
     font-size: 0.975rem;
     letter-spacing: -0.02em;
@@ -511,7 +518,7 @@
   }
 
   .section-title {
-    font-family: 'Syne', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     font-weight: 600;
     font-size: 0.875rem;
     letter-spacing: -0.01em;
@@ -574,7 +581,7 @@
     align-items: center;
     font-size: 0.7rem;
     font-weight: 600;
-    font-family: 'Syne', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     letter-spacing: 0.04em;
     text-transform: uppercase;
     padding: 0.2rem 0.55rem;
@@ -621,9 +628,9 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    background: var(--text-primary);
-    color: var(--bg-base);
-    font-family: 'Syne', sans-serif;
+    background: var(--accent-white);
+    color: #ffffff;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     font-weight: 600;
     font-size: 0.875rem;
     letter-spacing: -0.01em;
@@ -633,8 +640,8 @@
     transition: all 180ms ease;
   }
   .btn-primary:hover:not(:disabled) {
-    background: white;
-    box-shadow: 0 0 20px rgba(241,243,245,0.15);
+    background: var(--accent-hover);
+    box-shadow: 0 0 20px var(--accent-glow);
     transform: translateY(-1px);
   }
   .btn-primary:disabled {
@@ -651,7 +658,7 @@
     gap: 0.5rem;
     background: transparent;
     color: var(--text-secondary);
-    font-family: 'Syne', sans-serif;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
     font-weight: 500;
     font-size: 0.875rem;
     letter-spacing: -0.01em;
@@ -806,7 +813,7 @@
 
 /* ── ModeBadge ────────────────────────────────────────────────── */
 .mode-badge {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 0.65rem;
   letter-spacing: 0.05em;
@@ -860,7 +867,7 @@
   margin-bottom: 0.65rem;
 }
 .discussion-card__title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 1rem;
   letter-spacing: -0.02em;
@@ -958,7 +965,7 @@
   padding: 0.3rem 0.85rem;
   font-size: 0.78rem;
   color: #94a3b8;
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -973,7 +980,7 @@
   display: inline-block;
 }
 .hero-title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 800;
   font-size: clamp(2.4rem, 6vw, 4rem);
   letter-spacing: -0.04em;
@@ -998,7 +1005,7 @@
 /* ── Page layout ───────────────────────────────────────────────── */
 .page-shell {
   min-height: 100vh;
-  background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(30,41,59,0.35) 0%, transparent 70%), #080a0c;
+  background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(29,155,240,0.10) 0%, transparent 70%), #000000;
 }
 .page-grid-bg {
   position: fixed;
@@ -1036,7 +1043,7 @@
   margin-bottom: 1.5rem;
 }
 .section-header__title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 1.05rem;
   letter-spacing: -0.02em;
@@ -1101,7 +1108,7 @@
   transition: all 160ms ease;
   background: transparent;
   color: var(--text-muted);
-  font-family: 'DM Sans', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 .filter-pill.active {
   background: var(--bg-overlay);
@@ -1140,7 +1147,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 8px;
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 0.9rem;
   flex-shrink: 0;
@@ -1188,7 +1195,7 @@
   border-radius: 4px;
   font-size: 0.65rem;
   font-weight: 600;
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -1196,7 +1203,7 @@
   margin-left: auto;
   font-size: 0.75rem;
   font-weight: 600;
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 .trending-card__trend--up {
   color: #4ade80;
@@ -1205,7 +1212,7 @@
   color: #f87171;
 }
 .trending-card__title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--text-primary);
@@ -1241,7 +1248,7 @@
   border: 1px solid var(--border-subtle);
   border-radius: 5px;
   padding: 0.12rem 0.5rem;
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
 }
 
@@ -1284,7 +1291,7 @@
   margin-bottom: 1.5rem;
 }
 .section-title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 1.05rem;
   letter-spacing: -0.02em;
@@ -1306,7 +1313,7 @@
   font-weight: 700;
   color: #94a3b8;
   flex-shrink: 0;
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 /* ── Leaderboard layout ────────────────────────────────────────── */
@@ -1340,7 +1347,7 @@
   margin-bottom: 0.5rem;
 }
 .podium-username {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 0.85rem;
   color: var(--text-primary);
@@ -1352,7 +1359,7 @@
 .podium-reputation {
   font-weight: 700;
   font-size: 1.15rem;
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 .podium-reputation-label {
   font-size: 0.7rem;
@@ -1375,13 +1382,13 @@
 .leader-row__rank {
   min-width: 32px;
   text-align: center;
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 0.9rem;
   color: var(--text-muted);
 }
 .leader-row__name {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 0.875rem;
   color: var(--text-primary);
@@ -1416,7 +1423,7 @@
   font-weight: 700;
   font-size: 0.9rem;
   color: var(--text-primary);
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 .leader-row__rep-label {
   font-size: 0.65rem;
@@ -1463,7 +1470,7 @@
   line-height: 1.65;
 }
 .reputation-formula__title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   color: var(--text-secondary);
   display: block;
@@ -1523,7 +1530,7 @@
 }
 
 .ud-welcome__title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 800;
   font-size: clamp(1.6rem, 4vw, 2.4rem);
   letter-spacing: -0.04em;
@@ -1550,9 +1557,9 @@
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  background: var(--text-primary);
-  color: var(--bg-base);
-  font-family: 'Syne', sans-serif;
+  background: var(--accent-white);
+  color: #ffffff;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 0.85rem;
   letter-spacing: -0.01em;
@@ -1566,8 +1573,8 @@
 }
 
 .btn-primary:hover {
-  background: #ffffff;
-  box-shadow: 0 0 20px rgba(241,243,245,0.18);
+  background: var(--accent-hover);
+  box-shadow: 0 0 20px var(--accent-glow);
   transform: translateY(-1px);
 }
 
@@ -1577,7 +1584,7 @@
   gap: 0.45rem;
   background: transparent;
   color: var(--text-secondary);
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 0.85rem;
   padding: 0.5rem 1rem;
@@ -1647,7 +1654,7 @@
 }
 
 .ud-stat-pill__value {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 1.1rem;
   letter-spacing: -0.03em;
@@ -1717,7 +1724,7 @@
 }
 
 .ud-qa-card__label {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 0.72rem;
   color: var(--text-secondary);
@@ -1775,7 +1782,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 7px;
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 0.8rem;
   background: var(--bg-overlay);
@@ -1810,7 +1817,7 @@
 }
 
 .ud-disc-card__title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 0.975rem;
   letter-spacing: -0.02em;
@@ -1864,7 +1871,7 @@
   border-radius: 4px;
   font-size: 0.62rem;
   font-weight: 600;
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -1877,7 +1884,7 @@
   padding: 0.3rem 0.65rem;
   border-radius: 7px;
   font-size: 0.75rem;
-  font-family: 'DM Sans', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 500;
   background: rgba(255,255,255,0.03);
   border: 1px solid rgba(255,255,255,0.07);
@@ -1982,7 +1989,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 6px;
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 0.75rem;
   background: var(--bg-overlay);
@@ -2004,7 +2011,7 @@
 }
 
 .ud-trending-row__title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 0.82rem;
   color: var(--text-primary);
@@ -2048,7 +2055,7 @@
 }
 
 .ud-achievement__tier {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 1rem;
   letter-spacing: -0.02em;
@@ -2194,7 +2201,7 @@
 .ud-leader-row__rank {
   min-width: 22px;
   text-align: center;
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 0.8rem;
   color: var(--text-muted);
@@ -2206,7 +2213,7 @@
 }
 
 .ud-leader-row__name {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 0.8rem;
   color: var(--text-primary);
@@ -2239,7 +2246,7 @@
 }
 
 .ud-empty__title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 0.9rem;
   color: var(--text-secondary);
@@ -2262,7 +2269,7 @@
   gap: 0.4rem;
   background: transparent;
   color: var(--text-secondary);
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 500;
   font-size: 0.82rem;
   padding: 0.45rem 1rem;
@@ -2282,7 +2289,7 @@
 .badge {
   display: inline-flex;
   align-items: center;
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 0.62rem;
   letter-spacing: 0.04em;
@@ -2414,7 +2421,7 @@
 
 /* ── Teks typewriter ──────────────────────────────────────────── */
 .sonar-text {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 1.1rem;
   letter-spacing: 0.02em;
@@ -2529,7 +2536,7 @@
 }
 
 .dashboard-redirect__logo-text {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 800;
   font-size: 1.25rem;
   letter-spacing: -0.04em;
@@ -2559,7 +2566,7 @@
 
 /* ── Teks ──────────────────────────────────────────────────────── */
 .dashboard-redirect__text {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 1rem;
   color: #a8b2bc;
@@ -2660,7 +2667,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 0.7rem;
   letter-spacing: 0.1em;
@@ -2670,7 +2677,7 @@
 }
 
 .landing-section__title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 800;
   font-size: clamp(1.75rem, 4vw, 2.75rem);
   letter-spacing: -0.04em;
@@ -2727,7 +2734,7 @@
 }
 
 .stats-row__value {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 800;
   font-size: 1.75rem;
   letter-spacing: -0.04em;
@@ -2792,7 +2799,7 @@
 .feature-card:nth-child(6) .feature-card__icon { background: rgba(52,211,153,0.1); border-color: rgba(52,211,153,0.2); color: #34d399; }
 
 .feature-card__title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 0.95rem;
   letter-spacing: -0.02em;
@@ -2955,7 +2962,7 @@
   padding: 0.45rem 1rem;
   border-radius: 99px;
   font-size: 0.82rem;
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   letter-spacing: 0.01em;
   text-decoration: none;
@@ -3026,7 +3033,7 @@
 }
 
 .step-card__number {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 800;
   font-size: 2rem;
   letter-spacing: -0.06em;
@@ -3051,7 +3058,7 @@
 }
 
 .step-card__title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 1rem;
   letter-spacing: -0.02em;
@@ -3097,7 +3104,7 @@
 }
 
 .community-stat__n {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 800;
   font-size: 1.5rem;
   letter-spacing: -0.04em;
@@ -3141,7 +3148,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 0.85rem;
   color: #94a3b8;
@@ -3154,7 +3161,7 @@
 }
 
 .expert-card__pseudo {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 0.875rem;
   color: var(--text-primary);
@@ -3171,7 +3178,7 @@
 }
 
 .expert-card__badge {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 0.62rem;
   letter-spacing: 0.04em;
@@ -3242,7 +3249,7 @@
 }
 
 .cta-card__title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 800;
   font-size: clamp(1.75rem, 4vw, 3rem);
   letter-spacing: -0.04em;
@@ -3271,7 +3278,7 @@
 }
 
 .footer-brand__logo {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 800;
   font-size: 1.15rem;
   letter-spacing: -0.04em;
@@ -3327,7 +3334,7 @@
 }
 
 .footer-col__heading {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 0.78rem;
   letter-spacing: 0.06em;
@@ -3419,7 +3426,7 @@
   gap: 0.4rem;
   margin-bottom: 2rem;
   font-size: 0.78rem;
-  font-family: 'DM Sans', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 .legal-breadcrumb__link {
@@ -3455,7 +3462,7 @@
   padding: 0.3rem 0.85rem;
   font-size: 0.72rem;
   color: #94a3b8;
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -3471,7 +3478,7 @@
 }
 
 .legal-hero__title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 800;
   font-size: clamp(2rem, 5vw, 3.2rem);
   letter-spacing: -0.045em;
@@ -3507,7 +3514,7 @@
 
 .legal-hero__version {
   font-size: 0.7rem;
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   color: var(--text-muted);
   letter-spacing: 0.06em;
@@ -3561,7 +3568,7 @@
 }
 
 .legal-summary-card__title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 0.9rem;
   color: var(--text-primary);
@@ -3663,7 +3670,7 @@
 }
 
 .legal-section-title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 0.9rem;
   letter-spacing: -0.015em;
@@ -3744,7 +3751,7 @@
 }
 
 .legal-highlight__title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 0.9rem;
   color: #c4b5fd;
@@ -3800,7 +3807,7 @@
 }
 
 .legal-prohibit-card__title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 0.85rem;
   margin-bottom: 0.3rem;
@@ -3844,7 +3851,7 @@
 .legal-suspension-row__badge {
   display: inline-flex;
   align-items: center;
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 0.75rem;
   padding: 0.25rem 0.7rem;
@@ -3854,7 +3861,7 @@
 }
 
 .legal-suspension-row__duration {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 0.82rem;
 }
@@ -3881,7 +3888,7 @@
 }
 
 .legal-contact-card__title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 1rem;
   color: var(--text-primary);
@@ -3919,7 +3926,7 @@
   font-size: 0.85rem;
   color: var(--text-muted);
   text-decoration: none;
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   transition: color 160ms ease;
 }
@@ -3994,7 +4001,7 @@
 }
 
 .guideline-card__title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 0.875rem;
   letter-spacing: -0.01em;
@@ -4032,7 +4039,7 @@
 .legal-example-card__label {
   display: inline-flex;
   align-items: center;
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 0.72rem;
   letter-spacing: 0.04em;
@@ -4043,7 +4050,7 @@
 }
 
 .legal-example-card__title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 0.875rem;
   color: var(--text-primary);
@@ -4090,7 +4097,7 @@
 
 .legal-checklist__title {
   color: var(--text-primary);
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
 }
 
@@ -4116,7 +4123,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 0.8rem;
   color: #fb923c;
@@ -4125,7 +4132,7 @@
 }
 
 .legal-report-step__title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 0.875rem;
   color: var(--text-primary);
@@ -4180,7 +4187,7 @@
 }
 
 .legal-rep-card__name {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 0.875rem;
   line-height: 1.2;
@@ -4278,7 +4285,7 @@
 }
 
 .legal-security-card__title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 0.875rem;
   letter-spacing: -0.01em;
@@ -4295,7 +4302,7 @@
 .badge-pill {
   display: inline-flex;
   align-items: center;
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 0.72rem;
   letter-spacing: 0.04em;
@@ -4353,7 +4360,7 @@
 }
 
 .legal-tip-card__title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 0.95rem;
   margin: 0;
@@ -4434,7 +4441,7 @@
   margin: 0 auto 1.25rem;
 }
 .dd-error-state__title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 1.1rem;
   color: var(--text-primary);
@@ -4490,7 +4497,7 @@
 
 /* ── Title ─────────────────────────────────────────────────────── */
 .dd-title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: clamp(1.25rem, 2.5vw, 1.65rem);
   letter-spacing: -0.03em;
@@ -4509,7 +4516,7 @@
 .dd-meta__body  { display: flex; flex-direction: column; gap: 0.2rem; }
 .dd-meta__row   { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
 .dd-meta__username {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 0.875rem;
   color: var(--text-primary);
@@ -4571,7 +4578,7 @@
   padding: 0.45rem 0.875rem;
   border-radius: 8px;
   font-size: 0.82rem;
-  font-family: 'DM Sans', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 500;
   background: rgba(255,255,255,0.04);
   border: 1px solid var(--border-subtle);
@@ -4604,7 +4611,7 @@
   color: #f87171 !important;
 }
 .dd-vote__count {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 0.9rem;
   letter-spacing: -0.02em;
@@ -4640,7 +4647,7 @@
   border-bottom: 1px solid var(--border-subtle);
 }
 .dd-comments-title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 1rem;
   letter-spacing: -0.02em;
@@ -4708,7 +4715,7 @@
   flex-wrap: wrap;
 }
 .dd-comment__username {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 0.85rem;
   color: var(--text-primary);
@@ -4747,7 +4754,7 @@
   margin: 0 auto 0.875rem;
 }
 .dd-empty-comments__text {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 0.9rem;
   color: var(--text-secondary);
@@ -4787,7 +4794,7 @@
   background: transparent;
   border: none;
   color: var(--text-primary);
-  font-family: 'DM Sans', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-size: 0.9rem;
   line-height: 1.7;
   resize: none;
@@ -4842,7 +4849,7 @@
   margin: 0 auto 0.875rem;
 }
 .dd-comment-cta__text {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 0.9rem;
   color: var(--text-secondary);
@@ -4862,7 +4869,7 @@
   padding: 1.125rem;
 }
 .dd-sidebar-card__title {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 0.78rem;
   letter-spacing: 0.06em;
@@ -4890,7 +4897,7 @@
   gap: 0.75rem;
 }
 .dd-sidebar-author__name {
-  font-family: 'Syne', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 0.875rem;
   color: var(--text-primary);
@@ -4911,7 +4918,7 @@
   padding: 0.625rem 1.125rem;
   border-radius: 10px;
   font-size: 0.85rem;
-  font-family: 'DM Sans', sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   font-weight: 500;
   white-space: nowrap;
   backdrop-filter: blur(16px);
@@ -4987,3 +4994,6 @@
   border-left: 2px solid var(--border-light);
   padding-left: 1rem;
 }
+
+
+

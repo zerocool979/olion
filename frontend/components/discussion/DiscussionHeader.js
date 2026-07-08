@@ -37,3 +37,6 @@ export function DiscussionHeader({ discussion, onCopyLink }) {
     </header>
   )
 }
+
+
+

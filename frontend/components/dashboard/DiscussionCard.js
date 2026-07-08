@@ -1,79 +1,110 @@
-import { useState } from 'react'
-import Link from 'next/link'
-import { Avatar } from './Avatar'
+import { useState } from "react";
+import Avatar from "./Avatar";
+import StatPill from "./StatPill";
+import { colors } from "./tokens";
 
-export function DiscussionCard({ discussion, onVote, index, variant = 'feed' }) {
-  const [hovered, setHovered] = useState(false)
+function timeAgo(dateStr) {
+  if (!dateStr) return "";
+  const diff = (Date.now() - new Date(dateStr)) / 1000;
+  if (diff < 60) return "now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}d`;
+  return new Date(dateStr).toLocaleDateString();
+}
+
+function compactNumber(n = 0) {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
+  if (n >= 1000) return (n / 1000).toFixed(1) + "K";
+  return `${n}`;
+}
+
+/**
+ * DiscussionCard
+ * Renders one discussion/post in the feed.
+ *
+ * Accepts the same shapes the original feed used:
+ *   post.author.profile.username / post.author.username
+ *   post.title / post.content
+ *   post._count.votes / post.votes
+ *   post._count.comments / post.commentCount
+ *   post.viewCount / post.views
+ *
+ * - onLike(post, nextLiked): called when the like button is toggled
+ * - onComment(post): called when the comment button is clicked
+ * - onOpen(post): called when the card itself is clicked (open detail)
+ */
+export default function DiscussionCard({ post, onLike, onComment, onOpen }) {
+  const author = post.author?.profile ?? post.author ?? {};
+  const username = author.username ?? "Anonim";
+  const avatarSrc = author.avatarUrl ?? author.avatar ?? null;
+  const verified = post.author?.isExpert ?? author.isExpert ?? false;
+  const text = post.title ?? post.content ?? "";
+  const category = post.category?.name ?? post.category ?? null;
+  const votes = post._count?.votes ?? post.votes ?? 0;
+  const comments = post._count?.comments ?? post.commentCount ?? 0;
+  const views = post.viewCount ?? post.views ?? 0;
+
+  const [liked, setLiked] = useState(Boolean(post.likedByMe));
+
+  const handleLike = (e) => {
+    e.stopPropagation();
+    const next = !liked;
+    setLiked(next);
+    onLike?.(post, next);
+  };
+
+  const handleComment = (e) => {
+    e.stopPropagation();
+    onComment?.(post);
+  };
 
   return (
-    <div
-      className={`ud-disc-card animate-fade-up stagger-${Math.min(index + 1, 5)}`}
-      data-hovered={hovered}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+    <article
+      onClick={() => onOpen?.(post)}
+      style={{
+        display: "flex",
+        gap: 12,
+        padding: "14px 16px",
+        borderBottom: `1px solid ${colors.border}`,
+        cursor: onOpen ? "pointer" : "default",
+        transition: "background-color .15s",
+      }}
+      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors.bgHover)}
+      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
     >
-      {variant === 'trending' && (
-        <span className={`ud-disc-card__rank ${index < 3 ? 'ud-disc-card__rank--hot' : ''}`}>
-          {index + 1}
-        </span>
-      )}
+      <Avatar username={username} src={avatarSrc} verified={verified} />
 
-      <div className="ud-disc-card__body">
-        <div className="ud-disc-card__meta">
-          <Avatar username={discussion.user?.profile?.username} size={18} />
-          <span className="ud-disc-card__author">
-            {discussion.user?.profile?.username || 'Anonim'}
-          </span>
-          {discussion.user?.isVerifiedExpert && (
-            <span className="badge badge--expert">✦ Expert</span>
-          )}
-          {discussion.category?.name && (
-            <span className="badge badge--category">{discussion.category.name}</span>
-          )}
-          {discussion.mode && (
-            <span className={`badge ${discussion.mode === 'ANONYMOUS' ? 'badge--anon' : 'badge--public'}`}>
-              {discussion.mode === 'ANONYMOUS' ? 'Anonim' : 'Publik'}
-            </span>
-          )}
-          {variant === 'trending' && discussion._voteCount > 0 && (
-            <span className="ud-disc-card__hot-badge">
-              <svg width="9" height="9" viewBox="0 0 12 12" fill="currentColor">
-                <path d="M6.5 0C6.5 3 4 4 4 6.5c0 1.4 1.1 2.5 2.5 2.5S9.5 7.9 9.5 6.5C9.5 3.5 6.5 3 6.5 0z"/>
-              </svg>
-              Hot
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3, flexWrap: "wrap" }}>
+          <span style={{ fontWeight: 700, fontSize: 15, color: colors.textPrimary }}>{username}</span>
+          <span style={{ fontSize: 13, color: colors.textSecondary }}>· {timeAgo(post.createdAt)}</span>
+          {category && (
+            <span style={{ marginLeft: "auto" }}>
+              <StatPill variant="tag" tone="accent" label={category} />
             </span>
           )}
         </div>
 
-        <Link href={`/user/discussions/${discussion.id}`} className="ud-disc-card__title">
-          {discussion.title}
-        </Link>
+        <p style={{ fontSize: 15, color: colors.textPrimary, lineHeight: 1.5, marginBottom: 10, whiteSpace: "pre-wrap" }}>
+          {text.length > 280 ? text.slice(0, 280) + "…" : text}
+        </p>
 
-        <p className="ud-disc-card__preview line-clamp-2">{discussion.content}</p>
-
-        <div className="ud-disc-card__footer">
-          <button
-            className="ud-vote-btn"
-            onClick={() => onVote?.(discussion.id, 1)}
-            title="Helpful"
-          >
-            <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
-              <path d="M7 2v10M2 7l5-5 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            {discussion._voteCount > 0 ? discussion._voteCount : 'Helpful'}
-          </button>
-          <Link href={`/user/discussions/${discussion.id}#answers`} className="ud-vote-btn">
-            <svg width="11" height="11" viewBox="0 0 14 14" fill="none">
-              <path d="M2 2h10v7H2V2z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
-              <path d="M5 11l2 2 2-2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            {discussion._answerCount ?? 0} Jawaban
-          </Link>
-          <Link href={`/user/discussions/${discussion.id}`} className="ud-disc-card__readmore">
-            Baca →
-          </Link>
+        <div style={{ display: "flex", alignItems: "center", gap: 4, marginLeft: -8 }}>
+          <StatPill icon="💬" label={compactNumber(comments)} onClick={handleComment} />
+          <StatPill
+            icon={liked ? "❤️" : "🤍"}
+            label={compactNumber(votes + (liked ? 1 : 0))}
+            tone="like"
+            active={liked}
+            onClick={handleLike}
+          />
+          <StatPill icon="👁" label={compactNumber(views)} />
         </div>
       </div>
-    </div>
-  )
+    </article>
+  );
 }
+
+
+

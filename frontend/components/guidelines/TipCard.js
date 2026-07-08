@@ -16,3 +16,6 @@ export function TipCard({ section }) {
     </div>
   )
 }
+
+
+

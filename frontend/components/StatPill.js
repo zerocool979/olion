@@ -7,3 +7,6 @@ export default function StatPill({ icon, value, label }) {
     </span>
   );
 }
+
+
+

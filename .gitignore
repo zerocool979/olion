@@ -1,14 +1,19 @@
 # Node
 node_modules/
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 yarn.lock
 
 # Environment
 .env
 .env.*
+.env.local
+.env.*.local
 
-# Build
+# Build outputs
 dist/
+out/
 build/
 .next/
 
@@ -21,6 +26,25 @@ logs/
 
 # Prisma
 .prisma
+backend/prisma/migrations/
+*.db
+*.db-journal
 
 # file backup
 .bak
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.tar
+frontend/Dockerfile
+backend/Dockerfile
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# Docker
+docker-compose.yml

@@ -13,3 +13,6 @@ export default function Avatar({ username, size = 44 }) {
     </div>
   );
 }
+
+
+

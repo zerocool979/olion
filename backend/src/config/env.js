@@ -7,3 +7,6 @@ module.exports = {
   JWT_EXPIRE: '7d',
   NODE_ENV: process.env.NODE_ENV || 'development'
 }
+
+
+

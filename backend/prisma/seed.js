@@ -1,730 +1,1115 @@
-/**
- * seed.js — OLION comprehensive database seed
- *
- * Coverage:
- *  ✓ All Role enum values     (USER, EXPERT, MODERATOR, ADMIN)
- *  ✓ All DiscussionMode       (INFORMATIF, KLARIFIKATIF, EKSPLORATIF, EVALUATIF, ARGUMENTATIF, PRAKTIS)
- *  ✓ All DisciplineLevel      (BEBAS, RASIONAL, AKADEMIK, PROFESIONAL)
- *  ✓ All ReportStatus         (PENDING, RESOLVED, REJECTED)
- *  ✓ Categories + subcategories (11 root, 40 children)
- *  ✓ 12 users with realistic profiles and bios
- *  ✓ 40 discussions spread across categories, modes, disciplines
- *  ✓ 80+ comments with realistic content
- *  ✓ Votes (+1 / -1) that create meaningful reputation spread
- *  ✓ Reports on discussions and comments, all statuses
- *  ✓ ReputationLog entries matching vote activity
- *  ✓ Timestamps spread over past 90 days for realistic trending data
- */
-
 'use strict'
+// =============================================================================
+// seed.js — OLION  (KOMPREHENSIF — semua 18 model dari schema.prisma final)
+// =============================================================================
+//
+// Cara pakai:
+//   node prisma/seed.js           → seed penuh
+//   node prisma/seed.js --reset   → hapus semua data, lalu seed ulang
+//
+// Idempoten: aman dijalankan lebih dari satu kali (pakai upsert / skip jika
+// data sudah ada). Exception: --reset akan menghapus semua data terlebih dahulu.
+//
+// Urutan seeding mengikuti dependency graph:
+//   Badge → Category/Tag → User+Profile → Follow →
+//   Discussion+DiscussionTag → Comment → Vote → ReputationLog →
+//   UserBadge → Notification → Conversation+Participant+Message →
+//   ExpertApplication → Report
+// =============================================================================
+
 const { PrismaClient } = require('@prisma/client')
 const bcrypt = require('bcryptjs')
-const db = new PrismaClient()
 
-// ── Utilities ──────────────────────────────────────────────────────────────────
-const HASH_ROUNDS = 10
+const db  = new PrismaClient()
+const ARG = process.argv.slice(2)
 
-/** Random integer in [min, max] inclusive */
-function ri(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min
+// ─── Warna terminal ────────────────────────────────────────────────────────────
+const c = {
+  reset: '\x1b[0m', bold: '\x1b[1m',
+  green: '\x1b[32m', cyan: '\x1b[36m', yellow: '\x1b[33m',
+  red: '\x1b[31m', grey: '\x1b[90m', blue: '\x1b[34m',
+}
+const ok   = (msg) => console.log(`${c.green}  ✓${c.reset} ${msg}`)
+const info = (msg) => console.log(`${c.cyan}  →${c.reset} ${msg}`)
+const warn = (msg) => console.log(`${c.yellow}  ⚠${c.reset} ${msg}`)
+const step = (msg) => console.log(`\n${c.bold}${c.blue}► ${msg}${c.reset}`)
+
+// ─── Helper: random dari array ────────────────────────────────────────────────
+const rng    = (arr) => arr[Math.floor(Math.random() * arr.length)]
+const rngInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min
+const shuffle = (arr) => [...arr].sort(() => Math.random() - 0.5)
+
+// ─── Pseudonim anonim ─────────────────────────────────────────────────────────
+const ADJ  = ['Bijak','Cerdas','Tangguh','Kreatif','Kritis','Logis','Analitis',
+               'Tajam','Berani','Jeli','Teliti','Lantang','Fasih','Sigap']
+const NOUN = ['Pejuang','Pemikir','Inovator','Cendekia','Eksplorer','Katalis',
+               'Pioner','Pengamat','Narasi','Aksara','Nalar','Wacana']
+const pseudoName = () =>
+  `${rng(ADJ)}_${rng(NOUN)}_${Math.floor(Math.random() * 9000) + 1000}`
+
+// =============================================================================
+// DATA STATIK
+// =============================================================================
+
+// ── Badges (7 bawaan) ─────────────────────────────────────────────────────────
+const BADGES = [
+  { slug: 'first_post',      name: 'Penulis Pertama',      icon: '✍️',
+    description: 'Membuat diskusi pertama kamu di OLION',   threshold: 0   },
+  { slug: 'first_answer',    name: 'Penolong',              icon: '💬',
+    description: 'Memberikan komentar pertama di OLION',    threshold: 0   },
+  { slug: 'reputation_50',   name: 'Kontributor',           icon: '⭐',
+    description: 'Mencapai 50 poin reputasi',               threshold: 50  },
+  { slug: 'reputation_100',  name: 'Terpercaya',            icon: '🌟',
+    description: 'Mencapai 100 poin reputasi',              threshold: 100 },
+  { slug: 'reputation_500',  name: 'Pakar Komunitas',       icon: '🏆',
+    description: 'Mencapai 500 poin reputasi',              threshold: 500 },
+  { slug: 'reputation_1000', name: 'Legenda',               icon: '💎',
+    description: 'Mencapai 1000 poin reputasi',             threshold: 1000},
+  { slug: 'verified_expert', name: 'Pakar Terverifikasi',   icon: '✅',
+    description: 'Diverifikasi sebagai pakar di bidangnya', threshold: 0   },
+]
+
+// ── Kategori root (6) + subkategori (9) ──────────────────────────────────────
+const CATEGORIES = [
+  {
+    name: 'Sains & Teknologi', slug: 'sains-teknologi',
+    color: '#1565C0', borderColor: '#0D47A1',
+    description: 'Diskusi ilmu pengetahuan alam dan teknologi terkini',
+    subs: [
+      { name: 'Kecerdasan Buatan', slug: 'ai',
+        description: 'AI, Machine Learning, Deep Learning, LLM' },
+      { name: 'Pemrograman',       slug: 'pemrograman',
+        description: 'Bahasa pemrograman, arsitektur software, best practice' },
+      { name: 'Fisika & Sains',    slug: 'fisika',
+        description: 'Fisika, kimia, biologi, dan sains dasar lainnya' },
+    ],
+  },
+  {
+    name: 'Sosial & Budaya', slug: 'sosial-budaya',
+    color: '#6A1B9A', borderColor: '#4A148C',
+    description: 'Diskusi dinamika sosial, budaya, dan kemasyarakatan',
+    subs: [
+      { name: 'Politik & Kebijakan', slug: 'politik',
+        description: 'Kebijakan publik, demokrasi, tata kelola pemerintahan' },
+      { name: 'Seni & Sastra',       slug: 'seni',
+        description: 'Karya seni, sastra, musik, dan ekspresi budaya' },
+    ],
+  },
+  {
+    name: 'Ekonomi & Bisnis', slug: 'ekonomi-bisnis',
+    color: '#2E7D32', borderColor: '#1B5E20',
+    description: 'Diskusi ekonomi makro/mikro, keuangan, dan dunia bisnis',
+    subs: [
+      { name: 'Startup & Inovasi', slug: 'startup',
+        description: 'Ekosistem startup, kewirausahaan, dan inovasi produk' },
+      { name: 'Investasi & Pasar', slug: 'investasi',
+        description: 'Saham, obligasi, reksa dana, kripto, dan pasar modal' },
+    ],
+  },
+  {
+    name: 'Kesehatan', slug: 'kesehatan',
+    color: '#C62828', borderColor: '#B71C1C',
+    description: 'Diskusi kesehatan fisik, mental, dan medis berbasis bukti',
+    subs: [],
+  },
+  {
+    name: 'Pendidikan', slug: 'pendidikan',
+    color: '#E65100', borderColor: '#BF360C',
+    description: 'Diskusi kurikulum, pedagogi, riset pendidikan, dan literasi',
+    subs: [],
+  },
+  {
+    name: 'Lingkungan & Iklim', slug: 'lingkungan',
+    color: '#00695C', borderColor: '#004D40',
+    description: 'Diskusi krisis iklim, keberlanjutan, dan lingkungan hidup',
+    subs: [],
+  },
+]
+
+// ── Tags (12) ─────────────────────────────────────────────────────────────────
+const TAGS = [
+  { name: 'AI',            slug: 'ai-tag' },
+  { name: 'Teknologi',     slug: 'teknologi' },
+  { name: 'Pendidikan',    slug: 'pendidikan-tag' },
+  { name: 'Lingkungan',    slug: 'lingkungan-tag' },
+  { name: 'Ekonomi',       slug: 'ekonomi-tag' },
+  { name: 'Kesehatan',     slug: 'kesehatan-tag' },
+  { name: 'Politik',       slug: 'politik-tag' },
+  { name: 'Filsafat',      slug: 'filsafat' },
+  { name: 'Riset',         slug: 'riset' },
+  { name: 'Open Source',   slug: 'open-source' },
+  { name: 'Startup',       slug: 'startup-tag' },
+  { name: 'Masa Depan',    slug: 'masa-depan' },
+]
+
+// ── Sample diskusi (10) ───────────────────────────────────────────────────────
+const DISCUSSIONS = [
+  {
+    title: 'Apakah AI akan menggantikan pekerjaan programmer dalam 10 tahun ke depan?',
+    content: `Model bahasa besar seperti GPT-4, Claude, dan GitHub Copilot telah mengubah cara developer bekerja secara signifikan. Banyak tugas yang dulu membutuhkan jam kerja kini bisa diselesaikan dalam menit.
+
+Namun pertanyaan yang lebih mendasar adalah: apakah ini sekadar alat bantu, atau awal dari redudansi profesi programmer secara masif?
+
+Beberapa perspektif yang perlu dipertimbangkan:
+1. AI masih kesulitan memahami konteks bisnis yang kompleks
+2. Debugging sistem legacy masih butuh pemahaman domain yang dalam
+3. Peran programmer mungkin bergeser ke "AI orchestrator"
+
+Apa pandangan kalian sebagai praktisi atau akademisi di bidang ini?`,
+    catSlug: 'ai', mode: 'ARGUMENTATIF', discipline: 'AKADEMIK',
+    tags: ['ai-tag', 'teknologi', 'masa-depan'],
+  },
+  {
+    title: 'Dampak media sosial terhadap kualitas diskusi publik di Indonesia',
+    content: `Riset Pew Research (2022) menunjukkan bahwa polarisasi politik di platform media sosial meningkat 40% dalam 5 tahun terakhir di negara-negara berkembang.
+
+Di Indonesia, fenomena ini terlihat jelas menjelang Pemilu: ruang diskusi publik semakin terpecah ke dalam gelembung-gelembung informasi (filter bubble) yang memperkuat bias konfirmasi.
+
+Yang perlu kita diskusikan:
+- Apakah algoritma rekomendasi yang menjadi akar masalahnya?
+- Bagaimana peran platform vs pengguna dalam menjaga kualitas diskursus?
+- Apakah regulasi konten adalah solusi yang tepat?`,
+    catSlug: 'politik', mode: 'EVALUATIF', discipline: 'AKADEMIK',
+    tags: ['politik-tag', 'teknologi', 'riset'],
+  },
+  {
+    title: 'Strategi investasi di era suku bunga tinggi 2024–2025',
+    content: `Bank Indonesia mempertahankan BI Rate di level 6,25% sepanjang semester pertama 2024, mengikuti tren hawkish The Fed. Kondisi ini menciptakan landscape investasi yang sangat berbeda dari era suku bunga rendah 2020–2021.
+
+Instrumen yang perlu dievaluasi ulang:
+1. **Obligasi pemerintah (SBN)**: yield menarik tapi harga turun
+2. **Reksa dana pasar uang**: aman tapi imbal hasil terbatas
+3. **Saham growth vs value**: rotasi signifikan ke value stocks
+4. **Properti**: cash flow positif tapi capital gain terbatas
+5. **Kripto**: volatilitas ekstrem, peran sebagai hedge masih diperdebatkan
+
+Bagaimana kalian menyesuaikan portofolio dalam kondisi ini?`,
+    catSlug: 'investasi', mode: 'PRAKTIS', discipline: 'PROFESIONAL',
+    tags: ['ekonomi-tag', 'startup-tag'],
+  },
+  {
+    title: 'Kurikulum Merdeka: sudahkah benar-benar "memerdekakan" siswa?',
+    content: `Kurikulum Merdeka (KM) resmi diluncurkan Kemendikbudristek pada 2022 sebagai pengganti Kurikulum 2013. Dengan pendekatan "Pembelajaran Berdiferensiasi", KM mengklaim memberikan fleksibilitas lebih bagi guru dan siswa.
+
+Namun laporan dari sejumlah peneliti pendidikan menunjukkan gap antara konsep dan implementasi:
+- Banyak sekolah mengimplementasikan KM secara superfisial tanpa memahami filosofinya
+- Guru kekurangan pelatihan yang memadai
+- Asesmen Nasional masih cenderung mengukur hafalan, bukan kompetensi
+
+Apakah kalian (guru, orang tua, atau peneliti pendidikan) melihat perubahan nyata di lapangan?`,
+    catSlug: 'pendidikan', mode: 'EVALUATIF', discipline: 'AKADEMIK',
+    tags: ['pendidikan-tag', 'riset'],
+  },
+  {
+    title: 'Net Zero 2060: realistis atau sekadar janji politik Indonesia?',
+    content: `Indonesia berkomitmen mencapai net zero emission pada 2060 dalam NDC (Nationally Determined Contribution) yang diperbarui. Namun realitas di lapangan memunculkan banyak tanda tanya:
+
+**Fakta yang mendukung skeptisisme:**
+- Pembangunan PLTU batu bara masih berlanjut di beberapa daerah
+- Subsidi energi fosil masih jauh lebih besar dari subsidi EBT
+- Deforestasi belum sepenuhnya terkendali
+
+**Fakta yang mendukung optimisme:**
+- Target 23% EBT pada 2025 (meski perlu diakselerasi)
+- Potensi geotermal terbesar kedua di dunia
+- Pertumbuhan industri nikel untuk baterai EV
+
+Apakah target ini achievable, atau kita perlu narasi yang lebih jujur soal trade-off pembangunan?`,
+    catSlug: 'lingkungan', mode: 'ARGUMENTATIF', discipline: 'RASIONAL',
+    tags: ['lingkungan-tag', 'politik-tag', 'masa-depan'],
+  },
+  {
+    title: 'Krisis kesehatan mental mahasiswa Indonesia: darurat yang diabaikan?',
+    content: `Survei INTO THE LIGHT Indonesia (2023) menemukan bahwa 1 dari 3 mahasiswa pernah mengalami gejala depresi sedang hingga berat, namun hanya 9% yang mencari bantuan profesional.
+
+Hambatan utama:
+- Stigma sosial yang masih kuat
+- Keterbatasan akses dan biaya konseling
+- Budaya "bertahan" yang diromantisasi
+
+Yang ingin saya diskusikan: apakah kampus sudah melakukan cukup? Bagaimana perbandingan dengan kebijakan di negara lain? Dan apa peran platform diskusi seperti OLION dalam membangun ruang aman untuk topik ini?`,
+    catSlug: 'kesehatan', mode: 'EKSPLORATIF', discipline: 'AKADEMIK',
+    tags: ['kesehatan-tag', 'riset', 'pendidikan-tag'],
+  },
+  {
+    title: 'Open source vs proprietary: mengapa banyak startup Indonesia masih ragu?',
+    content: `Adopsi open source di startup Indonesia masih jauh di bawah India dan Vietnam. Padahal biaya lisensi software proprietary bisa menyedot 15–30% operational budget untuk startup early-stage.
+
+Dari pengalaman saya di beberapa startup:
+- Ketakutan utama: "tidak ada yang bertanggung jawab jika ada masalah"
+- Realita: komunitas OSS seringkali lebih responsif dari vendor komersial
+- Hidden cost OSS: waktu setup, customisasi, dan maintenance in-house
+
+Apakah ini soal edukasi, atau ada faktor struktural lain yang menghambat adopsi OSS di ekosistem startup Indonesia?`,
+    catSlug: 'startup', mode: 'PRAKTIS', discipline: 'PROFESIONAL',
+    tags: ['open-source', 'startup-tag', 'teknologi'],
+  },
+  {
+    title: 'Etika AI dalam pembuatan konten: di mana garis batasnya?',
+    content: `Generative AI kini bisa membuat artikel, gambar, musik, dan video yang sulit dibedakan dari karya manusia. Ini memunculkan pertanyaan filosofis sekaligus praktis:
+
+1. **Kepemilikan intelektual**: siapa yang memiliki output AI — pengguna, developer model, atau tidak ada?
+2. **Transparansi**: haruskah konten AI-generated wajib diberi label?
+3. **Dampak pada kreator**: apakah ini demokratisasi kreativitas atau devaluasi kerja kreatif?
+4. **Misinformasi**: deepfake dan synthetic media sebagai ancaman epistemik
+
+Sebagai pengguna, akademisi, atau pembuat kebijakan — di mana kalian menarik garis batas yang etis?`,
+    catSlug: 'ai', mode: 'ARGUMENTATIF', discipline: 'RASIONAL',
+    tags: ['ai-tag', 'filsafat', 'teknologi'],
+  },
+  {
+    title: 'Apakah demokrasi deliberatif bisa diterapkan di era digital?',
+    content: `Jurgen Habermas mengonseptualisasikan "ruang publik" sebagai arena di mana warga berdebat secara rasional untuk mencapai konsensus. Di era digital, apakah konsep ini masih relevan?
+
+Tantangan spesifik era digital:
+- Algoritma memaksimalkan engagement, bukan kualitas deliberasi
+- Anonimitas bisa mendorong kebebasan berbicara ATAU disinhibition negatif
+- Kesenjangan akses digital (digital divide) menciptakan ketidaksetaraan suara
+
+Platform seperti OLION justru mencoba merespons tantangan ini dengan mode diskusi terstruktur dan sistem reputasi. Apakah ini langkah yang tepat, atau ada desain yang lebih baik?`,
+    catSlug: 'politik', mode: 'EKSPLORATIF', discipline: 'AKADEMIK',
+    tags: ['politik-tag', 'filsafat', 'teknologi'],
+  },
+  {
+    title: 'Mengapa penelitian reprodusibilitas (replication crisis) penting untuk semua bidang?',
+    content: `"Replication crisis" yang dimulai dari psikologi kini merambah ke ekonomi, kedokteran, bahkan ilmu komputer (khususnya ML). Lebih dari 50% studi landmark di beberapa bidang tidak berhasil direplikasi.
+
+Implikasinya sangat luas:
+- Kebijakan publik yang didasarkan pada evidence yang tidak solid
+- Obat-obatan yang disetujui berdasarkan trial yang tidak representatif
+- Model ML yang overfitting pada benchmark tertentu
+
+Sebagai akademisi atau praktisi yang sering mengkonsumsi hasil riset — bagaimana kalian mengevaluasi kredibilitas sebuah studi? Dan apa yang bisa dilakukan komunitas ilmiah Indonesia?`,
+    catSlug: 'sains-teknologi', mode: 'KLARIFIKATIF', discipline: 'AKADEMIK',
+    tags: ['riset', 'pendidikan-tag', 'ai-tag'],
+  },
+]
+
+// ── Komentar template ─────────────────────────────────────────────────────────
+const COMMENT_TEMPLATES = {
+  expert: [
+    'Dari perspektif akademis, isu ini memiliki beberapa dimensi yang sering terlewat dalam diskusi populer. Pertama, penting untuk membedakan antara korelasi dan kausalitas dalam data yang sering dikutip. Kedua, konteks historis dan komparatif lintas negara memberikan nuansa yang lebih kaya.',
+    'Saya ingin menambahkan perspektif berbasis riset terbaru. Beberapa studi longitudinal dalam 5 tahun terakhir menunjukkan hasil yang lebih kompleks dari narasi utama. Kuncinya adalah pada metodologi pengukuran dan definisi operasional yang digunakan.',
+    'Ini adalah pertanyaan yang sangat relevan dan telah menjadi subjek perdebatan serius di komunitas ilmiah. Konsensus saat ini mengarah pada pandangan yang lebih bernuansa dari yang sering disederhanakan di media mainstream.',
+    'Dari sudut pandang praktis, ada beberapa intervensi berbasis bukti yang terbukti efektif di konteks serupa. Yang perlu diperhatikan adalah adaptasi konteks — apa yang berhasil di satu setting tidak selalu bisa langsung diterapkan.',
+  ],
+  regular: [
+    'Poin yang sangat menarik. Saya pernah mengalami langsung situasi yang kamu gambarkan, dan memang gap antara teori dan praktik seringkali lebih besar dari yang kita bayangkan.',
+    'Setuju dengan premis utama, tapi saya kira ada faktor yang belum dipertimbangkan: aspek insentif ekonomi jangka pendek yang sering mengalahkan pertimbangan jangka panjang.',
+    'Perspektif yang segar! Selama ini saya melihat isu ini dari satu sudut pandang saja. Argumen yang kamu bawa membuat saya mempertimbangkan ulang beberapa asumsi yang selama ini saya pegang.',
+    'Terima kasih sudah memulai diskusi ini. Topik ini sangat penting tapi jarang dibahas dengan kedalaman yang memadai. Saya ingin menambahkan bahwa pengalaman di daerah/sektor yang berbeda bisa sangat bervariasi.',
+    'Ada data terbaru yang menarik soal ini. Laporan OECD 2024 menunjukkan tren yang berbeda dari yang kita asumsikan — mungkin perlu kita evaluasi ulang frameworknya.',
+  ],
+  reply: [
+    'Poin yang bagus! Saya ingin melengkapi dengan menambahkan bahwa...',
+    'Terima kasih atas insight-nya. Memang hal ini sering diabaikan dalam diskusi mainstream.',
+    'Saya setuju, dan data terbaru semakin memperkuat argumen ini.',
+    'Menarik perspektifnya. Tapi apakah sudah mempertimbangkan variabel X yang mungkin menjadi confounding factor?',
+    'Ini mengingatkan saya pada kasus serupa yang pernah saya baca. Kesimpulannya cukup mengejutkan.',
+  ],
 }
 
-/** Random element from array */
-function pick(arr) {
-  return arr[ri(0, arr.length - 1)]
+// =============================================================================
+// FUNGSI SEEDING
+// =============================================================================
+
+async function seedBadges() {
+  step('Badge')
+  let count = 0
+  for (const badge of BADGES) {
+    await db.badge.upsert({ where: { slug: badge.slug }, update: badge, create: badge })
+    count++
+  }
+  ok(`${count} badge di-upsert`)
+  return db.badge.findMany()
 }
 
-/** Date offset: n days ago from now */
-function daysAgo(n) {
-  return new Date(Date.now() - n * 24 * 60 * 60 * 1000)
-}
+async function seedCategories() {
+  step('Category')
+  const created = {}
 
-/** Date offset: n hours ago */
-function hoursAgo(n) {
-  return new Date(Date.now() - n * 60 * 60 * 1000)
-}
+  for (const cat of CATEGORIES) {
+    const { subs, ...catData } = cat
+    const parent = await db.category.upsert({
+      where:  { slug: cat.slug },
+      update: catData,
+      create: catData,
+    })
+    created[cat.slug] = parent
 
-// ── Password hashes (pre-computed outside loop for speed) ─────────────────────
-async function buildHashes() {
-  const [userPwd, adminPwd, modPwd, expertPwd] = await Promise.all([
-    bcrypt.hash('password123', HASH_ROUNDS),
-    bcrypt.hash('admin123',    HASH_ROUNDS),
-    bcrypt.hash('moderator123', HASH_ROUNDS),
-    bcrypt.hash('expert123',   HASH_ROUNDS),
-  ])
-  return { userPwd, adminPwd, modPwd, expertPwd }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// MAIN
-// ─────────────────────────────────────────────────────────────────────────────
-async function main() {
-  console.log('🌱 Starting OLION seed...\n')
-
-  // ── 0. Wipe existing data in dependency order ──────────────────────────────
-  console.log('🗑  Clearing existing data...')
-  await db.reputationLog.deleteMany()
-  await db.report.deleteMany()
-  await db.vote.deleteMany()
-  await db.comment.deleteMany()
-  await db.discussion.deleteMany()
-  await db.profile.deleteMany()
-  await db.user.deleteMany()
-  await db.category.deleteMany()
-  console.log('   Done.\n')
-
-  // ── 1. Categories ─────────────────────────────────────────────────────────
-  console.log('📂 Creating categories...')
-
-  const CAT_DEFS = [
-    { name: 'General',     slug: 'general',     description: 'Diskusi umum dan pengumuman komunitas.' },
-    { name: 'Technology',  slug: 'technology',  description: 'Teknologi, software, AI, data, dan inovasi digital.' },
-    { name: 'Science',     slug: 'science',     description: 'Pembahasan sains, penelitian, dan pengetahuan ilmiah.' },
-    { name: 'Hukum',       slug: 'hukum',       description: 'Diskusi hukum, regulasi, dan perlindungan hak.' },
-    { name: 'Keuangan',    slug: 'keuangan',    description: 'Investasi, finansial, pajak, dan perencanaan uang.' },
-    { name: 'Kesehatan',   slug: 'kesehatan',   description: 'Kesehatan fisik, mental, nutrisi, dan kebugaran.' },
-    { name: 'Pendidikan',  slug: 'pendidikan',  description: 'Sekolah, kuliah, kursus, dan pengembangan akademik.' },
-    { name: 'Sosial',      slug: 'sosial',      description: 'Budaya, masyarakat, komunitas, dan isu sosial.' },
-    { name: 'Karier',      slug: 'karier',      description: 'Karier, pekerjaan, CV, interview, dan freelance.' },
-    { name: 'Hubungan',    slug: 'hubungan',    description: 'Relasi, keluarga, persahabatan, dan komunikasi.' },
-    { name: 'Lainnya',     slug: 'lainnya',     description: 'Topik umum lain di luar kategori utama.' },
-  ]
-
-  // Create root categories sequentially so we get references
-  const roots = {}
-  for (const def of CAT_DEFS) {
-    roots[def.slug] = await db.category.create({ data: def })
+    for (const sub of subs) {
+      const child = await db.category.upsert({
+        where:  { slug: sub.slug },
+        update: { ...sub, parentId: parent.id },
+        create: { ...sub, parentId: parent.id },
+      })
+      created[sub.slug] = child
+    }
   }
 
-  // Subcategories: [parentSlug, name, slug]
-  const SUBCATS = [
-    // General
-    ['general',    'Introductions',            'introductions'],
-    ['general',    'Announcements',            'announcements'],
-    ['general',    'Feedback & Saran',         'feedback'],
-    ['general',    'Off-topic',                'off-topic'],
-    // Technology
-    ['technology', 'Software Engineering',     'software'],
-    ['technology', 'AI & Machine Learning',    'ai-data'],
-    ['technology', 'Cybersecurity',            'cybersecurity'],
-    ['technology', 'Web & Mobile Dev',         'web-mobile'],
-    ['technology', 'Hardware & Elektronik',    'hardware'],
-    // Science
-    ['science',    'Fisika',                   'fisika'],
-    ['science',    'Biologi & Genetika',       'biologi'],
-    ['science',    'Kimia',                    'kimia'],
-    ['science',    'Astronomi',                'astronomi'],
-    // Hukum
-    ['hukum',      'Hukum Pidana',             'pidana'],
-    ['hukum',      'Hukum Perdata',            'perdata'],
-    ['hukum',      'Ketenagakerjaan',          'ketenagakerjaan'],
-    ['hukum',      'Hak Kekayaan Intelektual', 'hak-kekayaan-intelektual'],
-    ['hukum',      'Hukum Digital',            'hukum-digital'],
-    // Keuangan
-    ['keuangan',   'Investasi & Saham',        'investasi'],
-    ['keuangan',   'Perencanaan Keuangan',     'perencanaan-keuangan'],
-    ['keuangan',   'Pajak',                    'pajak'],
-    ['keuangan',   'Pinjaman & Utang',         'pinjaman-utang'],
-    ['keuangan',   'Kripto & Aset Digital',    'kripto'],
-    // Kesehatan
-    ['kesehatan',  'Nutrisi & Diet',           'nutrisi'],
-    ['kesehatan',  'Olahraga & Kebugaran',     'olahraga'],
-    ['kesehatan',  'Kesehatan Mental',         'kesehatan-mental'],
-    ['kesehatan',  'Penyakit & Pengobatan',    'penyakit-pengobatan'],
-    // Pendidikan
-    ['pendidikan', 'Sekolah Dasar',            'sekolah-dasar'],
-    ['pendidikan', 'SMP & SMA',                'smp-sma'],
-    ['pendidikan', 'Perkuliahan',              'perkuliahan'],
-    ['pendidikan', 'Kursus & Sertifikasi',     'kursus-sertifikasi'],
-    ['pendidikan', 'Beasiswa',                 'beasiswa'],
-    // Sosial
-    ['sosial',     'Budaya & Tradisi',         'budaya-tradisi'],
-    ['sosial',     'Lingkungan Hidup',         'lingkungan'],
-    ['sosial',     'Politik & Kebijakan',      'politik-kebijakan'],
-    ['sosial',     'Komunitas Lokal',          'komunitas'],
-    // Karier
-    ['karier',     'CV & Wawancara',           'cv-wawancara'],
-    ['karier',     'Pengembangan Diri',        'pengembangan-diri'],
-    ['karier',     'Wirausaha',                'wirausaha'],
-    ['karier',     'Remote Work & Freelance',  'remote-work-freelance'],
-    // Hubungan
-    ['hubungan',   'Pacaran & Romansa',        'pacaran'],
-    ['hubungan',   'Keluarga',                 'keluarga'],
-    ['hubungan',   'Persahabatan',             'persahabatan'],
-    ['hubungan',   'Konflik & Mediasi',        'konflik-mediasi'],
-    // Lainnya
-    ['lainnya',    'Hobi & Hiburan',           'hobi-hiburan'],
-    ['lainnya',    'Kuliner',                  'kuliner'],
-    ['lainnya',    'Perjalanan',               'perjalanan'],
-    ['lainnya',    'Tips & Trik',              'tips-trik'],
+  const total = await db.category.count()
+  ok(`${total} kategori tersedia`)
+  return created
+}
+
+async function seedTags() {
+  step('Tag')
+  const created = {}
+  for (const tag of TAGS) {
+    const t = await db.tag.upsert({ where: { slug: tag.slug }, update: tag, create: tag })
+    created[tag.slug] = t
+  }
+  ok(`${TAGS.length} tag di-upsert`)
+  return created
+}
+
+async function seedUsers() {
+  step('User + Profile')
+
+  if (await db.user.count() > 0) {
+    warn('User sudah ada, melewati pembuatan user — gunakan --reset untuk reset penuh')
+    return db.user.findMany({ include: { profile: true } })
+  }
+
+  const hash = await bcrypt.hash('Password123!', 12)
+  const users = []
+
+  // ── Akun khusus ─────────────────────────────────────────────────────────────
+  const specials = [
+    {
+      email: 'admin@olion.id', role: 'ADMIN', isVerifiedExpert: false,
+      username: 'admin_olion', bio: 'Administrator platform OLION. Bertanggung jawab atas kebijakan dan konfigurasi sistem.',
+    },
+    {
+      email: 'mod@olion.id', role: 'MODERATOR', isVerifiedExpert: false,
+      username: 'moderator_olion', bio: 'Moderator komunitas OLION. Menjaga kualitas diskusi dan menindaklanjuti laporan.',
+    },
+    {
+      email: 'pakar@olion.id', role: 'EXPERT', isVerifiedExpert: true,
+      username: 'dr_bilal_ai', bio: 'Peneliti AI & Data Science. PhD Ilmu Komputer UI. Fokus pada NLP dan etika AI.',
+    },
+    {
+      email: 'pakar2@olion.id', role: 'EXPERT', isVerifiedExpert: true,
+      username: 'prof_rina_sosio', bio: 'Sosiolog dan peneliti kebijakan publik. Anggota Dewan Riset Nasional.',
+    },
   ]
 
-  await db.category.createMany({
-    data: SUBCATS.map(([parentSlug, name, slug]) => ({
-      name,
-      slug,
-      description: `Sub-topik dari ${roots[parentSlug].name}.`,
-      parentId: roots[parentSlug].id,
-    })),
-  })
-
-  const allCategories = await db.category.findMany()
-  const rootCats  = allCategories.filter(c => !c.parentId)
-  const childCats = allCategories.filter(c =>  c.parentId)
-
-  console.log(`   ${rootCats.length} root categories, ${childCats.length} subcategories\n`)
-
-  // ── 2. Users ───────────────────────────────────────────────────────────────
-  console.log('👤 Creating users...')
-
-  const { userPwd, adminPwd, modPwd, expertPwd } = await buildHashes()
-
-  const USER_DEFS = [
-    // role, isVerifiedExpert, email, pwdKey, username, bio
-    ['ADMIN',     false, 'admin@olion.id',          'adminPwd', 'admin_olion',      'Administrator utama platform OLION.'],
-    ['MODERATOR', false, 'moderator@olion.id',      'modPwd',   'mod_rina',         'Moderator aktif sejak 2023. Suka berdiskusi tentang hukum dan sosial.'],
-    ['MODERATOR', false, 'mod2@olion.id',           'modPwd',   'mod_budi',         'Fokus moderasi konten teknologi dan sains.'],
-    ['EXPERT',    true,  'dr.sarah@olion.id',       'expertPwd','dr_sarah_k',       'Dokter umum. Aktif berbagi pengetahuan kesehatan berbasis bukti.'],
-    ['EXPERT',    true,  'prof.andi@olion.id',      'expertPwd','prof_andi_hukum',  'Dosen hukum pidana. Konsultan legal pro bono.'],
-    ['EXPERT',    true,  'rizky.dev@olion.id',      'expertPwd','rizky_engineer',   'Senior software engineer. 10 tahun di industri fintech.'],
-    ['EXPERT',    true,  'dr.chem@olion.id',        'expertPwd','dr_kimia_ui',      'Peneliti kimia organik. Alumni UI dan MIT.'],
-    ['USER',      false, 'aditya99@olion.id',       'userPwd',  'aditya_curious',   'Mahasiswa teknik informatika yang suka ngobrol soal AI.'],
-    ['USER',      false, 'sinta.finance@olion.id',  'userPwd',  'sinta_cerdas',     'Fresh graduate akuntansi. Belajar investasi dari nol.'],
-    ['USER',      false, 'bram.explore@olion.id',   'userPwd',  'bram_petualang',   'Freelancer desainer. Hobi traveling dan kuliner.'],
-    ['USER',      false, 'layla.sosial@olion.id',   'userPwd',  'layla_aktivis',    'Aktivis lingkungan dan komunitas. Percaya pada diskusi terbuka.'],
-    ['USER',      false, 'deni.karier@olion.id',    'userPwd',  'deni_growth',      'HRD startup. Senang berbagi tips karier dan wawancara.'],
-  ]
-
-  const pwdMap = { adminPwd, modPwd, expertPwd, userPwd }
-  const createdUsers = []
-
-  for (const [role, isVerifiedExpert, email, pwdKey, username, bio] of USER_DEFS) {
+  for (const s of specials) {
     const u = await db.user.create({
       data: {
-        email,
-        password: pwdMap[pwdKey],
-        role,
-        isVerifiedExpert,
-        profile: { create: { username, bio } },
+        email: s.email, password: hash, role: s.role, isVerifiedExpert: s.isVerifiedExpert,
+        profile: { create: { username: s.username, bio: s.bio } },
       },
       include: { profile: true },
     })
-    createdUsers.push(u)
+    users.push(u)
   }
 
-  // Convenience refs
-  const [admin, mod1, mod2, expertDoc, expertLaw, expertDev, expertChem,
-         userAdi, userSinta, userBram, userLayla, userDeni] = createdUsers
-
-  const experts   = [expertDoc, expertLaw, expertDev, expertChem]
-  const regularUsers = [userAdi, userSinta, userBram, userLayla, userDeni]
-  const allUsers  = createdUsers
-
-  console.log(`   ${createdUsers.length} users created\n`)
-
-  // ── 3. Discussions ─────────────────────────────────────────────────────────
-  console.log('💬 Creating discussions...')
-
-  // [title, content, categorySlug, mode, discipline, authorIndex(into allUsers), daysAgo]
-  const DISCUSSION_DEFS = [
-    // ── Technology / AI ──
-    [
-      'Apakah AI generatif akan menggantikan programmer dalam 5 tahun?',
-      'Model bahasa besar seperti GPT-4 dan Claude sudah bisa menulis kode yang cukup kompleks. Apakah ini berarti profesi software engineer akan tergantikan? Atau justru kita akan naik level ke peran yang lebih strategis? Saya ingin mendengar perspektif dari yang sudah bekerja di industri.',
-      'ai-data', 'EKSPLORATIF', 'RASIONAL', 6, 2,
-    ],
-    [
-      'Best practice keamanan API REST: authentication vs authorization',
-      'Banyak developer baru masih bingung membedakan autentikasi dan otorisasi. Dalam konteks REST API, autentikasi memverifikasi siapa Anda (JWT, OAuth2), sedangkan otorisasi menentukan apa yang boleh Anda lakukan (RBAC, ABAC). Diskusikan implementasi terbaik untuk production.',
-      'software', 'INFORMATIF', 'PROFESIONAL', 5, 5,
-    ],
-    [
-      'Pengalaman migrasi dari monolith ke microservices: worth it?',
-      'Startup kami baru selesai migrasi 18 bulan dari monolith Rails ke microservices Node.js + Go. Hasilnya? Deploy lebih cepat, scaling lebih fleksibel, tapi operational overhead naik drastis. Apakah pengalaman kalian sama?',
-      'software', 'EVALUATIF', 'PROFESIONAL', 5, 12,
-    ],
-    [
-      'Cursor AI vs GitHub Copilot: mana yang lebih produktif?',
-      'Sudah 3 bulan pakai keduanya secara bergantian. Cursor lebih baik untuk refactoring dan understanding codebase besar. Copilot lebih smooth untuk autocomplete rutin. Ada yang punya perbandingan lebih sistematis?',
-      'web-mobile', 'EVALUATIF', 'RASIONAL', 7, 8,
-    ],
-    [
-      'Cara kerja SSL/TLS dan kenapa HTTPS penting untuk semua website',
-      'Masih banyak website yang belum pakai HTTPS padahal sertifikat SSL sekarang gratis (Let\'s Encrypt). SSL/TLS mengenkripsi data antara browser dan server menggunakan asymmetric cryptography untuk key exchange dan symmetric untuk data transfer. Ini penjelasan lengkapnya.',
-      'cybersecurity', 'INFORMATIF', 'AKADEMIK', 5, 20,
-    ],
-    // ── Science ──
-    [
-      'Mengapa vaksin mRNA seperti COVID-19 dianggap aman meskipun teknologinya baru?',
-      'Banyak yang khawatir karena teknologi mRNA "baru", padahal penelitiannya sudah lebih dari 30 tahun. mRNA tidak masuk ke inti sel dan tidak mengubah DNA. Ia memberikan instruksi sementara untuk membuat protein spike, lalu terurai dalam beberapa hari.',
-      'biologi', 'KLARIFIKATIF', 'AKADEMIK', 3, 15,
-    ],
-    [
-      'Apakah ada kehidupan di luar Bumi? Probabilitas dan bukti ilmiah',
-      'Dengan 200 miliar bintang di galaksi kita dan triliunan galaksi di alam semesta, secara statistik hampir mustahil kita sendiri. Bukti: air di Mars, lautan di Europa, molekul organik di exoplanet. Tapi "kehidupan" dan "kehidupan cerdas" adalah dua pertanyaan berbeda.',
-      'astronomi', 'EKSPLORATIF', 'AKADEMIK', 3, 30,
-    ],
-    [
-      'Krisis reproduksi pada serangga: dampak ekologis dan ancaman ketahanan pangan',
-      'Studi terbaru menunjukkan populasi serangga menurun 45% dalam 40 tahun terakhir. Ini bukan sekadar soal nyamuk berkurang — serangga adalah fondasi ekosistem: penyerbuk tanaman, pengurai, sumber protein bagi burung dan ikan.',
-      'biologi', 'INFORMATIF', 'AKADEMIK', 6, 22,
-    ],
-    // ── Hukum ──
-    [
-      'Hak karyawan kontrak PKWT: apa yang sering dilanggar perusahaan?',
-      'Berdasarkan UU Cipta Kerja dan PP 35/2021, PKWT maksimal 5 tahun termasuk perpanjangan. Karyawan PKWT berhak atas uang kompensasi saat kontrak berakhir. Namun praktiknya banyak yang tidak mendapat haknya karena tidak tahu atau takut kehilangan pekerjaan.',
-      'ketenagakerjaan', 'INFORMATIF', 'PROFESIONAL', 4, 7,
-    ],
-    [
-      'Apakah screenshot chat WhatsApp bisa dijadikan bukti di pengadilan?',
-      'Ini pertanyaan yang sering muncul. Jawabannya: bisa, tapi dengan syarat. Berdasarkan UU ITE Pasal 5, informasi elektronik adalah alat bukti sah. Namun autentisitasnya harus bisa dibuktikan — idealnya dengan digital forensic atau pengakuan pihak lawan.',
-      'hukum-digital', 'KLARIFIKATIF', 'PROFESIONAL', 4, 3,
-    ],
-    [
-      'Paten software di Indonesia: mungkin tidak, dan bagaimana prosesnya?',
-      'Indonesia mengikuti perjanjian TRIPS dan memungkinkan paten untuk invensi yang mengandung unsur teknis, termasuk software dengan kontribusi teknis nyata. Proses di DJKI memakan waktu 2-5 tahun. Biaya jauh lebih rendah dari patent di US/EU.',
-      'hak-kekayaan-intelektual', 'INFORMATIF', 'AKADEMIK', 4, 18,
-    ],
-    // ── Keuangan ──
-    [
-      'Dollar cost averaging vs lump sum: mana lebih menguntungkan secara historis?',
-      'Penelitian Vanguard menunjukkan lump sum outperform DCA sekitar 66% dari waktu dalam horizon 10 tahun+. Namun DCA lebih cocok secara psikologis dan untuk yang tidak punya modal besar sekaligus. Ini bukan soal mana yang "benar" tapi mana yang sesuai situasimu.',
-      'investasi', 'EVALUATIF', 'RASIONAL', 8, 10,
-    ],
-    [
-      'Cara menghitung pajak penghasilan freelancer Indonesia: panduan lengkap 2024',
-      'Sebagai freelancer atau pekerja mandiri, kamu wajib lapor SPT tahunan. Penghasilan bruto dikurangi PTKP, hasil kena pajak progresif 5%-35%. Kalau omzet < 4,8M setahun, bisa pakai PP 23/2018 (tarif 0,5% dari omzet). Ada yang sudah lapor sendiri?',
-      'pajak', 'PRAKTIS', 'PROFESIONAL', 8, 25,
-    ],
-    [
-      'Review jujur: investasi reksa dana syariah vs konvensional performa 5 tahun',
-      'Saya tracking 12 reksa dana syariah dan 12 konvensional dari kategori yang sama selama 5 tahun. Hasil: performa hampir setara di saham campuran, reksa dana konvensional unggul tipis di money market. Biaya management syariah rata-rata lebih rendah.',
-      'investasi', 'EVALUATIF', 'AKADEMIK', 8, 45,
-    ],
-    [
-      'Strategi pelunasan hutang: avalanche vs snowball method',
-      'Avalanche: bayar hutang berbunga tertinggi dulu — secara matematis optimal, hemat bunga terbanyak. Snowball: bayar hutang terkecil dulu — secara psikologis lebih motivating karena ada "kemenangan" cepat. Metode mana yang berhasil buat kamu?',
-      'pinjaman-utang', 'PRAKTIS', 'RASIONAL', 11, 6,
-    ],
-    // ── Kesehatan ──
-    [
-      'Gejala burnout vs depresi: bagaimana membedakannya dan kapan harus ke psikiater?',
-      'Burnout adalah kondisi kelelahan kronis akibat stres kerja berkepanjangan — biasanya membaik dengan istirahat dan perubahan kondisi kerja. Depresi adalah gangguan mood yang lebih pervasif, mempengaruhi hampir semua area kehidupan bahkan saat kondisi external membaik.',
-      'kesehatan-mental', 'KLARIFIKATIF', 'PROFESIONAL', 3, 4,
-    ],
-    [
-      'Intermittent fasting 16:8 vs 5:2: tinjauan ilmiah manfaat dan risiko',
-      '16:8 (puasa 16 jam, makan 8 jam): lebih mudah dipertahankan, penelitian menunjukkan perbaikan sensitivitas insulin. 5:2 (5 hari normal, 2 hari <500 kalori): lebih dramatis untuk penurunan berat, tapi lebih sulit secara mental. Keduanya tidak disarankan untuk ibu hamil.',
-      'nutrisi', 'INFORMATIF', 'AKADEMIK', 3, 35,
-    ],
-    [
-      'Apakah suplemen kolagen oral benar-benar bekerja? Tinjauan penelitian',
-      'Industri suplemen kolagen senilai miliaran dolar, tapi skeptisisme ilmiah cukup kuat. Peptida kolagen yang dikonsumsi akan dipecah oleh pencernaan menjadi asam amino biasa. Namun beberapa RCT menunjukkan peningkatan elastisitas kulit. Mekanisme exakt masih diperdebatkan.',
-      'nutrisi', 'EVALUATIF', 'AKADEMIK', 6, 28,
-    ],
-    // ── Pendidikan ──
-    [
-      'Sistem zonasi PPDB: solusi atau masalah baru untuk pendidikan Indonesia?',
-      'Zonasi dirancang untuk mendemokratisasi akses pendidikan dan mencegah "sekolah favorit" yang segregatif. Di lapangan: orang tua memindahkan KK, guru berkualitas tidak terdistribusi merata, sekolah di zona "miskin" tidak diperkuat kapasitasnya. Apakah kebijakan ini perlu direvisi total?',
-      'smp-sma', 'ARGUMENTATIF', 'RASIONAL', 9, 9,
-    ],
-    [
-      'Pengalaman kuliah S2 di luar negeri dengan beasiswa LPDP: worth it?',
-      'Lulus LPDP 2021, kuliah di Delft Belanda jurusan Urban Planning. Worth it? Sangat. Bukan hanya ilmu — network internasional, cara berpikir yang berbeda, dan exposure ke problem nyata global sangat membuka wawasan. Tapi siap mental untuk 2 tahun yang sangat intense.',
-      'beasiswa', 'EVALUATIF', 'RASIONAL', 7, 50,
-    ],
-    [
-      'Platform belajar coding gratis terbaik 2024: perbandingan lengkap',
-      'Sudah coba: freeCodeCamp (web, gratis, sertifikat), The Odin Project (web full, project-based), CS50 Harvard (computer science dasar, sangat bagus), Kaggle (data science + ML), Khan Academy (matematika). Untuk pemula absolute: mulai dari CS50 + freeCodeCamp.',
-      'kursus-sertifikasi', 'PRAKTIS', 'RASIONAL', 5, 14,
-    ],
-    // ── Sosial ──
-    [
-      'Fenomena "quiet quitting": resistensi sehat atau krisis motivasi generasi Z?',
-      'Quiet quitting bukan benar-benar berhenti — tapi bekerja sesuai job desc, tidak lebih. Di satu sisi ini bentuk perlawanan terhadap hustle culture toxic. Di sisi lain, ekonom khawatir ini adalah sinyal disengagement massal yang berdampak produktivitas jangka panjang.',
-      'politik-kebijakan', 'ARGUMENTATIF', 'RASIONAL', 10, 16,
-    ],
-    [
-      'Dampak media sosial terhadap kesehatan mental remaja: apa kata riset?',
-      'Meta-analisis dari 226 studi (2023) menunjukkan korelasi negatif antara screen time media sosial dan wellbeing pada remaja, terutama perempuan. Mekanisme: social comparison, cyberbullying, disrupted sleep, algoritma yang mengamplifikasi konten negatif.',
-      'komunitas', 'INFORMATIF', 'AKADEMIK', 3, 11,
-    ],
-    [
-      'Apakah budaya "anti-kritik" di Indonesia menghambat kemajuan?',
-      'Observasi saya: di banyak lingkungan kerja dan akademik, kritik konstruktif masih dianggap tidak sopan. "Jaga perasaan" lebih diutamakan dari "mencari kebenaran". Ini berdampak pada kualitas keputusan organisasi. Bagaimana pengalaman kalian?',
-      'budaya-tradisi', 'EKSPLORATIF', 'RASIONAL', 10, 32,
-    ],
-    // ── Karier ──
-    [
-      'Negosiasi gaji: kapan waktu terbaik dan bagaimana caranya?',
-      'Waktu terbaik: saat sudah ada offer letter, bukan sebelumnya. Riset range pasar dulu (Glassdoor, LinkedIn Salary, jobstreet). Anchor high tapi reasonable. Jangan sebut gaji saat ini dulu. "Saya sangat excited dengan opportunity ini, apakah ada fleksibilitas di angka ini?" adalah kalimat ajaib.',
-      'cv-wawancara', 'PRAKTIS', 'PROFESIONAL', 11, 3,
-    ],
-    [
-      'Dari karyawan ke founder: pelajaran dari 2 tahun pertama bangun startup',
-      'Resign dari Google Jakarta untuk bangun edtech startup. 2 tahun kemudian: 3x pivot, 2 co-founder pergi, hampir tutup 2x, tapi sekarang profitable di niche yang sangat spesifik. Yang saya pelajari: focus on revenue lebih awal, team lebih penting dari idea, dan validasi sebelum build.',
-      'wirausaha', 'EKSPLORATIF', 'PROFESIONAL', 5, 40,
-    ],
-    [
-      'Tips produktif kerja remote untuk yang pertama kali WFH penuh',
-      'Setelah 3 tahun full remote: (1) dedicated workspace, (2) jadwal rigid di awal, (3) over-communicate dengan tim, (4) Pomodoro untuk deep work, (5) batas kerja yang tegas — matikan notif jam 6. Yang paling challenging: isolation sosial dan bedain "istirahat" vs "malas".',
-      'remote-work-freelance', 'PRAKTIS', 'RASIONAL', 11, 8,
-    ],
-    // ── Hubungan ──
-    [
-      'Long distance relationship: red flags yang sering diabaikan',
-      'LDR bukan tidak mungkin, tapi butuh kondisi spesifik untuk berhasil: end date yang jelas, komunikasi terjadwal, trust yang solid, dan keduanya punya kehidupan sosial mandiri. Red flags: posesif berlebihan, jealousy ekstrem, tidak ada rencana bersama, dan sering "menghilang".',
-      'pacaran', 'INFORMATIF', 'RASIONAL', 9, 5,
-    ],
-    [
-      'Toxic family dynamics: bagaimana navigasi hubungan dengan orang tua yang kontroling?',
-      'Ini topik yang jarang dibahas terbuka di Indonesia karena tabu budaya. Orang tua kontroling seringkali berasal dari rasa sayang yang distorted. Strateginya: komunikasi asertif (bukan agresif), boundaries yang jelas, dan bila perlu — bantuan profesional seperti family therapy.',
-      'keluarga', 'PRAKTIS', 'RASIONAL', 10, 13,
-    ],
-    // ── Lainnya ──
-    [
-      'Rekomendasi kafe coworking di Jakarta dengan WiFi stabil dan harga reasonable',
-      'Berdasarkan pengalaman 6 bulan nomad lokal: Anomali Coffee (Sudirman — WiFi 100Mbps, ramai tapi nyaman), Kopi Tuli (Mampang — sunyi, vibe bagus), Tanamera (kuningan — mahal tapi paling produktif untuk saya), dan Populer Kopi di mana-mana untuk yang budget sadar.',
-      'tips-trik', 'PRAKTIS', 'BEBAS', 9, 2,
-    ],
-    [
-      'Review: hiking Gunung Rinjani via jalur Sembalun — itinerary dan tips',
-      'Baru turun dari Rinjani minggu lalu via Sembalun (naik) dan Torean (turun) 4 hari 3 malam. Pemandangan: 10/10. Fisik terkuras: 10/10. Tips: training minimal 3 bulan sebelumnya, porter sangat worth it, bawa purotein bar banyak, dan jangan skip aklimatisasi.',
-      'perjalanan', 'INFORMATIF', 'BEBAS', 9, 17,
-    ],
-    [
-      'Cara membuat sourdough starter dari nol — troubleshooting masalah umum',
-      'Sourdough starter adalah fermentasi wild yeast + bakteri asam laktat. Masalah umum: (1) tidak mengembang — suhu terlalu dingin, coba di atas kulkas, (2) bau aneh — normal di 3-5 hari pertama, buang lapisan atas, (3) lapisan air di atas (hooch) — starter kelaparan, discard dan feed lebih sering.',
-      'kuliner', 'PRAKTIS', 'BEBAS', 9, 60,
-    ],
-    // ── More discussions untuk variety ──
-    [
-      'Blockchain beyond crypto: use case nyata yang sudah terbukti di industri',
-      'Terlepas dari hype kripto, blockchain punya use case legit: supply chain transparency (Walmart food tracking), sertifikasi dokumen (beberapa universitas), voting sistem, dan cross-border payment settlement. Yang mana menurut kamu paling transformatif?',
-      'kripto', 'EKSPLORATIF', 'RASIONAL', 5, 38,
-    ],
-    [
-      'Apakah gelar S1 masih relevan di era bootcamp dan self-taught developer?',
-      'Tech company besar (Google, Apple, IBM) sudah menghapus requirement gelar sarjana untuk banyak posisi. Bootcamp 6 bulan vs 4 tahun kuliah — mana yang lebih efisien untuk masuk industri? Dari perspektif recruiter: sertifikat + portofolio kuat sudah cukup untuk junior role.',
-      'perkuliahan', 'ARGUMENTATIF', 'RASIONAL', 7, 22,
-    ],
-    [
-      'Kenapa Indonesia masih susah membangun budaya membaca?',
-      'Data UNESCO: rata-rata orang Indonesia membaca 0-1 buku per tahun. Faktor: infrastruktur perpustakaan buruk, harga buku mahal relatif terhadap UMR, konten digital lebih accessible dan entertaining, dan sistem pendidikan yang tidak menanamkan reading habit. Ini masalah ekosistem, bukan individu.',
-      'budaya-tradisi', 'ARGUMENTATIF', 'AKADEMIK', 4, 28,
-    ],
-    [
-      'Pengalaman terapi EMDR untuk trauma: apakah efektif?',
-      'Setelah 2 tahun menghindari, akhirnya coba EMDR (Eye Movement Desensitization and Reprocessing) untuk trauma masa kecil. 12 sesi dengan psikolog tersertifikasi. Hasilnya: memori traumatik masih ada, tapi charge emosionalnya berkurang signifikan. EMDR punya evidence base yang kuat.',
-      'kesehatan-mental', 'EKSPLORATIF', 'RASIONAL', 10, 19,
-    ],
-    [
-      'Pertanyaan hukum: apakah boleh merekam percakapan tanpa izin untuk bukti?',
-      'Ini grey area hukum di Indonesia. Pasal 40 UU Telekomunikasi melarang intersepsi, tapi MA dalam beberapa putusan mengizinkan rekaman privat sebagai alat bukti jika: Anda adalah salah satu pihak percakapan, bukan pihak ketiga yang mengintercept. Konsultasikan ke kuasa hukum untuk kasus spesifik.',
-      'hukum-digital', 'KLARIFIKATIF', 'PROFESIONAL', 4, 6,
-    ],
-    [
-      'Data privacy di Indonesia pasca UU PDP: apa yang berubah untuk pengguna?',
-      'UU Perlindungan Data Pribadi disahkan 2022, berlaku penuh 2024. Hak baru: hak akses data, hak koreksi, hak hapus (right to be forgotten), hak portabilitas. Kewajiban baru untuk perusahaan: consent eksplisit, DPO untuk pengolah data skala besar, notifikasi breach 14 hari.',
-      'hukum-digital', 'INFORMATIF', 'AKADEMIK', 4, 34,
-    ],
-    [
-      'Portfolio developer pemula: proyek apa yang paling berkesan untuk recruiter?',
-      'Recruiter melihat portfolio dalam 60 detik. Yang berkesan: proyek yang menyelesaikan masalah nyata (bukan clone tutorial), ada data/angka dampaknya ("reduces load time 40%"), code di GitHub dengan README yang jelas, dan di-deploy (bisa diakses langsung). Hindari: todo app, calculator, weather app.',
-      'software', 'PRAKTIS', 'PROFESIONAL', 11, 1,
-    ],
-    [
-      'Bagaimana cara memulai bisnis kuliner dari rumah secara legal?',
-      'Langkah legal: (1) NIB via OSS, (2) Sertifikat Laik Higiene dari Dinkes untuk PIRT, (3) izin edar dari BPOM jika distribusi massal, (4) NPWP untuk pajak. Modal minimal: NIB gratis, PIRT sekitar Rp 300rb. Platform: GoFood/GrabFood untuk delivery, tidak perlu toko fisik dulu.',
-      'wirausaha', 'PRAKTIS', 'PROFESIONAL', 11, 4,
-    ],
+  // ── 12 user reguler ──────────────────────────────────────────────────────────
+  const regularBios = [
+    'Mahasiswa teknik informatika semester 6. Suka ngoprek dan debat soal teknologi.',
+    'Guru SMA yang tertarik dengan inovasi pendidikan dan teknologi pembelajaran.',
+    'Fresh graduate ekonomi yang sedang belajar investasi dan pasar modal.',
+    'Jurnalis independen. Tertarik dengan isu sosial, politik, dan kebebasan pers.',
+    'Software engineer 3 tahun pengalaman. Open source enthusiast.',
+    'Peneliti kebijakan iklim di LSM lingkungan. Percaya pada solusi berbasis data.',
+    'Dokter umum yang aktif mengikuti perkembangan evidence-based medicine.',
+    'Pengusaha startup yang sedang membangun produk di bidang edtech.',
+    'Filsuf amatir. Lebih suka pertanyaan daripada jawaban.',
+    'Data analyst di perusahaan FMCG. Suka menganalisis tren dan pola.',
+    'Aktivis mahasiswa yang tertarik dengan demokrasi deliberatif.',
+    'Pensiunan PNS yang ingin tetap mengikuti perkembangan zaman.',
   ]
 
-  const createdDiscussions = []
-  for (const [
-    title, content, categorySlug, mode, discipline, authorIdx, daysAgoCount
-  ] of DISCUSSION_DEFS) {
-    const cat = allCategories.find(c => c.slug === categorySlug)
-    if (!cat) {
-      console.warn(`   ⚠  category slug not found: ${categorySlug}, skipping`)
+  for (let i = 0; i < 12; i++) {
+    const u = await db.user.create({
+      data: {
+        email: `user${i + 1}@olion.id`, password: hash, role: 'USER',
+        profile: { create: { username: pseudoName(), bio: regularBios[i] } },
+      },
+      include: { profile: true },
+    })
+    users.push(u)
+  }
+
+  ok(`${users.length} user dibuat (4 khusus + 12 reguler)`)
+  return users
+}
+
+async function seedFollows(users) {
+  step('Follow')
+
+  // Pattern: user reguler follow expert; beberapa user saling follow
+  const follows = []
+  const [admin, mod, expert1, expert2, ...regulars] = users
+
+  // Semua user reguler follow kedua expert
+  for (const u of regulars) {
+    follows.push({ followerId: u.id, followingId: expert1.id })
+    follows.push({ followerId: u.id, followingId: expert2.id })
+  }
+
+  // 6 user pertama follow mod
+  for (const u of regulars.slice(0, 6)) {
+    follows.push({ followerId: u.id, followingId: mod.id })
+  }
+
+  // User saling follow (rantai: user1→user2→user3→...→user6→user1)
+  for (let i = 0; i < 6; i++) {
+    follows.push({ followerId: regulars[i].id, followingId: regulars[(i + 1) % 6].id })
+  }
+
+  let count = 0
+  for (const f of follows) {
+    await db.follow.upsert({
+      where:  { followerId_followingId: f },
+      update: {},
+      create: f,
+    })
+    count++
+  }
+
+  ok(`${count} relasi follow dibuat`)
+}
+
+async function seedDiscussions(users, categories, tags) {
+  step('Discussion + DiscussionTag')
+
+  const [admin, mod, expert1, expert2, ...regulars] = users
+  const authors = [expert1, expert2, ...regulars]
+
+  const created = []
+
+  for (let i = 0; i < DISCUSSIONS.length; i++) {
+    const d    = DISCUSSIONS[i]
+    const cat  = categories[d.catSlug] ?? categories['sains-teknologi']
+    const author = authors[i % authors.length]
+
+    // Buat atau skip jika title sudah ada
+    const existing = await db.discussion.findFirst({ where: { title: d.title } })
+    if (existing) {
+      created.push(existing)
       continue
     }
-    const author = allUsers[authorIdx]
-    const d = await db.discussion.create({
+
+    const disc = await db.discussion.create({
       data: {
-        title, content,
-        categoryId: cat.id,
+        title:      d.title,
+        content:    d.content,
+        mode:       d.mode,
+        discipline: d.discipline,
+        viewCount:  rngInt(20, 400),
         userId:     author.id,
-        mode,
-        discipline,
-        createdAt:  daysAgo(daysAgoCount),
-        updatedAt:  daysAgo(daysAgoCount),
+        categoryId: cat.id,
       },
     })
-    createdDiscussions.push(d)
+
+    // Attach tags
+    for (const tagSlug of (d.tags ?? [])) {
+      const tag = tags[tagSlug]
+      if (tag) {
+        await db.discussionTag.upsert({
+          where:  { discussionId_tagId: { discussionId: disc.id, tagId: tag.id } },
+          update: {},
+          create: { discussionId: disc.id, tagId: tag.id },
+        })
+      }
+    }
+
+    created.push(disc)
   }
 
-  console.log(`   ${createdDiscussions.length} discussions created\n`)
+  ok(`${created.length} diskusi tersedia`)
+  return created
+}
 
-  // ── 4. Comments ────────────────────────────────────────────────────────────
-  console.log('💭 Creating comments...')
+async function seedComments(users, discussions) {
+  step('Comment (root + replies)')
 
-  // Each entry: [discussionIndex, authorIndex(into allUsers), content, hoursAgoCount]
-  const COMMENT_DEFS = [
-    // Discussion 0 — AI vs programmer
-    [0, 5, 'Dari perspektif senior dev: AI sekarang adalah pair programmer yang sangat baik, bukan pengganti. Yang akan tergantikan adalah developer yang menolak belajar menggunakan AI, bukan developer pada umumnya.', 40],
-    [0, 7, 'Mahasiswa tingkat akhir di sini. Jujur sedikit khawatir, tapi justru ini motivasi untuk lebih fokus ke system design dan problem-solving daripada syntax.', 38],
-    [0, 10, 'Di perusahaan kami, developer yang pakai GitHub Copilot output-nya 30-40% lebih banyak. AI amplify, bukan replace. Tapi skill gap antar developer jadi lebih terlihat.', 35],
-    [0, 4, 'Perspektif hukum: AI-generated code punya pertanyaan tersendiri soal liability. Siapa yang bertanggung jawab jika AI menulis kode yang menyebabkan kerugian finansial?', 20],
-    // Discussion 1 — API security
-    [1, 7, 'Penting ditambahkan: rate limiting di level API gateway, bukan hanya di application layer. Dan selalu validate input di server side meskipun sudah ada validation di frontend.', 110],
-    [1, 9, 'Pertanyaan dari junior: apa bedanya JWT dengan session-based auth? Kapan pakai yang mana?', 100],
-    [1, 5, 'JWT lebih cocok untuk stateless API dan microservices karena tidak perlu shared session store. Session-based lebih sederhana untuk web app tradisional. Untuk mobile API, JWT umumnya lebih practical.', 95],
-    // Discussion 3 — Cursor vs Copilot
-    [3, 7, 'Saya add Tabnine juga ke perbandingan — lebih privacy-focused karena bisa dijalankan lokal. Untuk kode sensitif/proprietary ini penting.', 180],
-    [3, 5, 'Cursor menang di context window yang besar — bisa "paham" seluruh codebase. Copilot lebih bagus untuk muscle memory autocomplete. Dua-duanya saya pakai untuk kebutuhan berbeda.', 170],
-    // Discussion 5 — mRNA vaccine
-    [5, 3, 'Sebagai dokter, sering dapat pertanyaan ini. Penting dipahami: "baru" bukan berarti "tidak teruji". Teknologi mRNA untuk terapi kanker sudah diteliti sejak 1990an. COVID hanya mempercepat aplikasi klinisnya.', 350],
-    [5, 6, 'Dari sudut pandang biokimia: stabilitas mRNA di dalam sel sangat singkat — terurai dalam jam sampai hari, bukan permanen. Kekhawatiran soal integrasi ke DNA tidak memiliki dasar mekanistik.', 340],
-    [5, 7, 'Terima kasih penjelasannya. Satu pertanyaan: kenapa booster diperlukan kalau respons imunnya sudah ada?', 300],
-    [5, 3, 'Antibodi menurun seiring waktu — ini normal untuk semua vaksin. Booster "mengingatkan" sistem imun dan menghasilkan sel memori yang lebih banyak. Pola ini sama dengan vaksin flu, hepatitis B, dll.', 280],
-    // Discussion 8 — PKWT workers right
-    [8, 4, 'Tambahan penting: PKWT tidak boleh digunakan untuk pekerjaan yang bersifat tetap atau terus-menerus. Jika dilanggar, demi hukum berubah jadi PKWTT (kontrak tidak tertentu). Ini leverage yang kuat untuk karyawan.', 160],
-    [8, 10, 'Pengalaman pribadi: kena terminate tanpa kompensasi karena "masa probasi". Setelah konsultasi ke LBH, ternyata kontrak kami ilegal — tidak ada klausul probasi dalam PKWT. Akhirnya dapat hak.', 150],
-    [8, 4, 'Kasus seperti ini banyak terjadi. Dokumen kontrak harus dibaca teliti sebelum tanda tangan. Jika ada yang tidak jelas atau melanggar UU, konsultasikan sebelum tanda tangan.', 140],
-    // Discussion 11 — DCA vs Lump sum
-    [11, 8, 'Konteks penting yang sering diabaikan: penelitian Vanguard menggunakan data pasar US yang trennya bullish jangka panjang. Di pasar yang lebih volatile seperti IHSG, DCA bisa mengungguli lump sum dalam periode sideways yang panjang.', 230],
-    [11, 9, 'Dari pengalaman: saya pilih DCA karena secara psikologis lebih tenang. Pas IHSG crash 2020, yang lump sum di peak panik setengah mati, yang DCA malah happy beli di harga murah.', 220],
-    // Discussion 15 — burnout vs depression
-    [15, 3, 'Sebagai klinisi: satu cara membedakan — jika gejalanya (sedih, tidak berminat, lelah) membaik signifikan saat sedang liburan atau jauh dari pekerjaan, kemungkinan besar burnout. Jika tetap tidak hilang meski kondisi eksternal berubah, perlu evaluasi lebih lanjut untuk depresi.', 90],
-    [15, 10, 'Terima kasih, ini sangat helpful. Satu tambahan: burnout dan depresi bisa terjadi bersamaan. Burnout yang tidak ditangani bisa trigger episode depresi klinis.', 80],
-    [15, 7, 'Kapan harus ke psikiater vs psikolog? Kalau ada pikiran menyakiti diri, segera ke psikiater (bisa resepkan obat). Untuk yang belum separah itu, psikolog/konselor sudah sangat membantu.', 70],
-    [15, 3, 'Betul. Tambahan: psikiater menangani kondisi yang butuh farmakologi. Keduanya bisa berkolaborasi — ini yang disebut integrated treatment, dan sering lebih efektif untuk kondisi komorbid.', 60],
-    // Discussion 18 — zonasi PPDB
-    [18, 11, 'Data yang sering dilupakan dalam debat zonasi: anggaran BOS per siswa sudah sama antara sekolah negeri zonasi bagus dan tidak bagus. Masalahnya ada di distribusi guru berkualitas dan fasilitas, bukan kebijakan zonasi saja.', 200],
-    [18, 8, 'Pengalaman sebagai orang tua: anak saya masuk sekolah zona yang "kurang favorit". Ternyata guru-gurunya sangat dedicated. Stigma "sekolah jelek" lebih banyak dari persepsi orang tua, bukan kenyataan.',180],
-    // Discussion 22 — negosiasi gaji
-    [22, 11, 'Tips tambahan dari HR: research BATNA (Best Alternative to Negotiated Agreement) kamu. Kalau sudah punya offer lain, posisi negosiasi jauh lebih kuat. Dan jangan pernah sebut angka duluan.', 60],
-    [22, 7, 'Bisa ceritakan bagaimana kalau sudah terlanjur sebut gaji sekarang di awal proses? Bisa recover tidak?', 55],
-    [22, 11, 'Masih bisa. Saat offer datang, fokus ke value dan scope pekerjaan: "Based on scope yang lebih besar dari role sebelumnya dan hasil riset market, saya harapkan di angka X". Jangan defensif, tetap confident.', 50],
-    // Discussion 25 — Blockchain use cases
-    [25, 5, 'Supply chain use case yang paling matang saat ini: pharmaceutical track and trace untuk anti-pemalsuan obat. FDA sudah mandatkan ini di US. Beberapa industri farmasi Indonesia sudah mulai pilot.', 900],
-    [25, 7, 'Pertanyaan genuein: kenapa tidak pakai database biasa yang di-audit secara independen? Apa yang blockchain bisa lakukan yang tidak bisa dilakukan trusted third party dengan database konvensional?', 850],
-    [25, 5, 'Pertanyaan bagus. Jawaban jujur: untuk banyak use case, database biasa sudah cukup. Blockchain value add nyata ada di: multi-party yang tidak saling percaya, tidak ada trusted third party natural, dan audit trail yang immutable dan publik.', 820],
-    // Discussion 30 — portfolio developer
-    [30, 5, 'Yang sering saya lihat tapi jarang disebut: README yang baik sama pentingnya dengan kodenya. Jelaskan problem apa yang diselesaikan, keputusan teknis apa yang diambil dan kenapa. Ini menunjukkan kemampuan komunikasi teknis.', 20],
-    [30, 7, 'Satu proyek yang kompleks tapi well-documented lebih baik dari sepuluh proyek tutorial. Quality over quantity.', 18],
-    [30, 11, 'Dari sudut pandang recruiter: saya selalu cek commit history. Proyek dengan single commit giant langsung red flag. Proyek dengan commit history yang teratur menunjukkan kerja nyata.', 15],
-  ]
+  const [admin, mod, expert1, expert2, ...regulars] = users
+  const allComments = []
 
-  const createdComments = []
-  for (const [discIdx, authorIdx, content, hrsAgo] of COMMENT_DEFS) {
-    if (discIdx >= createdDiscussions.length) continue
-    const discussion = createdDiscussions[discIdx]
-    const author     = allUsers[authorIdx]
-    const c = await db.comment.create({
+  for (const disc of discussions) {
+    const existingCount = await db.comment.count({ where: { discussionId: disc.id } })
+    if (existingCount > 0) continue
+
+    // 1 komentar dari expert
+    const expertComment = await db.comment.create({
       data: {
-        content,
-        discussionId: discussion.id,
-        userId:       author.id,
-        createdAt:    hoursAgo(hrsAgo),
-        updatedAt:    hoursAgo(hrsAgo),
+        discussionId: disc.id,
+        userId:       rng([expert1.id, expert2.id]),
+        content:      rng(COMMENT_TEMPLATES.expert),
       },
     })
-    createdComments.push({ comment: c, discussionId: discussion.id })
-  }
+    allComments.push(expertComment)
 
-  console.log(`   ${createdComments.length} comments created\n`)
+    // 2–4 komentar dari user reguler
+    const commenters = shuffle(regulars).slice(0, rngInt(2, 4))
+    const rootComments = [expertComment]
 
-  // ── 5. Votes ───────────────────────────────────────────────────────────────
-  // Constraint: @@unique([userId, discussionId]) — one vote per user per discussion
-  console.log('👍 Creating votes...')
-
-  // [discussionIndex, voterIndex, value (+1 or -1)]
-  const VOTE_DEFS = [
-    // High engagement discussions get many votes
-    [0,  1,  1], [0,  2,  1], [0,  3,  1], [0,  4,  1], [0,  6,  1],
-    [0,  7,  1], [0,  8,  1], [0,  9,  1], [0, 10,  1], [0, 11,  1],
-    [1,  0,  1], [1,  2,  1], [1,  3,  1], [1,  7,  1], [1,  8,  1], [1, 10,  1],
-    [2,  0,  1], [2,  3,  1], [2,  7,  1], [2,  9,  1], [2, 11,  1],
-    [3,  2,  1], [3,  4,  1], [3,  8,  1], [3,  9,  1], [3, 10,  1],
-    [4,  0,  1], [4,  2,  1], [4,  3,  1], [4,  7,  1], [4,  8,  1],
-    [5,  0,  1], [5,  2,  1], [5,  4,  1], [5,  7,  1], [5,  8,  1], [5, 10,  1], [5, 11,  1],
-    [6,  0,  1], [6,  2,  1], [6,  4,  1], [6,  7,  1], [6,  8,  1],
-    [7,  0,  1], [7,  2,  1], [7,  5,  1], [7,  9,  1], [7, 11,  1],
-    [8,  0,  1], [8,  2,  1], [8,  3,  1], [8,  7,  1], [8,  9,  1], [8, 10,  1],
-    [9,  0,  1], [9,  2,  1], [9,  4,  1], [9,  7,  1], [9,  8,  1],
-    [10, 0,  1], [10, 2,  1], [10, 7,  1], [10, 9,  1], [10, 11,  1],
-    [11, 0,  1], [11, 3,  1], [11, 4,  1], [11, 7,  1], [11, 9,  1], [11, 10,  1],
-    [12, 0,  1], [12, 3,  1], [12, 7,  1], [12, 9,  1], [12, 10,  1],
-    [13, 0,  1], [13, 2,  1], [13, 4,  1], [13, 8,  1], [13, 11,  1],
-    [14, 0,  1], [14, 3,  1], [14, 7,  1], [14, 8,  1], [14, 11,  1],
-    [15, 0,  1], [15, 2,  1], [15, 4,  1], [15, 7,  1], [15,  9,  1], [15, 10,  1], [15, 11,  1],
-    [16, 0,  1], [16, 2,  1], [16, 7,  1], [16, 9,  1], [16, 10,  1],
-    [17, 0,  1], [17, 2,  1], [17, 7,  1], [17, 9,  1],
-    [18, 0,  1], [18, 2,  1], [18, 7,  1], [18, 9,  1], [18, 10,  1], [18, 11,  1],
-    [19, 0,  1], [19, 2,  1], [19, 7,  1], [19, 10,  1],
-    [20, 0,  1], [20, 3,  1], [20, 7,  1], [20, 9,  1], [20, 10,  1],
-    [21, 0,  1], [21, 3,  1], [21, 7,  1], [21, 9,  1], [21, 10,  1], [21, 11,  1],
-    [22, 0,  1], [22, 3,  1], [22, 7,  1], [22, 9,  1], [22, 10,  1],
-    [23, 0,  1], [23, 3,  1], [23, 7,  1], [23, 9,  1],
-    [24, 0,  1], [24, 2,  1], [24, 7,  1], [24, 9,  1], [24, 11,  1],
-    [25, 0,  1], [25, 3,  1], [25, 7,  1], [25, 9,  1], [25, 10,  1],
-    [26, 0,  1], [26, 3,  1], [26, 7,  1], [26, 9,  1], [26, 11,  1],
-    [27, 0,  1], [27, 3,  1], [27, 7,  1], [27, 9,  1],
-    [28, 0,  1], [28, 2,  1], [28, 7,  1], [28, 9,  1], [28, 10,  1],
-    [29, 0,  1], [29, 2,  1], [29, 7,  1], [29, 9,  1],
-    [30, 0,  1], [30, 2,  1], [30, 7,  1], [30, 9,  1], [30, 10,  1], [30, 11,  1],
-    [31, 0,  1], [31, 2,  1], [31, 7,  1], [31, 9,  1],
-    [32, 0,  1], [32, 3,  1], [32, 7,  1], [32, 9,  1], [32, 10,  1],
-    [33, 0,  1], [33, 3,  1], [33, 7,  1], [33, 9,  1],
-    [34, 0,  1], [34, 2,  1], [34, 7,  1], [34, 9,  1],
-    [35, 0,  1], [35, 2,  1], [35, 7,  1], [35, 9,  1], [35, 11,  1],
-    [36, 0,  1], [36, 3,  1], [36, 7,  1], [36, 9,  1],
-    [37, 0,  1], [37, 3,  1], [37, 7,  1], [37, 9,  1], [37, 11,  1],
-    [38, 0,  1], [38, 2,  1], [38, 7,  1], [38, 9,  1],
-    // Some downvotes for controversial discussions
-    [21, 1, -1], [21, 5, -1],   // "anti-kritik" budaya — not everyone agrees
-    [18, 3, -1], [18, 5, -1],   // zonasi PPDB — polarizing topic
-    [22, 2, -1],                  // negosiasi gaji — someone disagrees
-  ]
-
-  let voteCount = 0
-  const seenVotePairs = new Set()
-  for (const [discIdx, voterIdx, value] of VOTE_DEFS) {
-    if (discIdx >= createdDiscussions.length) continue
-    const key = `${voterIdx}-${discIdx}`
-    if (seenVotePairs.has(key)) continue
-    seenVotePairs.add(key)
-
-    const discussion = createdDiscussions[discIdx]
-    const voter      = allUsers[voterIdx]
-
-    // Author cannot vote on own discussion (business rule)
-    if (discussion.userId === voter.id) continue
-
-    await db.vote.create({
-      data: {
-        value,
-        discussionId: discussion.id,
-        userId:       voter.id,
-      },
-    })
-    voteCount++
-  }
-
-  console.log(`   ${voteCount} votes created\n`)
-
-  // ── 6. Reports ─────────────────────────────────────────────────────────────
-  console.log('🚩 Creating reports...')
-
-  const REPORT_DEFS = [
-    // [type('discussion'|'comment'), targetIndex, reporterIndex, reason, status]
-    ['discussion', 21, 8,  'Konten bisa dianggap menyinggung budaya tertentu.',                        'RESOLVED'],
-    ['discussion', 18, 9,  'Informasi zonasi tidak akurat berdasarkan kebijakan terbaru.',              'REJECTED'],
-    ['discussion', 32, 10, 'Judul clickbait, konten tidak sesuai.',                                    'PENDING'],
-    ['comment',     0, 9,  'Komentar tidak relevan dengan topik diskusi.',                              'PENDING'],
-    ['comment',     3, 10, 'Nada komentar terasa merendahkan penanya.',                                 'RESOLVED'],
-    ['discussion', 27, 7,  'Kurang sumber referensi untuk klaim yang dibuat.',                          'REJECTED'],
-    ['comment',     6, 8,  'Informasi teknis berpotensi menyesatkan pembaca awam.',                     'PENDING'],
-  ]
-
-  for (const [type, targetIdx, reporterIdx, reason, status] of REPORT_DEFS) {
-    const reporter = allUsers[reporterIdx]
-    if (type === 'discussion') {
-      if (targetIdx >= createdDiscussions.length) continue
-      const discussion = createdDiscussions[targetIdx]
-      if (discussion.userId === reporter.id) continue // can't report own content
-      await db.report.create({
-        data: { reason, status, reporterId: reporter.id, discussionId: discussion.id },
+    for (const user of commenters) {
+      const c = await db.comment.create({
+        data: {
+          discussionId: disc.id,
+          userId:       user.id,
+          content:      rng(COMMENT_TEMPLATES.regular),
+        },
       })
-    } else {
-      if (targetIdx >= createdComments.length) continue
-      const { comment, discussionId: _ } = createdComments[targetIdx]
-      if (comment.userId === reporter.id) continue
-      await db.report.create({
-        data: { reason, status, reporterId: reporter.id, commentId: comment.id },
+      rootComments.push(c)
+      allComments.push(c)
+    }
+
+    // 2–3 reply ke komentar root
+    for (let r = 0; r < rngInt(2, 3); r++) {
+      const parent  = rng(rootComments)
+      const replier = rng(regulars)
+      if (replier.id === parent.userId) continue
+
+      const reply = await db.comment.create({
+        data: {
+          discussionId: disc.id,
+          userId:       replier.id,
+          parentId:     parent.id,
+          content:      rng(COMMENT_TEMPLATES.reply),
+        },
       })
+      allComments.push(reply)
     }
   }
 
-  console.log(`   ${REPORT_DEFS.length} reports created\n`)
+  ok(`${allComments.length} komentar baru dibuat`)
+  return db.comment.findMany()
+}
 
-  // ── 7. ReputationLog ───────────────────────────────────────────────────────
-  // Mirror the votes that went to discussion authors as reputation events.
-  console.log('⭐ Creating reputation logs...')
+async function seedVotes(users, discussions, comments) {
+  step('Vote (diskusi + komentar)')
 
-  let repCount = 0
-  const allVotes = await db.vote.findMany({ include: { discussion: true } })
-  for (const vote of allVotes) {
-    const authorId = vote.discussion.userId
-    const point    = vote.value === 1 ? 10 : -10
-    const reason   = vote.value === 1
-      ? `Upvote diterima pada diskusi "${vote.discussion.title.slice(0, 50)}..."`
-      : `Downvote diterima pada diskusi "${vote.discussion.title.slice(0, 50)}..."`
-    await db.reputationLog.create({
-      data: { point, reason, userId: authorId },
-    })
-    repCount++
+  const [admin, mod, expert1, expert2, ...regulars] = users
+  const voters = [expert1, expert2, ...regulars]
+  let count = 0
+
+  // Vote pada diskusi: setiap diskusi dapat 3–8 upvote, 0–2 downvote
+  for (const disc of discussions) {
+    const upvoters   = shuffle(voters).slice(0, rngInt(3, 8))
+    const downvoters = shuffle(voters.filter(v => !upvoters.includes(v))).slice(0, rngInt(0, 2))
+
+    for (const u of upvoters) {
+      await db.vote.upsert({
+        where:  { userId_discussionId: { userId: u.id, discussionId: disc.id } },
+        update: { value: 1 },
+        create: { userId: u.id, discussionId: disc.id, value: 1 },
+      }).catch(() => {}) // skip jika constraint conflict
+      count++
+    }
+    for (const u of downvoters) {
+      await db.vote.upsert({
+        where:  { userId_discussionId: { userId: u.id, discussionId: disc.id } },
+        update: { value: -1 },
+        create: { userId: u.id, discussionId: disc.id, value: -1 },
+      }).catch(() => {})
+      count++
+    }
   }
 
-  // Bonus reputation for comments (authoring comments = contribution)
-  const allCommentsDb = await db.comment.findMany({ include: { discussion: true } })
-  for (const comment of allCommentsDb) {
-    await db.reputationLog.create({
-      data: {
-        point:  2,
-        reason: `Komentar ditulis pada diskusi "${comment.discussion.title.slice(0, 50)}..."`,
-        userId: comment.userId,
-      },
-    })
-    repCount++
+  // Vote pada komentar: pilih 50% komentar, berikan 1–4 upvote
+  const rootComments = comments.filter(c => !c.parentId)
+  const sampledComments = shuffle(rootComments).slice(0, Math.ceil(rootComments.length * 0.5))
+
+  for (const comment of sampledComments) {
+    const upvoters = shuffle(voters).slice(0, rngInt(1, 4))
+    for (const u of upvoters) {
+      if (u.id === comment.userId) continue // tidak bisa vote konten sendiri
+      await db.vote.upsert({
+        where:  { userId_commentId: { userId: u.id, commentId: comment.id } },
+        update: { value: 1 },
+        create: { userId: u.id, commentId: comment.id, value: 1 },
+      }).catch(() => {})
+      count++
+    }
   }
 
-  // Expert verification bonus
-  for (const expert of experts) {
-    await db.reputationLog.create({
-      data: {
-        point:  50,
-        reason: 'Terverifikasi sebagai Expert oleh admin.',
-        userId: expert.id,
-      },
-    })
-    repCount++
+  ok(`${count} vote dibuat`)
+}
+
+async function seedReputationLogs(users, discussions, comments) {
+  step('ReputationLog')
+
+  // Hitung reputasi dari vote yang ada di DB
+  const discVotes = await db.vote.findMany({
+    where: { discussionId: { not: null } },
+    include: { discussion: { select: { userId: true } } },
+  })
+  const commVotes = await db.vote.findMany({
+    where: { commentId: { not: null } },
+    include: { comment: { select: { userId: true } } },
+  })
+
+  // Agregat per pemilik konten
+  const repMap = {}
+  const addRep = (userId, point, reason) => {
+    if (!userId) return
+    if (!repMap[userId]) repMap[userId] = []
+    repMap[userId].push({ point, reason })
   }
 
-  console.log(`   ${repCount} reputation log entries created\n`)
+  for (const v of discVotes) {
+    const ownerId = v.discussion?.userId
+    if (!ownerId || ownerId === v.userId) continue
+    addRep(ownerId, v.value === 1 ? 10 : -2, v.value === 1 ? 'Upvote pada diskusi' : 'Downvote pada diskusi')
+  }
 
-  // ── Summary ────────────────────────────────────────────────────────────────
-  const [
-    catCount, userCount, discCount, commentCount, voteCountFinal, reportCount, repCountFinal,
-  ] = await Promise.all([
-    db.category.count(),
-    db.user.count(),
-    db.discussion.count(),
-    db.comment.count(),
-    db.vote.count(),
-    db.report.count(),
-    db.reputationLog.count(),
+  for (const v of commVotes) {
+    const ownerId = v.comment?.userId
+    if (!ownerId || ownerId === v.userId) continue
+    addRep(ownerId, v.value === 1 ? 5 : -1, v.value === 1 ? 'Upvote pada komentar' : 'Downvote pada komentar')
+  }
+
+  // +5 per diskusi yang dibuat
+  for (const d of discussions) {
+    if (d.userId) addRep(d.userId, 5, 'Membuat diskusi baru')
+  }
+
+  // +2 per komentar root yang dibuat
+  const allComments = await db.comment.findMany({ where: { parentId: null } })
+  for (const c of allComments) {
+    if (c.userId) addRep(c.userId, 2, 'Memberikan komentar')
+  }
+
+  // Bonus +50 untuk expert
+  for (const u of users.filter(u => u.isVerifiedExpert)) {
+    addRep(u.id, 50, 'Bonus Pakar Terverifikasi')
+  }
+
+  // Tulis ke DB (hanya jika belum ada log untuk user tersebut)
+  let totalLogs = 0
+  for (const [userId, logs] of Object.entries(repMap)) {
+    const existing = await db.reputationLog.count({ where: { userId } })
+    if (existing > 0) continue
+
+    for (const log of logs) {
+      await db.reputationLog.create({ data: { userId, ...log } })
+      totalLogs++
+    }
+  }
+
+  ok(`${totalLogs} reputation log dibuat`)
+
+  // Kembalikan total reputasi per user untuk keperluan badge
+  const result = {}
+  for (const [userId, logs] of Object.entries(repMap)) {
+    result[userId] = logs.reduce((s, l) => s + l.point, 0)
+  }
+  return result
+}
+
+async function seedUserBadges(users, reputationMap, badges) {
+  step('UserBadge')
+
+  const badgeBySlug = {}
+  for (const b of badges) badgeBySlug[b.slug] = b
+
+  let count = 0
+
+  for (const user of users) {
+    const rep = reputationMap[user.id] ?? 0
+
+    // Badge berdasarkan threshold reputasi
+    for (const b of badges.filter(b => b.threshold > 0)) {
+      if (rep >= b.threshold) {
+        await db.userBadge.upsert({
+          where:  { userId_badgeId: { userId: user.id, badgeId: b.id } },
+          update: {},
+          create: { userId: user.id, badgeId: b.id },
+        })
+        count++
+      }
+    }
+
+    // Badge first_post: jika user punya minimal 1 diskusi
+    const discCount = await db.discussion.count({ where: { userId: user.id } })
+    if (discCount > 0) {
+      const fb = badgeBySlug['first_post']
+      if (fb) {
+        await db.userBadge.upsert({
+          where:  { userId_badgeId: { userId: user.id, badgeId: fb.id } },
+          update: {},
+          create: { userId: user.id, badgeId: fb.id },
+        })
+        count++
+      }
+    }
+
+    // Badge first_answer: jika user punya minimal 1 komentar
+    const commCount = await db.comment.count({ where: { userId: user.id } })
+    if (commCount > 0) {
+      const fa = badgeBySlug['first_answer']
+      if (fa) {
+        await db.userBadge.upsert({
+          where:  { userId_badgeId: { userId: user.id, badgeId: fa.id } },
+          update: {},
+          create: { userId: user.id, badgeId: fa.id },
+        })
+        count++
+      }
+    }
+
+    // Badge verified_expert: hanya untuk isVerifiedExpert=true
+    if (user.isVerifiedExpert) {
+      const vb = badgeBySlug['verified_expert']
+      if (vb) {
+        await db.userBadge.upsert({
+          where:  { userId_badgeId: { userId: user.id, badgeId: vb.id } },
+          update: {},
+          create: { userId: user.id, badgeId: vb.id },
+        })
+        count++
+      }
+    }
+  }
+
+  ok(`${count} UserBadge di-upsert`)
+}
+
+async function seedNotifications(users, discussions) {
+  step('Notification')
+
+  const existing = await db.notification.count()
+  if (existing > 0) {
+    warn(`${existing} notifikasi sudah ada, lewati`)
+    return
+  }
+
+  const [admin, mod, expert1, expert2, ...regulars] = users
+  const notifs = []
+
+  // Follow notifications: beberapa user mendapat notif "X mulai mengikuti kamu"
+  for (const follower of regulars.slice(0, 5)) {
+    notifs.push({
+      userId:  expert1.id,
+      actorId: follower.id,
+      type:    'FOLLOW',
+      message: `${follower.profile?.username ?? 'Seseorang'} mulai mengikuti kamu`,
+    })
+  }
+
+  // Vote notifications: pemilik diskusi dapat notif upvote
+  for (const disc of discussions.slice(0, 5)) {
+    if (!disc.userId) continue
+    const voter = rng(regulars)
+    notifs.push({
+      userId:       disc.userId,
+      actorId:      voter.id,
+      type:         'VOTE',
+      message:      'Diskusi kamu mendapat upvote',
+      discussionId: disc.id,
+    })
+  }
+
+  // Comment notifications: penulis diskusi mendapat notif komentar baru
+  const discComments = await db.comment.findMany({
+    take: 5,
+    where: { parentId: null },
+    include: { discussion: true },
+  })
+  for (const c of discComments) {
+    if (!c.discussion?.userId || c.userId === c.discussion.userId) continue
+    notifs.push({
+      userId:       c.discussion.userId,
+      actorId:      c.userId,
+      type:         'COMMENT',
+      message:      'Ada komentar baru di diskusi kamu',
+      discussionId: c.discussionId,
+      commentId:    c.id,
+    })
+  }
+
+  // Reply notifications
+  const replies = await db.comment.findMany({
+    take: 4,
+    where: { parentId: { not: null } },
+    include: { parent: true },
+  })
+  for (const r of replies) {
+    if (!r.parent?.userId || r.userId === r.parent.userId) continue
+    notifs.push({
+      userId:       r.parent.userId,
+      actorId:      r.userId,
+      type:         'REPLY',
+      message:      'Komentar kamu dibalas',
+      discussionId: r.discussionId,
+      commentId:    r.id,
+    })
+  }
+
+  // Expert verified notifications
+  for (const u of [expert1, expert2]) {
+    notifs.push({
+      userId:  u.id,
+      type:    'EXPERT_VERIFIED',
+      message: '🎉 Selamat! Permohonan pakar kamu telah disetujui. Kamu kini menjadi Pakar Terverifikasi OLION.',
+    })
+  }
+
+  // System notifications: badge baru
+  for (const u of regulars.slice(0, 4)) {
+    notifs.push({
+      userId:  u.id,
+      type:    'SYSTEM',
+      message: '⭐ Selamat! Kamu mendapat badge "Kontributor" karena mencapai 50 poin reputasi.',
+    })
+  }
+
+  // Beberapa sudah dibaca, sisanya belum
+  let count = 0
+  for (let i = 0; i < notifs.length; i++) {
+    await db.notification.create({
+      data: { ...notifs[i], read: i < Math.floor(notifs.length * 0.4) },
+    })
+    count++
+  }
+
+  ok(`${count} notifikasi dibuat`)
+}
+
+async function seedChats(users) {
+  step('Conversation + ConversationParticipant + Message')
+
+  const existing = await db.conversation.count()
+  if (existing > 0) {
+    warn(`${existing} percakapan sudah ada, lewati`)
+    return
+  }
+
+  const [admin, mod, expert1, expert2, ...regulars] = users
+
+  const chatPairs = [
+    { p1: regulars[0], p2: expert1,   msgs: [
+        { sender: 'p1', text: 'Halo Dok, saya ingin bertanya soal topik diskusi AI kemarin. Apakah ada referensi bacaan yang bisa direkomendasikan?' },
+        { sender: 'p2', text: 'Tentu! Saya rekomendasikan "The Alignment Problem" oleh Brian Christian sebagai starting point yang bagus. Ada juga paper-paper dari AI Safety Institute yang cukup accessible.' },
+        { sender: 'p1', text: 'Terima kasih banyak! Kalau boleh, apakah saya bisa tanya lagi jika ada yang kurang dipahami?' },
+        { sender: 'p2', text: 'Silakan, justru itu tujuan platform ini. Diskusi yang baik dimulai dari pertanyaan yang tepat.' },
+    ]},
+    { p1: regulars[1], p2: expert2,   msgs: [
+        { sender: 'p1', text: 'Prof, saya membaca paper Anda tentang demokrasi deliberatif. Ada beberapa poin yang ingin saya klarifikasi.' },
+        { sender: 'p2', text: 'Tentu, silakan. Saya senang kalau ada yang membaca dengan teliti dan mau berdiskusi lebih dalam.' },
+        { sender: 'p1', text: 'Terutama soal asumsi rasionalitas aktor dalam model Habermas. Apakah ini masih relevan di era post-truth?' },
+    ]},
+    { p1: regulars[2], p2: regulars[3], msgs: [
+        { sender: 'p1', text: 'Eh bro, tadi diskusi soal investasi seru banget. Kamu sudah coba instrumen SBN belum?' },
+        { sender: 'p2', text: 'Sudah, SR019 sama ORI024. Cukup bagus untuk dana darurat cadangan. Kamu?' },
+        { sender: 'p1', text: 'Belum sempat. Masih belajar bedain fixed vs floating rate. Ada resource yang kamu rekomendasikan?' },
+        { sender: 'p2', text: 'Coba cek channel YouTube Stockbit dan buku "Rich Dad Poor Dad" versi Indonesia dulu buat fondasi. Setelah itu langsung praktek aja biar cepat paham.' },
+    ]},
+    { p1: admin, p2: mod, msgs: [
+        { sender: 'p1', text: 'Ada laporan masuk untuk diskusi tentang investasi. Tolong dicek dulu konteksnya.' },
+        { sender: 'p2', text: 'Sudah saya lihat. Sepertinya false positive, kontennya masih dalam batas diskusi finansial yang wajar.' },
+        { sender: 'p1', text: 'Oke, kalau begitu mark sebagai REJECTED ya. Dan perlu tambahkan catatan untuk pelapornya.' },
+        { sender: 'p2', text: 'Siap, sudah diproses.' },
+    ]},
+  ]
+
+  let convCount = 0, msgCount = 0
+  for (const pair of chatPairs) {
+    const conv = await db.conversation.create({ data: {} })
+
+    await db.conversationParticipant.createMany({
+      data: [
+        { conversationId: conv.id, userId: pair.p1.id },
+        { conversationId: conv.id, userId: pair.p2.id },
+      ],
+    })
+
+    for (const msg of pair.msgs) {
+      const sender = msg.sender === 'p1' ? pair.p1 : pair.p2
+      await db.message.create({
+        data: { conversationId: conv.id, senderId: sender.id, content: msg.text },
+      })
+      msgCount++
+    }
+
+    convCount++
+  }
+
+  ok(`${convCount} percakapan, ${msgCount} pesan dibuat`)
+}
+
+async function seedExpertApplications(users) {
+  step('ExpertApplication')
+
+  const existing = await db.expertApplication.count()
+  if (existing > 0) {
+    warn(`${existing} permohonan sudah ada, lewati`)
+    return
+  }
+
+  const [admin, mod, expert1, expert2, ...regulars] = users
+
+  const apps = [
+    // Sudah disetujui (untuk expert1 dan expert2 — agar ada riwayat permohonan)
+    {
+      userId:      expert1.id,
+      field:       'Kecerdasan Buatan & Machine Learning',
+      credentials: 'PhD Ilmu Komputer Universitas Indonesia (2018). Research Fellow di MIT CSAIL 2019–2021. Penulis 12 paper peer-reviewed di NeurIPS, ICML, dan ACL. Google Scholar citations: 847. Sertifikasi: AWS ML Specialty, Google Professional ML Engineer.',
+      status:      'APPROVED',
+      reviewNote:  'Kredensial sangat kuat. Disetujui sebagai pakar bidang AI/ML.',
+    },
+    {
+      userId:      expert2.id,
+      field:       'Sosiologi & Kebijakan Publik',
+      credentials: 'Profesor Sosiologi Universitas Gadjah Mada. Anggota Dewan Riset Nasional sejak 2020. Penulis buku "Demokrasi Digital Indonesia" (Gramedia, 2022). Konsultan kebijakan untuk Kemendikbud dan BRIN.',
+      status:      'APPROVED',
+      reviewNote:  'Track record riset dan kebijakan yang sangat relevan. Disetujui.',
+    },
+    // Sedang pending (dari user reguler)
+    {
+      userId:      regulars[4].id,
+      field:       'Kesehatan Masyarakat & Epidemiologi',
+      credentials: 'Dokter umum dengan spesialisasi kesehatan komunitas. S2 Epidemiologi UI (2020). Pernah terlibat penelitian pandemi COVID-19 bersama WHO Indonesia. Publikasi di Jurnal Kesehatan Masyarakat Indonesia.',
+      status:      'PENDING',
+    },
+    // Pernah ditolak (dari user lain)
+    {
+      userId:      regulars[7].id,
+      field:       'Investasi & Pasar Modal',
+      credentials: 'Trader forex 2 tahun. Punya akun Instagram edukasi investasi dengan 50k followers.',
+      status:      'REJECTED',
+      reviewNote:  'Kredensial belum cukup memenuhi standar verifikasi pakar. Pengalaman trading dan media sosial tidak setara dengan keahlian akademis atau profesional yang terverifikasi. Disarankan melengkapi sertifikasi formal (WPPE/CFA) dan/atau publikasi riset.',
+    },
+  ]
+
+  for (const app of apps) {
+    await db.expertApplication.create({ data: app })
+  }
+
+  ok(`${apps.length} expert application dibuat (2 approved, 1 pending, 1 rejected)`)
+}
+
+async function seedReports(users, discussions, comments) {
+  step('Report')
+
+  const existing = await db.report.count()
+  if (existing > 0) {
+    warn(`${existing} laporan sudah ada, lewati`)
+    return
+  }
+
+  const [admin, mod, expert1, expert2, ...regulars] = users
+
+  const reports = [
+    // RESOLVED — diskusi (sudah ditangani)
+    {
+      reporterId:   regulars[0].id,
+      discussionId: discussions[2].id,
+      reason:       'Konten terkesan mempromosikan produk investasi tertentu tanpa disclosure. Berpotensi menyesatkan pengguna awam.',
+      status:       'RESOLVED',
+    },
+    // REJECTED — false positive
+    {
+      reporterId:   regulars[1].id,
+      discussionId: discussions[6].id,
+      reason:       'Saya rasa diskusi ini terlalu teknis dan tidak relevan untuk forum umum.',
+      status:       'REJECTED',
+    },
+    // PENDING — menunggu review
+    {
+      reporterId:   regulars[3].id,
+      commentId:    (await db.comment.findFirst({ where: { parentId: null } }))?.id,
+      reason:       'Komentar ini mengandung pernyataan yang tidak didukung bukti dan berpotensi menyebarkan misinformasi medis.',
+      status:       'PENDING',
+    },
+    // PENDING — laporan user
+    {
+      reporterId:   regulars[5].id,
+      targetUserId: regulars[8].id,
+      reason:       'User ini tampak membuat beberapa akun untuk memanipulasi voting.',
+      status:       'PENDING',
+    },
+  ]
+
+  for (const r of reports) {
+    await db.report.create({ data: r })
+  }
+
+  ok(`${reports.length} laporan dibuat (1 resolved, 1 rejected, 2 pending)`)
+}
+
+// =============================================================================
+// MAIN
+// =============================================================================
+
+async function resetAll() {
+  console.log(`\n${c.red}${c.bold}⚠  MODE RESET — Menghapus semua data...${c.reset}`)
+  // Urutan hapus mengikuti foreign key constraint (child dulu, baru parent)
+  const steps = [
+    'report', 'expertApplication', 'userBadge', 'notification',
+    'message', 'conversationParticipant', 'conversation',
+    'reputationLog', 'vote', 'discussionTag', 'comment', 'discussion',
+    'follow', 'tag', 'profile', 'user', 'category', 'badge',
+  ]
+  for (const model of steps) {
+    const count = await db[model].deleteMany()
+    console.log(`  ${c.grey}Hapus ${model}: ${count.count} baris${c.reset}`)
+  }
+  console.log(`${c.green}✓ Reset selesai${c.reset}`)
+}
+
+async function main() {
+  console.log(`\n${c.bold}${c.green}🌱 OLION Database Seeder${c.reset}`)
+  console.log(`${c.grey}   Schema: 18 model | Mode: ${ARG.includes('--reset') ? 'RESET + SEED' : 'UPSERT'}${c.reset}`)
+
+  if (ARG.includes('--reset')) await resetAll()
+
+  const badges      = await seedBadges()
+  const categories  = await seedCategories()
+  const tags        = await seedTags()
+  const users       = await seedUsers()
+
+  if (users.length === 0) {
+    console.log(`\n${c.yellow}⚠  Tidak ada user yang bisa diproses. Jalankan dengan --reset untuk seed ulang.${c.reset}`)
+    return
+  }
+
+  await seedFollows(users)
+  const discussions = await seedDiscussions(users, categories, tags)
+  const comments    = await seedComments(users, discussions)
+  await seedVotes(users, discussions, comments)
+  const repMap      = await seedReputationLogs(users, discussions, comments)
+  await seedUserBadges(users, repMap, badges)
+  await seedNotifications(users, discussions)
+  await seedChats(users)
+  await seedExpertApplications(users)
+  await seedReports(users, discussions, comments)
+
+  // ── Ringkasan akhir ─────────────────────────────────────────────────────────
+  const counts = await Promise.all([
+    db.user.count(), db.profile.count(), db.category.count(), db.tag.count(),
+    db.discussion.count(), db.comment.count(), db.vote.count(),
+    db.report.count(), db.reputationLog.count(), db.notification.count(),
+    db.badge.count(), db.userBadge.count(), db.expertApplication.count(),
+    db.follow.count(), db.conversation.count(), db.message.count(),
+    db.discussionTag.count(),
   ])
+  const labels = [
+    'User','Profile','Category','Tag','Discussion','Comment','Vote',
+    'Report','ReputationLog','Notification','Badge','UserBadge',
+    'ExpertApplication','Follow','Conversation','Message','DiscussionTag',
+  ]
 
-  console.log('✅ Seed completed successfully!\n')
-  console.log('📊 Summary:')
-  console.log(`   Categories:       ${catCount}  (${rootCats.length} root + ${childCats.length} subcategories)`)
-  console.log(`   Users:            ${userCount}  (1 admin, 2 moderator, 4 expert, 5 user)`)
-  console.log(`   Discussions:      ${discCount}`)
-  console.log(`   Comments:         ${commentCount}`)
-  console.log(`   Votes:            ${voteCountFinal}`)
-  console.log(`   Reports:          ${reportCount}  (PENDING + RESOLVED + REJECTED)`)
-  console.log(`   Reputation Logs:  ${repCountFinal}`)
-  console.log()
-  console.log('🔑 Test credentials:')
-  console.log('   admin@olion.id       / admin123')
-  console.log('   moderator@olion.id   / moderator123')
-  console.log('   dr.sarah@olion.id    / expert123  (Expert)')
-  console.log('   aditya99@olion.id    / password123')
+  console.log(`\n${c.bold}${c.green}✅ Seeding selesai!${c.reset}`)
+  console.log(`\n${c.bold}📊 Ringkasan data:${c.reset}`)
+  labels.forEach((l, i) => {
+    console.log(`   ${c.grey}${l.padEnd(20)}${c.reset} ${c.bold}${counts[i]}${c.reset}`)
+  })
+
+  console.log(`\n${c.bold}🔑 Akun development:${c.reset}`)
+  console.log(`   ${c.cyan}admin@olion.id${c.reset}    Password123!  ${c.grey}(ADMIN)${c.reset}`)
+  console.log(`   ${c.cyan}mod@olion.id${c.reset}      Password123!  ${c.grey}(MODERATOR)${c.reset}`)
+  console.log(`   ${c.cyan}pakar@olion.id${c.reset}    Password123!  ${c.grey}(EXPERT — AI/ML)${c.reset}`)
+  console.log(`   ${c.cyan}pakar2@olion.id${c.reset}   Password123!  ${c.grey}(EXPERT — Sosiologi)${c.reset}`)
+  console.log(`   ${c.cyan}user1@olion.id${c.reset}    Password123!  ${c.grey}(USER)${c.reset}`)
+  console.log(`   ${c.grey}... user2 s.d. user12 dengan password yang sama${c.reset}\n`)
 }
 
 main()
-  .catch((e) => { console.error('❌ Seed failed:', e); process.exit(1) })
+  .catch(e => { console.error(`\n${c.red}❌ Error:${c.reset}`, e); process.exit(1) })
   .finally(() => db.$disconnect())

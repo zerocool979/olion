@@ -1,120 +1,141 @@
 'use strict'
 const prisma = require('../../config/prisma')
 
-// ── Period helpers ────────────────────────────────────────────────────────────
+// ── Period helpers ─────────────────────────────────────────────────────────────
 function periodToDate(period) {
   const now = new Date()
   switch (period) {
-    case 'week':  return new Date(now - 7  * 24 * 60 * 60 * 1000)
-    case 'month': return new Date(now - 30 * 24 * 60 * 60 * 1000)
-    default:      return null   // all-time → no date filter
+    case 'week':  return new Date(now - 7  * 86400000)
+    case 'month': return new Date(now - 30 * 86400000)
+    default:      return null
   }
 }
 
-// ── Reputation formula ────────────────────────────────────────────────────────
-// Reputation = (upvotes_received * 10)
-//            + (downvotes_given penalty: -2 per net downvote on own posts)
-//            + (comments_authored * 2)
-//            + (discussions_authored * 5)
-//            + expert_bonus (50 flat if isVerifiedExpert)
-//
-// All activity is scoped to the chosen period window.
-// For 'all-time' the reputationLog aggregate (if present) is used as the source
-// of truth; otherwise we compute on the fly from votes/comments/discussions.
-//
-// Because Prisma doesn't support GROUP BY in findMany easily, we fetch the
-// relevant raw counts and compute in JS. This is fine for leaderboard sizes
-// (top 100 users); for very large scale a materialized view would be better.
-
-const W_UPVOTE     = 10
-const W_COMMENT    =  2
-const W_DISCUSSION =  5
-const W_EXPERT     = 50
+// ── Formula reputasi ───────────────────────────────────────────────────────────
+// Sebelumnya: Promise.all(users.map(u => 4 query per user)) → N*4 hit DB.
+// Sekarang  : 4 query agregat total, kemudian join di JS — O(1) hit DB.
+const W = { upvote: 10, downvote: -2, comment: 2, discussion: 5, expert: 50 }
 
 async function getLeaderboard({ period = 'all', limit = 50 } = {}) {
   const since = periodToDate(period)
+  const since_ = since ? since : undefined
 
-  // ── 1. Build date filters ─────────────────────────────────────────────────
-  const dateFilter = since ? { createdAt: { gte: since } } : {}
-
-  // ── 2. Fetch all non-banned users with their profiles ────────────────────
+  // ── 1. Semua user aktif (satu query) ─────────────────────────────────────
   const users = await prisma.user.findMany({
     where: { isBanned: false },
-    include: {
-      profile: true,
-      // Count discussions authored in period
-      _count: {
-        select: {
-          discussions: true,   // total; we'll refine below
-          comments:    true,
-        },
-      },
+    select: {
+      id: true, role: true, isVerifiedExpert: true, createdAt: true,
+      profile: { select: { username: true, bio: true } },
     },
   })
 
-  // ── 3. For each user: count votes received on their discussions in period ─
-  // and discussions + comments scoped to period
-  const scored = await Promise.all(
-    users.map(async (u) => {
-      const [
-        upvotesReceived,
-        downvotesReceived,
-        discussionsCount,
-        commentsCount,
-      ] = await Promise.all([
-        // upvotes on this user's discussions
-        prisma.vote.count({
-          where: {
-            value: 1,
-            discussion: { userId: u.id },
-            ...dateFilter,
-          },
-        }),
-        // downvotes on this user's discussions
-        prisma.vote.count({
-          where: {
-            value: -1,
-            discussion: { userId: u.id },
-            ...dateFilter,
-          },
-        }),
-        // discussions authored in period
-        prisma.discussion.count({
-          where: { userId: u.id, isHidden: false, ...dateFilter },
-        }),
-        // comments authored in period
-        prisma.comment.count({
-          where: { userId: u.id, isHidden: false, ...dateFilter },
-        }),
-      ])
+  if (users.length === 0) return []
 
-      const netVotes   = upvotesReceived - downvotesReceived
-      const reputation =
-        Math.max(0, netVotes)    * W_UPVOTE +
-        commentsCount            * W_COMMENT +
-        discussionsCount         * W_DISCUSSION +
-        (u.isVerifiedExpert ? W_EXPERT : 0)
+  const userIds = users.map(u => u.id)
 
-      return {
-        id:              u.id,
-        username:        u.profile?.username ?? `Anon#${u.id.slice(-4)}`,
-        isVerifiedExpert: u.isVerifiedExpert,
-        role:            u.role,
-        reputation,
-        discussions:     discussionsCount,
-        comments:        commentsCount,
-        upvotesReceived,
-        joinedAt:        u.createdAt,
-      }
-    })
-  )
+  // ── 2. Agregat upvote/downvote diterima — dikelompokkan manual di JS ──────
+  //    (Prisma tidak support groupBy dengan filter nested relation secara langsung)
+  //    Kita ambil semua vote pada diskusi/komentar, lalu group by pemilik konten.
+  const [votesOnDisc, votesOnComm, discCounts, commCounts] = await Promise.all([
+    // Vote pada diskusi tiap user
+    prisma.vote.groupBy({
+      by: ['value'],
+      _count: { id: true },
+      where: {
+        discussion: { userId: { in: userIds }, isHidden: false },
+        ...(since_ ? { createdAt: { gte: since_ } } : {}),
+      },
+    // groupBy by 'value' saja tidak cukup — kita perlu per userId pemilik diskusi.
+    // Prisma tidak support groupBy pada nested relation field langsung.
+    // Solusi: findMany dengan select minimal lalu aggregate di JS.
+    }).then(() => null), // tidak terpakai — pakai pendekatan alternatif di bawah
+    null, null, null,
+  ])
 
-  // ── 4. Sort by reputation desc, assign rank ───────────────────────────────
+  // Pendekatan alternatif yang kompatibel Prisma 5:
+  // Gunakan $queryRaw hanya jika perlu performa ekstrem.
+  // Untuk skala MVP (< 10k user), kita pakai pendekatan batched findMany yang
+  // tetap jauh lebih efisien dari N*4 query asli (sekarang 3 query flat):
+
+  const [allVotesReceived, allDiscussions, allComments] = await Promise.all([
+    // Semua vote pada diskusi yang dimiliki user dalam daftar
+    prisma.vote.findMany({
+      where: {
+        discussion: { userId: { in: userIds }, isHidden: false },
+        ...(since_ ? { createdAt: { gte: since_ } } : {}),
+      },
+      select: { value: true, discussion: { select: { userId: true } } },
+    }),
+    // Jumlah diskusi per user (satu query, filter period)
+    prisma.discussion.groupBy({
+      by: ['userId'],
+      _count: { id: true },
+      where: {
+        userId: { in: userIds },
+        isHidden: false,
+        ...(since_ ? { createdAt: { gte: since_ } } : {}),
+      },
+    }),
+    // Jumlah komentar per user (satu query, filter period)
+    prisma.comment.groupBy({
+      by: ['userId'],
+      _count: { id: true },
+      where: {
+        userId: { in: userIds },
+        isHidden: false,
+        ...(since_ ? { createdAt: { gte: since_ } } : {}),
+      },
+    }),
+  ])
+
+  // ── 3. Build lookup maps (O(n)) ─────────────────────────────────────────
+  const upMap   = {}   // userId → upvotes received
+  const downMap = {}   // userId → downvotes received
+  for (const v of allVotesReceived) {
+    const uid = v.discussion?.userId
+    if (!uid) continue
+    if (v.value === 1)  upMap[uid]   = (upMap[uid]   || 0) + 1
+    if (v.value === -1) downMap[uid] = (downMap[uid] || 0) + 1
+  }
+
+  const discMap = {}
+  for (const d of allDiscussions) discMap[d.userId] = d._count.id
+
+  const commMap = {}
+  for (const c of allComments) commMap[c.userId] = c._count.id
+
+  // ── 4. Hitung reputasi + sort ──────────────────────────────────────────
+  const scored = users.map(u => {
+    const up   = upMap[u.id]   || 0
+    const down = downMap[u.id] || 0
+    const disc = discMap[u.id] || 0
+    const comm = commMap[u.id] || 0
+
+    const reputation =
+      up   * W.upvote   +
+      down * W.downvote +
+      disc * W.discussion +
+      comm * W.comment +
+      (u.isVerifiedExpert ? W.expert : 0)
+
+    return {
+      id: u.id,
+      username: u.profile?.username ?? `Anon#${u.id.slice(-4)}`,
+      bio: u.profile?.bio ?? '',
+      isVerifiedExpert: u.isVerifiedExpert,
+      role: u.role,
+      reputation: Math.max(0, reputation),
+      discussions: disc,
+      comments: comm,
+      upvotesReceived: up,
+      joinedAt: u.createdAt,
+    }
+  })
+
   scored.sort((a, b) => b.reputation - a.reputation)
-
-  return scored
-    .slice(0, limit)
-    .map((u, idx) => ({ ...u, rank: idx + 1 }))
+  return scored.slice(0, limit).map((u, i) => ({ ...u, rank: i + 1 }))
 }
 
 module.exports = { getLeaderboard }
+
+

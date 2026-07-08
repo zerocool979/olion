@@ -110,3 +110,6 @@ async function search({
 }
 
 module.exports = { list, detail, create, search }
+
+
+

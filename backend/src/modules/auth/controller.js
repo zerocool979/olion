@@ -65,5 +65,44 @@ module.exports = {
     } catch (err) {
       next(err)
     }
+  },
+
+  // ─── ADDED: GET /users/by-username/:username
+  // FIX: sebelumnya selalu return status 200 bahkan saat user tidak ditemukan,
+  // sehingga frontend ([username].jsx) gagal mendeteksi NotFound (objek
+  // {message:...} dianggap truthy). Sekarang return 404 yang benar.
+  getByUsername: async (req, res, next) => {
+    try {
+      const { username } = req.params
+      const user = await authService.getByUsername(username)
+      if (!user) {
+        return res.status(404).json({ message: 'Pengguna tidak ditemukan' })
+      }
+      return res.status(200).json(user)
+    } catch (err) {
+      next(err)
+    }
+  },
+
+  // ─── ADDED: PATCH /auth/password
+  changePassword: async (req, res, next) => {
+    try {
+      const { oldPassword, newPassword } = req.body
+      if (!oldPassword || !newPassword) {
+        return res.status(400).json({ message: 'Password lama dan baru harus diisi' })
+      }
+      if (newPassword.length < 6) {
+        return res.status(400).json({ message: 'Password baru minimal 6 karakter' })
+      }
+
+      await authService.changePassword(req.userId, oldPassword, newPassword)
+      return res.status(200).json({ message: 'Password berhasil diubah' })
+    } catch (err) {
+      next(err)
+    }
   }
 }
+
+
+
+

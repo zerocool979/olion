@@ -5,43 +5,44 @@
 
 import Head from 'next/head'
 import Link from 'next/link'
+import { colors, avatarPalette } from '../components/dashboard'
 
 const LAST_UPDATED = '15 Januari 2025'
 
 const prohibitions = [
   {
     icon: '✉',
-    color: '#f59e0b',
+    color: avatarPalette[2].color,
     title: 'Spam & Konten Komersial',
     desc: 'Dilarang memposting promosi produk/jasa, pyramid scheme, affiliate link tanpa izin, atau pesan berulang yang mengganggu komunitas.',
   },
   {
     icon: '🔍',
-    color: '#f87171',
+    color: colors.like,
     title: 'Doxxing',
     desc: 'Dilarang keras mengungkapkan, mencari, atau mendistribusikan informasi pribadi orang lain tanpa consent eksplisit. Ini adalah pelanggaran berat yang langsung mengakibatkan ban permanen.',
   },
   {
     icon: '⚠',
-    color: '#fb923c',
+    color: avatarPalette[5].color,
     title: 'Malware & Phishing',
     desc: 'Dilarang mendistribusikan link malware, tools eksploitasi berbahaya, halaman phishing, atau konten yang bertujuan merusak sistem orang lain.',
   },
   {
     icon: '👤',
-    color: '#a78bfa',
+    color: avatarPalette[4].color,
     title: 'Penyalahgunaan Akun',
     desc: 'Dilarang membuat akun ganda untuk menghindari ban, menjual atau meminjamkan akun, serta menggunakan bot untuk aktivitas otomatis tanpa izin.',
   },
   {
     icon: '✦',
-    color: '#4ade80',
+    color: colors.gold,
     title: 'Manipulasi Sistem Reputasi',
     desc: 'Dilarang melakukan vote manipulation, upvote ring, atau koordinasi untuk mengangkat konten secara artifisial.',
   },
   {
     icon: '◉',
-    color: '#60a5fa',
+    color: colors.accent,
     title: 'Konten Ilegal',
     desc: 'Dilarang memposting konten yang melanggar hukum Indonesia, termasuk SARA, pornografi, ujaran kebencian, dan pelanggaran hak cipta.',
   },
@@ -57,10 +58,10 @@ const moderatorRights = [
 ]
 
 const suspensionLevels = [
-  { level: 'Peringatan', duration: '—', color: '#f59e0b', desc: 'Notifikasi resmi untuk pelanggaran pertama ringan' },
-  { level: 'Mute', duration: '1–7 hari', color: '#fb923c', desc: 'Pembatasan kemampuan posting sementara' },
-  { level: 'Suspensi', duration: '7–30 hari', color: '#f87171', desc: 'Akun dinonaktifkan sementara' },
-  { level: 'Ban Permanen', duration: 'Selamanya', color: '#ef4444', desc: 'Untuk pelanggaran berat: doxxing, malware, CSAM' },
+  { level: 'Peringatan', duration: '—', color: colors.accent, desc: 'Notifikasi resmi untuk pelanggaran pertama ringan' },
+  { level: 'Mute', duration: '1–7 hari', color: colors.gold, desc: 'Pembatasan kemampuan posting sementara' },
+  { level: 'Suspensi', duration: '7–30 hari', color: colors.like, desc: 'Akun dinonaktifkan sementara' },
+  { level: 'Ban Permanen', duration: 'Selamanya', color: '#f4212e', desc: 'Untuk pelanggaran berat: doxxing, malware, CSAM' },
 ]
 
 export default function TermsPage() {
@@ -87,7 +88,7 @@ export default function TermsPage() {
           {/* ── Hero ── */}
           <header className="legal-hero">
             <div className="legal-hero__badge">
-              <span className="legal-hero__badge-dot" style={{ background: '#fb923c', boxShadow: '0 0 8px #fb923c55' }} />
+              <span className="legal-hero__badge-dot" style={{ background: colors.gold, boxShadow: `0 0 8px ${colors.goldSoft}` }} />
               Ketentuan Legal
             </div>
             <h1 className="legal-hero__title">
@@ -115,9 +116,9 @@ export default function TermsPage() {
           </div>
 
           {/* ── Acceptance ── */}
-          <div className="legal-card animate-fade-up" style={{ '--legal-accent': '#60a5fa' }}>
+          <div className="legal-card animate-fade-up" style={{ '--legal-accent': colors.accent }}>
             <div className="legal-card__header">
-              <span className="legal-card__icon-wrap" style={{ color: '#60a5fa', borderColor: '#60a5fa25', background: '#60a5fa0f' }}>
+              <span className="legal-card__icon-wrap" style={{ color: colors.accent, borderColor: `${colors.accent}25`, background: colors.accentSoft }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
                 </svg>
@@ -134,7 +135,7 @@ export default function TermsPage() {
                 'Penggunaan berkelanjutan setelah perubahan dianggap sebagai persetujuan',
               ].map((item) => (
                 <li key={item} className="legal-list__item">
-                  <span className="legal-list__dot" style={{ background: '#60a5fa' }} />
+                  <span className="legal-list__dot" style={{ background: colors.accent }} />
                   {item}
                 </li>
               ))}
@@ -145,7 +146,7 @@ export default function TermsPage() {
           <div style={{ marginBottom: '2rem' }}>
             <div className="legal-section-header">
               <h2 className="legal-section-title legal-section-title--lg">
-                <span style={{ color: '#f87171' }}>✕</span> Yang Dilarang
+                <span style={{ color: colors.like }}>✕</span> Yang Dilarang
               </h2>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '0.35rem' }}>
                 Pelanggaran dapat mengakibatkan suspensi atau ban permanen.
@@ -168,9 +169,9 @@ export default function TermsPage() {
           </div>
 
           {/* ── Moderator rights ── */}
-          <div className="legal-card animate-fade-up" style={{ '--legal-accent': '#fb923c' }}>
+          <div className="legal-card animate-fade-up" style={{ '--legal-accent': colors.gold }}>
             <div className="legal-card__header">
-              <span className="legal-card__icon-wrap" style={{ color: '#fb923c', borderColor: '#fb923c25', background: '#fb923c0f' }}>
+              <span className="legal-card__icon-wrap" style={{ color: colors.gold, borderColor: `${colors.gold}25`, background: colors.goldSoft }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                 </svg>
@@ -184,7 +185,7 @@ export default function TermsPage() {
             <ul className="legal-list">
               {moderatorRights.map((item) => (
                 <li key={item} className="legal-list__item">
-                  <span className="legal-list__dot" style={{ background: '#fb923c' }} />
+                  <span className="legal-list__dot" style={{ background: colors.gold }} />
                   {item}
                 </li>
               ))}
@@ -192,9 +193,9 @@ export default function TermsPage() {
           </div>
 
           {/* ── Suspension levels ── */}
-          <div className="legal-card animate-fade-up" style={{ '--legal-accent': '#f87171' }}>
+          <div className="legal-card animate-fade-up" style={{ '--legal-accent': colors.like }}>
             <div className="legal-card__header">
-              <span className="legal-card__icon-wrap" style={{ color: '#f87171', borderColor: '#f8717125', background: '#f871710f' }}>
+              <span className="legal-card__icon-wrap" style={{ color: colors.like, borderColor: `${colors.like}25`, background: colors.likeSoft }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
                 </svg>

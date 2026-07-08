@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { AuthContext } from '../../context/AuthContext'
 import api from '../../lib/api'
+import { colors } from '../../components/dashboard'
 
 export default function Login() {
   const { login } = useContext(AuthContext)
@@ -43,9 +44,9 @@ export default function Login() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'radial-gradient(ellipse 80% 50% at 50% -10%, rgba(30,41,59,0.35) 0%, transparent 70%), #080a0c',
+        background: `radial-gradient(ellipse 80% 50% at 50% -10%, ${colors.accentSoft} 0%, transparent 70%), ${colors.bg}`,
         padding: '1.5rem',
-        fontFamily: "'DM Sans', sans-serif",
+        fontFamily: 'system-ui, -apple-system, sans-serif',
       }}
     >
       {/* Grid background */}
@@ -56,7 +57,7 @@ export default function Login() {
           zIndex: 0,
           pointerEvents: 'none',
           backgroundImage:
-            'linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px)',
+            'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)',
           backgroundSize: '64px 64px',
           maskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 100%)',
           WebkitMaskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 100%)',
@@ -75,13 +76,13 @@ export default function Login() {
             alignItems: 'center',
             gap: '0.4rem',
             fontSize: '0.8rem',
-            color: '#596570',
+            color: colors.textSecondary,
             textDecoration: 'none',
             marginBottom: '1.5rem',
             transition: 'color 160ms ease',
           }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#94a3b8')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#596570')}
+          onMouseEnter={e => (e.currentTarget.style.color = colors.textPrimary)}
+          onMouseLeave={e => (e.currentTarget.style.color = colors.textSecondary)}
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
@@ -93,11 +94,11 @@ export default function Login() {
         <div
           style={{
             position: 'relative',
-            background: 'rgba(14, 17, 20, 0.9)',
-            border: '1px solid rgba(255,255,255,0.08)',
+            background: colors.bgElevated,
+            border: `1px solid ${colors.border}`,
             borderRadius: '18px',
             padding: '2.5rem 2rem',
-            boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03)',
+            boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.02)',
           }}
         >
           {/* Top glow line */}
@@ -109,7 +110,7 @@ export default function Login() {
               transform: 'translateX(-50%)',
               width: '120px',
               height: '1px',
-              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+              background: `linear-gradient(90deg, transparent, ${colors.accentSoft}, transparent)`,
             }}
           />
 
@@ -123,12 +124,12 @@ export default function Login() {
                 width: '44px',
                 height: '44px',
                 borderRadius: '12px',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.09)',
+                background: colors.accentSoft,
+                border: `1px solid ${colors.border}`,
                 marginBottom: '1.25rem',
               }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth="1.5">
                 <circle cx="12" cy="8" r="4"/>
                 <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
               </svg>
@@ -149,17 +150,17 @@ export default function Login() {
                   width: '7px',
                   height: '7px',
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg,#e2e8f0,#94a3b8)',
-                  boxShadow: '0 0 8px rgba(148,163,184,0.4)',
+                  background: colors.accent,
+                  boxShadow: `0 0 8px ${colors.accentSoft}`,
                 }}
               />
               <span
                 style={{
-                  fontFamily: "'Syne', sans-serif",
+                  fontFamily: 'system-ui, -apple-system, sans-serif',
                   fontWeight: 800,
                   fontSize: '0.8rem',
                   letterSpacing: '0.06em',
-                  color: '#596570',
+                  color: colors.textSecondary,
                   textTransform: 'uppercase',
                 }}
               >
@@ -169,17 +170,17 @@ export default function Login() {
 
             <h1
               style={{
-                fontFamily: "'Syne', sans-serif",
+                fontFamily: 'system-ui, -apple-system, sans-serif',
                 fontWeight: 700,
                 fontSize: '1.5rem',
                 letterSpacing: '-0.03em',
-                color: '#f1f3f5',
+                color: colors.textPrimary,
                 marginBottom: '0.4rem',
               }}
             >
               Masuk ke akun
             </h1>
-            <p style={{ fontSize: '0.85rem', color: '#596570' }}>
+            <p style={{ fontSize: '0.85rem', color: colors.textSecondary }}>
               Lanjutkan diskusi yang bermakna
             </p>
           </div>
@@ -195,11 +196,11 @@ export default function Login() {
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: '0.6rem',
-                  background: 'rgba(239,68,68,0.08)',
-                  border: '1px solid rgba(239,68,68,0.2)',
+                  background: colors.likeSoft,
+                  border: `1px solid ${colors.like}33`,
                   borderRadius: '10px',
                   padding: '0.75rem 0.875rem',
-                  color: '#fca5a5',
+                  color: colors.like,
                   fontSize: '0.825rem',
                   lineHeight: 1.5,
                 }}
@@ -220,10 +221,10 @@ export default function Login() {
                   display: 'block',
                   fontSize: '0.7rem',
                   fontWeight: 600,
-                  fontFamily: "'Syne', sans-serif",
+                  fontFamily: 'system-ui, -apple-system, sans-serif',
                   letterSpacing: '0.07em',
                   textTransform: 'uppercase',
-                  color: '#596570',
+                  color: colors.textSecondary,
                   marginBottom: '0.5rem',
                 }}
               >
@@ -241,14 +242,14 @@ export default function Login() {
                 style={{
                   width: '100%',
                   padding: '0.7rem 0.875rem',
-                  background: emailFocused ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${emailFocused ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)'}`,
+                  background: emailFocused ? colors.bgHover : colors.bg,
+                  border: `1px solid ${emailFocused ? colors.accent : colors.border}`,
                   borderRadius: '10px',
-                  color: '#f1f3f5',
+                  color: colors.textPrimary,
                   fontSize: '0.875rem',
-                  fontFamily: "'DM Sans', sans-serif",
+                  fontFamily: 'system-ui, -apple-system, sans-serif',
                   outline: 'none',
-                  boxShadow: emailFocused ? '0 0 0 3px rgba(255,255,255,0.04)' : 'none',
+                  boxShadow: emailFocused ? `0 0 0 3px ${colors.accentSoft}` : 'none',
                   transition: 'all 180ms ease',
                   opacity: loading ? 0.4 : 1,
                   cursor: loading ? 'not-allowed' : 'text',
@@ -263,10 +264,10 @@ export default function Login() {
                   display: 'block',
                   fontSize: '0.7rem',
                   fontWeight: 600,
-                  fontFamily: "'Syne', sans-serif",
+                  fontFamily: 'system-ui, -apple-system, sans-serif',
                   letterSpacing: '0.07em',
                   textTransform: 'uppercase',
-                  color: '#596570',
+                  color: colors.textSecondary,
                   marginBottom: '0.5rem',
                 }}
               >
@@ -284,31 +285,30 @@ export default function Login() {
                 style={{
                   width: '100%',
                   padding: '0.7rem 0.875rem',
-                  background: passwordFocused ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${passwordFocused ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)'}`,
+                  background: passwordFocused ? colors.bgHover : colors.bg,
+                  border: `1px solid ${passwordFocused ? colors.accent : colors.border}`,
                   borderRadius: '10px',
-                  color: '#f1f3f5',
+                  color: colors.textPrimary,
                   fontSize: '0.875rem',
-                  fontFamily: "'DM Sans', sans-serif",
+                  fontFamily: 'system-ui, -apple-system, sans-serif',
                   outline: 'none',
-                  boxShadow: passwordFocused ? '0 0 0 3px rgba(255,255,255,0.04)' : 'none',
+                  boxShadow: passwordFocused ? `0 0 0 3px ${colors.accentSoft}` : 'none',
                   transition: 'all 180ms ease',
                   opacity: loading ? 0.4 : 1,
                   cursor: loading ? 'not-allowed' : 'text',
                 }}
               />
-              {/* ── LUPA PASSWORD (TAMBAHAN) ──────────────────────────────── */}
               <div style={{ textAlign: 'right', marginTop: '0.4rem' }}>
                 <Link
                   href="/guest/forgot-password"
                   style={{
                     fontSize: '0.78rem',
-                    color: '#596570',
+                    color: colors.textSecondary,
                     textDecoration: 'none',
                     transition: 'color 150ms ease',
                   }}
-                  onMouseEnter={e => e.currentTarget.style.color = '#a8b2bc'}
-                  onMouseLeave={e => e.currentTarget.style.color = '#596570'}
+                  onMouseEnter={e => e.currentTarget.style.color = colors.accent}
+                  onMouseLeave={e => e.currentTarget.style.color = colors.textSecondary}
                 >
                   Lupa password?
                 </Link>
@@ -324,9 +324,9 @@ export default function Login() {
                 height: '44px',
                 marginTop: '0.25rem',
                 borderRadius: '10px',
-                background: loading ? 'rgba(241,243,245,0.4)' : '#f1f3f5',
-                color: '#080a0c',
-                fontFamily: "'Syne', sans-serif",
+                background: loading ? colors.accentSoft : colors.accent,
+                color: '#ffffff',
+                fontFamily: 'system-ui, -apple-system, sans-serif',
                 fontWeight: 700,
                 fontSize: '0.875rem',
                 letterSpacing: '-0.01em',
@@ -338,8 +338,8 @@ export default function Login() {
                 gap: '0.5rem',
                 transition: 'all 180ms ease',
               }}
-              onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.boxShadow = '0 0 20px rgba(241,243,245,0.15)' }}}
-              onMouseLeave={e => { e.currentTarget.style.background = loading ? 'rgba(241,243,245,0.4)' : '#f1f3f5'; e.currentTarget.style.boxShadow = 'none' }}
+              onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = colors.accentHover; e.currentTarget.style.boxShadow = `0 0 20px ${colors.accentSoft}` }}}
+              onMouseLeave={e => { e.currentTarget.style.background = loading ? colors.accentSoft : colors.accent; e.currentTarget.style.boxShadow = 'none' }}
             >
               {loading ? (
                 <>
@@ -347,8 +347,8 @@ export default function Login() {
                     style={{ animation: 'spin 0.8s linear infinite', width: '16px', height: '16px' }}
                     viewBox="0 0 24 24" fill="none"
                   >
-                    <circle cx="12" cy="12" r="10" stroke="rgba(8,10,12,0.25)" strokeWidth="3"/>
-                    <path fill="rgba(8,10,12,0.8)" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"/>
+                    <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" strokeWidth="3"/>
+                    <path fill="rgba(255,255,255,0.9)" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"/>
                   </svg>
                   Masuk...
                 </>
@@ -367,36 +367,36 @@ export default function Login() {
               margin: '1.5rem 0',
             }}
           >
-            <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
+            <div style={{ flex: 1, height: '1px', background: colors.border }} />
             <span
               style={{
                 fontSize: '0.68rem',
-                fontFamily: "'Syne', sans-serif",
+                fontFamily: 'system-ui, -apple-system, sans-serif',
                 fontWeight: 600,
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
-                color: '#2e3540',
+                color: colors.textSecondary,
               }}
             >
               atau
             </span>
-            <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
+            <div style={{ flex: 1, height: '1px', background: colors.border }} />
           </div>
 
           {/* Register link */}
-          <p style={{ textAlign: 'center', fontSize: '0.825rem', color: '#3d4851' }}>
+          <p style={{ textAlign: 'center', fontSize: '0.825rem', color: colors.textSecondary }}>
             Belum punya akun?{' '}
             <Link
               href="/guest/register"
               style={{
-                color: '#a8b2bc',
+                color: colors.accent,
                 textDecoration: 'underline',
-                textDecorationColor: 'rgba(168,178,188,0.3)',
+                textDecorationColor: colors.accentSoft,
                 textUnderlineOffset: '3px',
                 transition: 'all 150ms ease',
               }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#f1f3f5'; e.currentTarget.style.textDecorationColor = 'rgba(241,243,245,0.4)' }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#a8b2bc'; e.currentTarget.style.textDecorationColor = 'rgba(168,178,188,0.3)' }}
+              onMouseEnter={e => { e.currentTarget.style.color = colors.accentHover }}
+              onMouseLeave={e => { e.currentTarget.style.color = colors.accent }}
             >
               Daftar sekarang
             </Link>
@@ -409,11 +409,11 @@ export default function Login() {
             marginTop: '1.5rem',
             textAlign: 'center',
             fontSize: '0.7rem',
-            color: '#2e3540',
+            color: colors.textSecondary,
             letterSpacing: '0.02em',
           }}
         >
-          © 2025 OLION · Platform diskusi terstruktur
+          © 2026 OLION · Platform diskusi terstruktur
         </p>
       </div>
 

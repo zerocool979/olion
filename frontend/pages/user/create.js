@@ -1,142 +1,153 @@
-import { useContext, useEffect, useState } from 'react'
+/**
+ * pages/user/create.jsx  — Buat Diskusi Baru
+ */
+import { useState, useEffect, useContext } from 'react'
 import { AuthContext } from '../../context/AuthContext'
 import { useRouter } from 'next/router'
-import { ROUTES } from '../../lib/routes'
+import Link from 'next/link'
 import api from '../../lib/api'
+import { Avatar, StatPill, colors } from '../../components/dashboard'
+import UserLayout from './_layout'
 
-export default function UserCreate() {
-  const { user, loading: authLoading } = useContext(AuthContext)
+export default function CreateDiscussion() {
+  const { user } = useContext(AuthContext)
   const router = useRouter()
 
   const [title,      setTitle]      = useState('')
   const [content,    setContent]    = useState('')
-  const [category,   setCategory]   = useState('')
-  const [mode,       setMode]       = useState('IDENTIFIED')
-  const [discipline, setDiscipline] = useState('BEBAS')   // ← tambahkan state ini
-  const [cats,       setCats]       = useState([])
+  const [categoryId, setCategoryId] = useState('')
+  const [tags,       setTags]       = useState('')
+  const [categories, setCategories] = useState([])
   const [submitting, setSubmitting] = useState(false)
-  const [error,      setError]      = useState(null)
+  const [error,      setError]      = useState('')
 
-  useEffect(() => {
-    if (!authLoading && !user) router.replace(ROUTES.guest.login)
-  }, [user, authLoading, router])
+  const username = user?.profile?.username ?? user?.username ?? 'Kamu'
 
   useEffect(() => {
     api.get('/categories')
-      .then(r => { const d = r.data?.data ?? r.data ?? []; setCats(Array.isArray(d) ? d : []) })
+      .then(r => { const d = r.data?.data ?? r.data ?? []; setCategories(Array.isArray(d) ? d : []) })
       .catch(() => {})
   }, [])
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError(null)
-    if (!title.trim() || !content.trim()) { setError('Judul dan konten wajib diisi.'); return }
+  const handleSubmit = async () => {
+    setError('')
+    if (!title.trim()) return setError('Judul wajib diisi.')
+    if (!content.trim()) return setError('Konten wajib diisi.')
+
     setSubmitting(true)
     try {
-      const res = await api.post('/discussions', {
-        title,
-        content,
-        categoryId: category || undefined,
-        mode,
-        discipline,                // ← kirim discipline
+      const tagArray = tags.split(',').map(t => t.trim()).filter(Boolean)
+      const r = await api.post('/discussions', {
+        title:    title.trim(),
+        content:  content.trim(),
+        categoryId: categoryId || undefined,
+        tags:     tagArray,
       })
-      const id = res.data?.data?.id ?? res.data?.id
-      router.push(id ? ROUTES.user.discussion(id) : ROUTES.user.dashboard)
+      const id = r.data?.data?.id ?? r.data?.id
+      router.push(id ? `/user/discussions/${id}` : '/user/discussions')
     } catch (err) {
-      setError(err?.response?.data?.message ?? 'Gagal membuat diskusi.')
+      setError(err?.response?.data?.message ?? 'Gagal membuat diskusi. Coba lagi.')
     } finally {
       setSubmitting(false)
     }
   }
 
-  return (
-    <div className="page-shell">
-      <div className="page-grid-bg" />
-      <div className="page-content" style={{ maxWidth: '680px' }}>
+  const charLeft = 5000 - content.length
 
-        <div className="page-header animate-fade-up">
-          <h1 className="page-title">Buat Diskusi</h1>
-          <p className="page-subtitle">Ajukan pertanyaan atau mulai topik baru.</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="animate-fade-up stagger-1">
-          {error && <div className="error-banner" style={{ marginBottom: '1.25rem' }}>{error}</div>}
-
-          <div style={{ marginBottom: '1.25rem' }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.4rem', fontFamily: "'Syne', sans-serif", fontWeight: 600 }}>
-              Judul *
-            </label>
-            <input
-              className="form-input"
-              type="text"
-              placeholder="Tuliskan pertanyaan atau topik diskusimu…"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              maxLength={200}
-              required
-            />
-          </div>
-
-          <div style={{ marginBottom: '1.25rem' }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.4rem', fontFamily: "'Syne', sans-serif", fontWeight: 600 }}>
-              Konten *
-            </label>
-            <textarea
-              className="form-input"
-              placeholder="Jelaskan lebih detail…"
-              value={content}
-              onChange={e => setContent(e.target.value)}
-              rows={8}
-              required
-              style={{ resize: 'vertical', minHeight: '160px' }}
-            />
-          </div>
-
-          {/* Baris Kategori + Mode */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.4rem', fontFamily: "'Syne', sans-serif", fontWeight: 600 }}>
-                Kategori
-              </label>
-              <select className="form-input" value={category} onChange={e => setCategory(e.target.value)}>
-                <option value="">Pilih kategori</option>
-                {cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.4rem', fontFamily: "'Syne', sans-serif", fontWeight: 600 }}>
-                Mode
-              </label>
-              <select className="form-input" value={mode} onChange={e => setMode(e.target.value)}>
-                <option value="IDENTIFIED">Publik (identitas terlihat)</option>
-                <option value="ANONYMOUS">Anonim</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Discipline — TAMBAHAN BARU */}
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.4rem', fontFamily: "'Syne', sans-serif", fontWeight: 600 }}>
-              Tingkat Disiplin
-            </label>
-            <select className="form-input" value={discipline} onChange={e => setDiscipline(e.target.value)}>
-              <option value="BEBAS">Bebas</option>
-              <option value="RASIONAL">Rasional</option>
-              <option value="AKADEMIK">Akademik</option>
-              <option value="PROFESIONAL">Profesional</option>
-            </select>
-          </div>
-
-          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-            <button type="button" className="btn-outline" onClick={() => router.back()}>Batal</button>
-            <button type="submit" className="btn-primary" disabled={submitting}>
-              {submitting ? 'Menyimpan…' : 'Publikasikan'}
-            </button>
-          </div>
-        </form>
-
-      </div>
+  const sidebar = (
+    <div style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 16, padding: '14px 16px' }}>
+      <span style={{ fontWeight: 700, fontSize: 15, color: colors.textPrimary, display: 'block', marginBottom: 12 }}>💡 Tips</span>
+      {[
+        '📌 Judul yang jelas & spesifik mendapat lebih banyak respons.',
+        '🏷 Gunakan kategori dan tag yang tepat.',
+        '📝 Deskripsikan masalah dengan detail untuk jawaban terbaik.',
+        '👍 Upvote jawaban yang membantumu!',
+      ].map((tip, i) => (
+        <p key={i} style={{ fontSize: 12, color: colors.textSecondary, lineHeight: 1.5, marginBottom: 8 }}>{tip}</p>
+      ))}
     </div>
   )
+
+  return (
+    <UserLayout sidebar={sidebar}>
+      {/* Header */}
+      <div style={{ padding: '16px 16px 12px', borderBottom: `1px solid ${colors.border}`, position: 'sticky', top: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Link href="/user" style={{ color: colors.textSecondary, textDecoration: 'none', fontSize: 18 }}>←</Link>
+          <h1 style={{ fontSize: 18, fontWeight: 700, color: colors.textPrimary }}>Buat Diskusi</h1>
+          <div style={{ flex: 1 }} />
+          <button onClick={handleSubmit} disabled={submitting || !title.trim() || !content.trim()} style={{
+            background: title.trim() && content.trim() ? colors.accent : colors.bgElevated,
+            color: title.trim() && content.trim() ? '#fff' : colors.textSecondary,
+            border: 'none', borderRadius: 20, padding: '8px 20px',
+            fontSize: 14, fontWeight: 700, cursor: title.trim() && content.trim() ? 'pointer' : 'default',
+          }}>
+            {submitting ? 'Memposting…' : 'Post'}
+          </button>
+        </div>
+      </div>
+
+      {/* Form */}
+      <div style={{ padding: '16px', display: 'flex', gap: 12 }}>
+        <Avatar username={username} size={42} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+
+          {/* Title */}
+          <input
+            value={title} onChange={e => setTitle(e.target.value)} maxLength={200}
+            placeholder="Judul diskusi…"
+            style={{ display: 'block', width: '100%', fontSize: 20, fontWeight: 700, border: 'none', outline: 'none', background: 'transparent', color: colors.textPrimary, marginBottom: 12, fontFamily: 'inherit', boxSizing: 'border-box' }}
+          />
+
+          {/* Category */}
+          <select value={categoryId} onChange={e => setCategoryId(e.target.value)}
+            style={{ display: 'block', marginBottom: 12, padding: '6px 12px', borderRadius: 20, border: `1px solid ${colors.border}`, background: colors.bgElevated, color: categoryId ? colors.textPrimary : colors.textSecondary, fontSize: 13, cursor: 'pointer', outline: 'none' }}
+          >
+            <option value="">Pilih kategori…</option>
+            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+
+          {/* Content */}
+          <textarea
+            value={content} onChange={e => setContent(e.target.value.slice(0, 5000))}
+            placeholder="Tuliskan diskusi atau pertanyaanmu di sini…"
+            rows={12}
+            style={{ display: 'block', width: '100%', border: 'none', outline: 'none', fontSize: 16, resize: 'none', color: colors.textPrimary, background: 'transparent', fontFamily: 'inherit', lineHeight: 1.6, boxSizing: 'border-box' }}
+          />
+
+          {/* Char count */}
+          <div style={{ textAlign: 'right', fontSize: 12, color: charLeft < 200 ? '#ef4444' : colors.textSecondary, marginTop: 4 }}>
+            {charLeft} karakter tersisa
+          </div>
+
+          {/* Tags */}
+          <div style={{ marginTop: 12 }}>
+            <input value={tags} onChange={e => setTags(e.target.value)}
+              placeholder="Tag (pisahkan dengan koma): misal react, nextjs, tips"
+              style={{ width: '100%', padding: '8px 14px', borderRadius: 24, border: `1px solid ${colors.border}`, background: colors.bgElevated, color: colors.textPrimary, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+            />
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div style={{ marginTop: 12, padding: '10px 14px', borderRadius: 8, background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: 13 }}>
+              ⚠️ {error}
+            </div>
+          )}
+
+          {/* Preview tags */}
+          {tags.trim() && (
+            <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {tags.split(',').map(t => t.trim()).filter(Boolean).map(t => (
+                <span key={t} style={{ padding: '3px 10px', borderRadius: 20, fontSize: 12, background: colors.bgElevated, color: colors.accent, border: `1px solid ${colors.border}` }}>#{t}</span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </UserLayout>
+  )
 }
+
+
+

@@ -19,10 +19,12 @@ function Guard({ children }) {
 export default function App({ Component, pageProps }) {
   return (
     <AuthProvider>
-      <Nav />
       <Guard>
         <Component {...pageProps} />
       </Guard>
     </AuthProvider>
   )
 }
+
+
+

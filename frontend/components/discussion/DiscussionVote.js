@@ -30,3 +30,6 @@ export function DiscussionVote({ voteCount, voteState, votePending, onVote }) {
     </div>
   )
 }
+
+
+

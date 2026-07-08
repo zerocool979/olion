@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import { AuthContext } from '../../context/AuthContext'
 import api from '../../lib/api'
+import { colors } from '../../components/dashboard'
 
 export default function Register() {
   const { login } = useContext(AuthContext)
@@ -63,14 +64,14 @@ export default function Register() {
   const inputStyle = (focused) => ({
     width: '100%',
     padding: '0.7rem 0.875rem',
-    background: focused ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)',
-    border: `1px solid ${focused ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)'}`,
+    background: focused ? colors.bgHover : colors.bg,
+    border: `1px solid ${focused ? colors.accent : colors.border}`,
     borderRadius: '10px',
-    color: '#f1f3f5',
+    color: colors.textPrimary,
     fontSize: '0.875rem',
-    fontFamily: "'DM Sans', sans-serif",
+    fontFamily: 'system-ui, -apple-system, sans-serif',
     outline: 'none',
-    boxShadow: focused ? '0 0 0 3px rgba(255,255,255,0.04)' : 'none',
+    boxShadow: focused ? `0 0 0 3px ${colors.accentSoft}` : 'none',
     transition: 'all 180ms ease',
     opacity: loading ? 0.4 : 1,
     cursor: loading ? 'not-allowed' : 'text',
@@ -80,10 +81,10 @@ export default function Register() {
     display: 'block',
     fontSize: '0.7rem',
     fontWeight: 600,
-    fontFamily: "'Syne', sans-serif",
+    fontFamily: 'system-ui, -apple-system, sans-serif',
     letterSpacing: '0.07em',
     textTransform: 'uppercase',
-    color: '#596570',
+    color: colors.textSecondary,
     marginBottom: '0.5rem',
   }
 
@@ -94,9 +95,9 @@ export default function Register() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'radial-gradient(ellipse 80% 50% at 50% -10%, rgba(30,41,59,0.35) 0%, transparent 70%), #080a0c',
+        background: `radial-gradient(ellipse 80% 50% at 50% -10%, ${colors.accentSoft} 0%, transparent 70%), ${colors.bg}`,
         padding: '1.5rem',
-        fontFamily: "'DM Sans', sans-serif",
+        fontFamily: 'system-ui, -apple-system, sans-serif',
       }}
     >
       {/* Grid background */}
@@ -107,7 +108,7 @@ export default function Register() {
           zIndex: 0,
           pointerEvents: 'none',
           backgroundImage:
-            'linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px)',
+            'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)',
           backgroundSize: '64px 64px',
           maskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 100%)',
           WebkitMaskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 100%)',
@@ -126,13 +127,13 @@ export default function Register() {
             alignItems: 'center',
             gap: '0.4rem',
             fontSize: '0.8rem',
-            color: '#596570',
+            color: colors.textSecondary,
             textDecoration: 'none',
             marginBottom: '1.5rem',
             transition: 'color 160ms ease',
           }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#94a3b8')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#596570')}
+          onMouseEnter={e => (e.currentTarget.style.color = colors.textPrimary)}
+          onMouseLeave={e => (e.currentTarget.style.color = colors.textSecondary)}
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
@@ -144,11 +145,11 @@ export default function Register() {
         <div
           style={{
             position: 'relative',
-            background: 'rgba(14, 17, 20, 0.9)',
-            border: '1px solid rgba(255,255,255,0.08)',
+            background: colors.bgElevated,
+            border: `1px solid ${colors.border}`,
             borderRadius: '18px',
             padding: '2.5rem 2rem',
-            boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03)',
+            boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.02)',
           }}
         >
           {/* Top glow line */}
@@ -160,7 +161,7 @@ export default function Register() {
               transform: 'translateX(-50%)',
               width: '120px',
               height: '1px',
-              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+              background: `linear-gradient(90deg, transparent, ${colors.accentSoft}, transparent)`,
             }}
           />
 
@@ -174,12 +175,12 @@ export default function Register() {
                 width: '44px',
                 height: '44px',
                 borderRadius: '12px',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.09)',
+                background: colors.accentSoft,
+                border: `1px solid ${colors.border}`,
                 marginBottom: '1.25rem',
               }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth="1.5">
                 <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/>
                 <circle cx="9" cy="7" r="4"/>
                 <line x1="19" y1="8" x2="19" y2="14"/>
@@ -202,17 +203,17 @@ export default function Register() {
                   width: '7px',
                   height: '7px',
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg,#e2e8f0,#94a3b8)',
-                  boxShadow: '0 0 8px rgba(148,163,184,0.4)',
+                  background: colors.accent,
+                  boxShadow: `0 0 8px ${colors.accentSoft}`,
                 }}
               />
               <span
                 style={{
-                  fontFamily: "'Syne', sans-serif",
+                  fontFamily: 'system-ui, -apple-system, sans-serif',
                   fontWeight: 800,
                   fontSize: '0.8rem',
                   letterSpacing: '0.06em',
-                  color: '#596570',
+                  color: colors.textSecondary,
                   textTransform: 'uppercase',
                 }}
               >
@@ -222,17 +223,17 @@ export default function Register() {
 
             <h1
               style={{
-                fontFamily: "'Syne', sans-serif",
+                fontFamily: 'system-ui, -apple-system, sans-serif',
                 fontWeight: 700,
                 fontSize: '1.5rem',
                 letterSpacing: '-0.03em',
-                color: '#f1f3f5',
+                color: colors.textPrimary,
                 marginBottom: '0.4rem',
               }}
             >
               Buat akun baru
             </h1>
-            <p style={{ fontSize: '0.85rem', color: '#596570' }}>
+            <p style={{ fontSize: '0.85rem', color: colors.textSecondary }}>
               Username unik akan dibuat otomatis untukmu
             </p>
           </div>
@@ -248,11 +249,11 @@ export default function Register() {
                   display: 'flex',
                   alignItems: 'flex-start',
                   gap: '0.6rem',
-                  background: 'rgba(239,68,68,0.08)',
-                  border: '1px solid rgba(239,68,68,0.2)',
+                  background: colors.likeSoft,
+                  border: `1px solid ${colors.like}33`,
                   borderRadius: '10px',
                   padding: '0.75rem 0.875rem',
-                  color: '#fca5a5',
+                  color: colors.like,
                   fontSize: '0.825rem',
                   lineHeight: 1.5,
                 }}
@@ -320,20 +321,20 @@ export default function Register() {
                 display: 'flex',
                 alignItems: 'flex-start',
                 gap: '0.6rem',
-                background: 'rgba(255,255,255,0.025)',
-                border: '1px solid rgba(255,255,255,0.06)',
+                background: colors.bgHover,
+                border: `1px solid ${colors.borderLight}`,
                 borderRadius: '10px',
                 padding: '0.75rem 0.875rem',
               }}
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="1.8" style={{ flexShrink: 0, marginTop: '1px' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth="1.8" style={{ flexShrink: 0, marginTop: '1px' }}>
                 <circle cx="12" cy="12" r="10"/>
                 <line x1="12" y1="16" x2="12" y2="12"/>
                 <line x1="12" y1="8" x2="12.01" y2="8"/>
               </svg>
-              <p style={{ fontSize: '0.78rem', color: '#3d4851', lineHeight: 1.55 }}>
+              <p style={{ fontSize: '0.78rem', color: colors.textSecondary, lineHeight: 1.55 }}>
                 Identitasmu dilindungi. Username acak seperti{' '}
-                <span style={{ color: '#596570', fontWeight: 500 }}>SwiftFalcon4821</span>{' '}
+                <span style={{ color: colors.textPrimary, fontWeight: 500 }}>SwiftFalcon4821</span>{' '}
                 akan dibuat untukmu.
               </p>
             </div>
@@ -347,9 +348,9 @@ export default function Register() {
                 height: '44px',
                 marginTop: '0.25rem',
                 borderRadius: '10px',
-                background: loading ? 'rgba(241,243,245,0.4)' : '#f1f3f5',
-                color: '#080a0c',
-                fontFamily: "'Syne', sans-serif",
+                background: loading ? colors.accentSoft : colors.accent,
+                color: '#ffffff',
+                fontFamily: 'system-ui, -apple-system, sans-serif',
                 fontWeight: 700,
                 fontSize: '0.875rem',
                 letterSpacing: '-0.01em',
@@ -361,8 +362,8 @@ export default function Register() {
                 gap: '0.5rem',
                 transition: 'all 180ms ease',
               }}
-              onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.boxShadow = '0 0 20px rgba(241,243,245,0.15)' }}}
-              onMouseLeave={e => { e.currentTarget.style.background = loading ? 'rgba(241,243,245,0.4)' : '#f1f3f5'; e.currentTarget.style.boxShadow = 'none' }}
+              onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = colors.accentHover; e.currentTarget.style.boxShadow = `0 0 20px ${colors.accentSoft}` }}}
+              onMouseLeave={e => { e.currentTarget.style.background = loading ? colors.accentSoft : colors.accent; e.currentTarget.style.boxShadow = 'none' }}
             >
               {loading ? (
                 <>
@@ -370,8 +371,8 @@ export default function Register() {
                     style={{ animation: 'spin 0.8s linear infinite', width: '16px', height: '16px' }}
                     viewBox="0 0 24 24" fill="none"
                   >
-                    <circle cx="12" cy="12" r="10" stroke="rgba(8,10,12,0.25)" strokeWidth="3"/>
-                    <path fill="rgba(8,10,12,0.8)" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"/>
+                    <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" strokeWidth="3"/>
+                    <path fill="rgba(255,255,255,0.9)" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"/>
                   </svg>
                   Mendaftar...
                 </>
@@ -390,10 +391,10 @@ export default function Register() {
                 width: '100%',
                 height: '44px',
                 borderRadius: '10px',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                color: '#a8b2bc',
-                fontFamily: "'DM Sans', sans-serif",
+                background: colors.bgHover,
+                border: `1px solid ${colors.border}`,
+                color: colors.textSecondary,
+                fontFamily: 'system-ui, -apple-system, sans-serif',
                 fontWeight: 500,
                 fontSize: '0.875rem',
                 cursor: loading ? 'not-allowed' : 'pointer',
@@ -404,10 +405,10 @@ export default function Register() {
                 transition: 'all 180ms ease',
                 opacity: loading ? 0.4 : 1,
               }}
-              onMouseEnter={e => { if (!loading) e.currentTarget.style.background = 'rgba(255,255,255,0.08)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }}
+              onMouseEnter={e => { if (!loading) e.currentTarget.style.background = colors.bgElevated }}
+              onMouseLeave={e => { e.currentTarget.style.background = colors.bgHover }}
             >
-              {/* Ikon Google */}
+              {/* Ikon Google — warna brand asli, tidak diretema */}
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
                 <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -427,36 +428,36 @@ export default function Register() {
               margin: '1.5rem 0',
             }}
           >
-            <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
+            <div style={{ flex: 1, height: '1px', background: colors.border }} />
             <span
               style={{
                 fontSize: '0.68rem',
-                fontFamily: "'Syne', sans-serif",
+                fontFamily: 'system-ui, -apple-system, sans-serif',
                 fontWeight: 600,
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
-                color: '#2e3540',
+                color: colors.textSecondary,
               }}
             >
               atau
             </span>
-            <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.06)' }} />
+            <div style={{ flex: 1, height: '1px', background: colors.border }} />
           </div>
 
           {/* Login link */}
-          <p style={{ textAlign: 'center', fontSize: '0.825rem', color: '#3d4851' }}>
+          <p style={{ textAlign: 'center', fontSize: '0.825rem', color: colors.textSecondary }}>
             Sudah punya akun?{' '}
             <Link
               href="/guest/login"
               style={{
-                color: '#a8b2bc',
+                color: colors.accent,
                 textDecoration: 'underline',
-                textDecorationColor: 'rgba(168,178,188,0.3)',
+                textDecorationColor: colors.accentSoft,
                 textUnderlineOffset: '3px',
                 transition: 'all 150ms ease',
               }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#f1f3f5'; e.currentTarget.style.textDecorationColor = 'rgba(241,243,245,0.4)' }}
-              onMouseLeave={e => { e.currentTarget.style.color = '#a8b2bc'; e.currentTarget.style.textDecorationColor = 'rgba(168,178,188,0.3)' }}
+              onMouseEnter={e => { e.currentTarget.style.color = colors.accentHover }}
+              onMouseLeave={e => { e.currentTarget.style.color = colors.accent }}
             >
               Masuk di sini
             </Link>
@@ -469,11 +470,11 @@ export default function Register() {
             marginTop: '1.5rem',
             textAlign: 'center',
             fontSize: '0.7rem',
-            color: '#2e3540',
+            color: colors.textSecondary,
             letterSpacing: '0.02em',
           }}
         >
-          © 2025 OLION · Platform diskusi terstruktur
+          © 2026 OLION · Platform diskusi terstruktur
         </p>
       </div>
 

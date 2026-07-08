@@ -22,3 +22,6 @@ export function StatBox({ value, label }) {
     </div>
   )
 }
+
+
+

@@ -74,3 +74,6 @@ export default function DiscussionCard({ discussion, index }) {
     </DiscussionLink>
   );
 }
+
+
+

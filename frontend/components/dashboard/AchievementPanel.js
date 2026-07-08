@@ -1,56 +1,74 @@
-export function AchievementPanel({ user, reputation }) {
-  const tiers = [
-    { label: 'Pemula',       min: 0,   max: 49,   color: '#596570', icon: '◎' },
-    { label: 'Kontributor',  min: 50,  max: 199,  color: '#60a5fa', icon: '◈' },
-    { label: 'Aktif',        min: 200, max: 749,  color: '#a78bfa', icon: '◆' },
-    { label: 'Ahli',         min: 750, max: 1499, color: '#f59e0b', icon: '✦' },
-    { label: 'Master',       min: 1500, max: Infinity, color: '#4ade80', icon: '★' },
-  ]
+import { colors } from "./tokens";
+import SkeletonCard from "./SkeletonCard";
 
-  const current = tiers.findIndex(t => reputation >= t.min && reputation <= t.max)
-  const tier = tiers[current] ?? tiers[0]
-  const next = tiers[current + 1]
-  const progress = next
-    ? Math.round(((reputation - tier.min) / (next.min - tier.min)) * 100)
-    : 100
-
+/**
+ * AchievementPanel
+ * Boxed sidebar panel (same shape as a "Subscribe to Premium" / "Today's News"
+ * card) used to show a user's earned badges / reputation milestones.
+ *
+ * achievements: [{ id, icon, label, unlocked, hint }]
+ * footer: optional node rendered below the grid (e.g. a "Lihat semua" link)
+ */
+export default function AchievementPanel({
+  title = "Pencapaian",
+  icon = "🏆",
+  achievements = [],
+  loading = false,
+  emptyMessage = "Belum ada pencapaian.",
+  footer,
+}) {
   return (
-    <div className="ud-achievement">
-      <div className="ud-achievement__header">
-        <span className="ud-achievement__icon" style={{ color: tier.color }}>{tier.icon}</span>
-        <div>
-          <div className="ud-achievement__tier" style={{ color: tier.color }}>{tier.label}</div>
-          <div className="ud-achievement__rep">{reputation.toLocaleString()} rep</div>
-        </div>
+    <div
+      style={{
+        background: colors.bg,
+        border: `1px solid ${colors.border}`,
+        borderRadius: 16,
+        padding: "14px 16px",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+        <span style={{ fontSize: 16 }}>{icon}</span>
+        <span style={{ fontWeight: 800, fontSize: 16, color: colors.textPrimary }}>{title}</span>
       </div>
 
-      {next && (
-        <div className="ud-achievement__progress-wrap">
-          <div className="ud-achievement__progress-track">
+      {loading ? (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonCard key={i} variant="panel" />
+          ))}
+        </div>
+      ) : achievements.length === 0 ? (
+        <p style={{ fontSize: 13, color: colors.textSecondary }}>{emptyMessage}</p>
+      ) : (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+          {achievements.map((a) => (
             <div
-              className="ud-achievement__progress-bar"
-              style={{ width: `${progress}%`, background: tier.color }}
-            />
-          </div>
-          <div className="ud-achievement__progress-label">
-            <span>{progress}%</span>
-            <span>{next.label} — {next.min.toLocaleString()} rep</span>
-          </div>
+              key={a.id}
+              title={a.hint}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 6,
+                padding: "12px 8px",
+                borderRadius: 12,
+                background: a.unlocked ? colors.goldSoft : colors.bgElevated,
+                opacity: a.unlocked ? 1 : 0.45,
+              }}
+            >
+              <span style={{ fontSize: 22 }}>{a.icon ?? "🏅"}</span>
+              <span style={{ fontSize: 11.5, fontWeight: 600, color: colors.textPrimary, textAlign: "center" }}>
+                {a.label}
+              </span>
+            </div>
+          ))}
         </div>
       )}
 
-      <div className="ud-achievement__badges">
-        {tiers.slice(0, current + 1).map(t => (
-          <div key={t.label} className="ud-achievement__badge" title={t.label} style={{ color: t.color, borderColor: `${t.color}30` }}>
-            {t.icon}
-          </div>
-        ))}
-        {tiers.slice(current + 1).map(t => (
-          <div key={t.label} className="ud-achievement__badge ud-achievement__badge--locked" title={`${t.label} (terkunci)`}>
-            {t.icon}
-          </div>
-        ))}
-      </div>
+      {footer && <div style={{ marginTop: 12 }}>{footer}</div>}
     </div>
-  )
+  );
 }
+
+
+

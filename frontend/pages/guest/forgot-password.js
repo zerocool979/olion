@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Link from 'next/link'
+import { colors } from '../../components/dashboard'
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
@@ -37,9 +38,9 @@ export default function ForgotPassword() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'radial-gradient(ellipse 80% 50% at 50% -10%, rgba(30,41,59,0.35) 0%, transparent 70%), #080a0c',
+        background: `radial-gradient(ellipse 80% 50% at 50% -10%, ${colors.accentSoft} 0%, transparent 70%), ${colors.bg}`,
         padding: '1.5rem',
-        fontFamily: "'DM Sans', sans-serif",
+        fontFamily: 'system-ui, -apple-system, sans-serif',
       }}
     >
       <div
@@ -49,7 +50,7 @@ export default function ForgotPassword() {
           zIndex: 0,
           pointerEvents: 'none',
           backgroundImage:
-            'linear-gradient(rgba(255,255,255,0.022) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.022) 1px, transparent 1px)',
+            'linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)',
           backgroundSize: '64px 64px',
           maskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 100%)',
           WebkitMaskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 100%)',
@@ -67,13 +68,13 @@ export default function ForgotPassword() {
             alignItems: 'center',
             gap: '0.4rem',
             fontSize: '0.8rem',
-            color: '#596570',
+            color: colors.textSecondary,
             textDecoration: 'none',
             marginBottom: '1.5rem',
             transition: 'color 160ms ease',
           }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#94a3b8')}
-          onMouseLeave={e => (e.currentTarget.style.color = '#596570')}
+          onMouseEnter={e => (e.currentTarget.style.color = colors.textPrimary)}
+          onMouseLeave={e => (e.currentTarget.style.color = colors.textSecondary)}
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
@@ -84,11 +85,11 @@ export default function ForgotPassword() {
         <div
           style={{
             position: 'relative',
-            background: 'rgba(14, 17, 20, 0.9)',
-            border: '1px solid rgba(255,255,255,0.08)',
+            background: colors.bgElevated,
+            border: `1px solid ${colors.border}`,
             borderRadius: '18px',
             padding: '2.5rem 2rem',
-            boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03)',
+            boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.02)',
           }}
         >
           <div
@@ -99,7 +100,7 @@ export default function ForgotPassword() {
               transform: 'translateX(-50%)',
               width: '120px',
               height: '1px',
-              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+              background: `linear-gradient(90deg, transparent, ${colors.accentSoft}, transparent)`,
             }}
           />
 
@@ -112,12 +113,12 @@ export default function ForgotPassword() {
                 width: '44px',
                 height: '44px',
                 borderRadius: '12px',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.09)',
+                background: colors.accentSoft,
+                border: `1px solid ${colors.border}`,
                 marginBottom: '1.25rem',
               }}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="1.5">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={colors.accent} strokeWidth="1.5">
                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
                 <path d="M7 11V7a5 5 0 0110 0v4"/>
               </svg>
@@ -125,17 +126,17 @@ export default function ForgotPassword() {
 
             <h1
               style={{
-                fontFamily: "'Syne', sans-serif",
+                fontFamily: 'system-ui, -apple-system, sans-serif',
                 fontWeight: 700,
                 fontSize: '1.5rem',
                 letterSpacing: '-0.03em',
-                color: '#f1f3f5',
+                color: colors.textPrimary,
                 marginBottom: '0.4rem',
               }}
             >
               Lupa Password
             </h1>
-            <p style={{ fontSize: '0.85rem', color: '#596570' }}>
+            <p style={{ fontSize: '0.85rem', color: colors.textSecondary }}>
               Masukkan email terdaftar untuk menerima link reset password.
             </p>
           </div>
@@ -147,11 +148,11 @@ export default function ForgotPassword() {
                 display: 'flex',
                 alignItems: 'flex-start',
                 gap: '0.6rem',
-                background: 'rgba(74,222,128,0.08)',
-                border: '1px solid rgba(74,222,128,0.2)',
+                background: 'rgba(0,186,124,0.08)',
+                border: '1px solid rgba(0,186,124,0.25)',
                 borderRadius: '10px',
                 padding: '0.75rem 0.875rem',
-                color: '#86efac',
+                color: '#00ba7c',
                 fontSize: '0.825rem',
                 lineHeight: 1.5,
               }}
@@ -170,11 +171,11 @@ export default function ForgotPassword() {
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: '0.6rem',
-                    background: 'rgba(239,68,68,0.08)',
-                    border: '1px solid rgba(239,68,68,0.2)',
+                    background: colors.likeSoft,
+                    border: `1px solid ${colors.like}33`,
                     borderRadius: '10px',
                     padding: '0.75rem 0.875rem',
-                    color: '#fca5a5',
+                    color: colors.like,
                     fontSize: '0.825rem',
                     lineHeight: 1.5,
                   }}
@@ -194,10 +195,10 @@ export default function ForgotPassword() {
                     display: 'block',
                     fontSize: '0.7rem',
                     fontWeight: 600,
-                    fontFamily: "'Syne', sans-serif",
+                    fontFamily: 'system-ui, -apple-system, sans-serif',
                     letterSpacing: '0.07em',
                     textTransform: 'uppercase',
-                    color: '#596570',
+                    color: colors.textSecondary,
                     marginBottom: '0.5rem',
                   }}
                 >
@@ -215,14 +216,14 @@ export default function ForgotPassword() {
                   style={{
                     width: '100%',
                     padding: '0.7rem 0.875rem',
-                    background: emailFocused ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${emailFocused ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)'}`,
+                    background: emailFocused ? colors.bgHover : colors.bg,
+                    border: `1px solid ${emailFocused ? colors.accent : colors.border}`,
                     borderRadius: '10px',
-                    color: '#f1f3f5',
+                    color: colors.textPrimary,
                     fontSize: '0.875rem',
-                    fontFamily: "'DM Sans', sans-serif",
+                    fontFamily: 'system-ui, -apple-system, sans-serif',
                     outline: 'none',
-                    boxShadow: emailFocused ? '0 0 0 3px rgba(255,255,255,0.04)' : 'none',
+                    boxShadow: emailFocused ? `0 0 0 3px ${colors.accentSoft}` : 'none',
                     transition: 'all 180ms ease',
                     opacity: loading ? 0.4 : 1,
                     cursor: loading ? 'not-allowed' : 'text',
@@ -237,9 +238,9 @@ export default function ForgotPassword() {
                   width: '100%',
                   height: '44px',
                   borderRadius: '10px',
-                  background: loading ? 'rgba(241,243,245,0.4)' : '#f1f3f5',
-                  color: '#080a0c',
-                  fontFamily: "'Syne', sans-serif",
+                  background: loading ? colors.accentSoft : colors.accent,
+                  color: '#ffffff',
+                  fontFamily: 'system-ui, -apple-system, sans-serif',
                   fontWeight: 700,
                   fontSize: '0.875rem',
                   letterSpacing: '-0.01em',
@@ -251,8 +252,8 @@ export default function ForgotPassword() {
                   gap: '0.5rem',
                   transition: 'all 180ms ease',
                 }}
-                onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.boxShadow = '0 0 20px rgba(241,243,245,0.15)' }}}
-                onMouseLeave={e => { e.currentTarget.style.background = loading ? 'rgba(241,243,245,0.4)' : '#f1f3f5'; e.currentTarget.style.boxShadow = 'none' }}
+                onMouseEnter={e => { if (!loading) { e.currentTarget.style.background = colors.accentHover; e.currentTarget.style.boxShadow = `0 0 20px ${colors.accentSoft}` }}}
+                onMouseLeave={e => { e.currentTarget.style.background = loading ? colors.accentSoft : colors.accent; e.currentTarget.style.boxShadow = 'none' }}
               >
                 {loading ? (
                   <>
@@ -260,8 +261,8 @@ export default function ForgotPassword() {
                       style={{ animation: 'spin 0.8s linear infinite', width: '16px', height: '16px' }}
                       viewBox="0 0 24 24" fill="none"
                     >
-                      <circle cx="12" cy="12" r="10" stroke="rgba(8,10,12,0.25)" strokeWidth="3"/>
-                      <path fill="rgba(8,10,12,0.8)" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"/>
+                      <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.3)" strokeWidth="3"/>
+                      <path fill="rgba(255,255,255,0.9)" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"/>
                     </svg>
                     Mengirim...
                   </>
@@ -273,6 +274,10 @@ export default function ForgotPassword() {
           )}
         </div>
       </div>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   )
 }

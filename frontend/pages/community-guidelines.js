@@ -1,8 +1,14 @@
 import Head from 'next/head'
 import Link from 'next/link'
 import { EthicsCard, ExampleCard, ReputationTierCard, ForbiddenItem, TipCard, BadgePill, ReportStep, QualityChecklist } from '../components/guidelines'
+import { colors, avatarPalette } from '../components/dashboard'
 
 const LAST_UPDATED = '15 Januari 2025'
+
+const GREEN = '#00ba7c'
+const PURPLE = avatarPalette[4].color
+const ORANGE = avatarPalette[5].color
+const YELLOW = avatarPalette[2].color
 
 const ethicsRules = [
   {
@@ -13,7 +19,7 @@ const ethicsRules = [
     ),
     title: 'Hormati Sesama',
     desc: 'Perlakukan setiap anggota komunitas dengan respek, terlepas dari pendapat atau latar belakang mereka.',
-    color: '#f87171',
+    color: colors.like,
   },
   {
     icon: (
@@ -23,7 +29,7 @@ const ethicsRules = [
     ),
     title: 'Diskusi Berbasis Fakta',
     desc: 'Dukung klaimmu dengan sumber yang dapat diverifikasi. Opini boleh, tapi tandai dengan jelas sebagai opini.',
-    color: '#60a5fa',
+    color: colors.accent,
   },
   {
     icon: (
@@ -33,7 +39,7 @@ const ethicsRules = [
     ),
     title: 'Inklusif & Welcoming',
     desc: 'Sambut anggota baru. Jangan mengintimidasi newbie. Kita semua pernah jadi pemula.',
-    color: '#4ade80',
+    color: GREEN,
   },
   {
     icon: (
@@ -43,7 +49,7 @@ const ethicsRules = [
     ),
     title: 'Tetap On-Topic',
     desc: 'Posting di kategori yang tepat. Diskusi yang nyasar akan dipindahkan oleh moderator.',
-    color: '#a78bfa',
+    color: PURPLE,
   },
   {
     icon: (
@@ -53,7 +59,7 @@ const ethicsRules = [
     ),
     title: 'Kontribusi Berkualitas',
     desc: 'Lebih baik satu jawaban panjang yang mendalam daripada sepuluh komentar pendek yang tidak membantu.',
-    color: '#f59e0b',
+    color: colors.gold,
   },
   {
     icon: (
@@ -63,7 +69,7 @@ const ethicsRules = [
     ),
     title: 'Gunakan Search Sebelum Posting',
     desc: 'Cek apakah topikmu sudah pernah dibahas sebelumnya untuk menghindari duplikasi.',
-    color: '#34d399',
+    color: YELLOW,
   },
 ]
 
@@ -71,9 +77,9 @@ const examples = [
   {
     type: 'good',
     label: '✓ Contoh Bagus',
-    color: '#4ade80',
-    bg: 'rgba(74,222,128,0.06)',
-    border: 'rgba(74,222,128,0.18)',
+    color: GREEN,
+    bg: 'rgba(0,186,124,0.06)',
+    border: 'rgba(0,186,124,0.18)',
     title: 'Pertanyaan tentang CTF challenge',
     body: '"Saya sedang mengerjakan challenge buffer overflow di HTB. Sudah mencoba payload standar tapi segfault. Berikut stack trace-nya: [dump]. Apa yang salah dengan pendekatan saya?"',
     why: 'Spesifik, menunjukkan effort, menyertakan detail teknis yang relevan.',
@@ -81,9 +87,9 @@ const examples = [
   {
     type: 'bad',
     label: '✗ Contoh Buruk',
-    color: '#f87171',
-    bg: 'rgba(248,113,113,0.06)',
-    border: 'rgba(248,113,113,0.18)',
+    color: colors.like,
+    bg: colors.likeSoft,
+    border: `${colors.like}30`,
     title: 'Pertanyaan yang tidak membantu',
     body: '"tolong ajarin hacking dong, mau jadi hacker pro. ada tools nya nggak?"',
     why: 'Terlalu umum, tidak ada usaha mandiri, berpotensi disalahgunakan.',
@@ -91,9 +97,9 @@ const examples = [
   {
     type: 'good',
     label: '✓ Diskusi Bermutu',
-    color: '#4ade80',
-    bg: 'rgba(74,222,128,0.06)',
-    border: 'rgba(74,222,128,0.18)',
+    color: GREEN,
+    bg: 'rgba(0,186,124,0.06)',
+    border: 'rgba(0,186,124,0.18)',
     title: 'Debat teknikal yang konstruktif',
     body: '"Saya tidak setuju bahwa Rust selalu lebih aman dari C dalam konteks embedded. Pada constraint memory < 64KB, overhead Rust compiler justru counterproductive karena... [argumen dengan data]"',
     why: 'Tidak setuju tapi sopan, didukung argumen teknis yang spesifik.',
@@ -101,9 +107,9 @@ const examples = [
   {
     type: 'bad',
     label: '✗ Debat Toxic',
-    color: '#f87171',
-    bg: 'rgba(248,113,113,0.06)',
-    border: 'rgba(248,113,113,0.18)',
+    color: colors.like,
+    bg: colors.likeSoft,
+    border: `${colors.like}30`,
     title: 'Serangan personal',
     body: '"Lo pasti gak tau apa-apa. Python programmer nggak ngerti systems programming, ngomong doang."',
     why: 'Serangan personal, meremehkan orang lain, tidak ada argumen substantif.',
@@ -111,18 +117,18 @@ const examples = [
 ]
 
 const userTiers = [
-  { name: 'Pemula', rep: '0–49', color: '#596570', icon: '◎', perks: ['Buat diskusi & komentar', 'Vote standar', 'Bookmark diskusi'] },
-  { name: 'Kontributor', rep: '50–199', color: '#60a5fa', icon: '◈', perks: ['Vote berbobot', 'Flag / laporkan konten', 'Edit tag diskusi sendiri'] },
-  { name: 'Aktif', rep: '200–749', color: '#a78bfa', icon: '◆', perks: ['Buat ruang diskusi terbatas', 'Edit tag bersama', 'Statistik kontribusi pribadi'] },
-  { name: 'Ahli', rep: '750–1499', color: '#f59e0b', icon: '✦', perks: ['Undang Expert', 'Sorotan di profil', 'Akses chat komunitas'] },
-  { name: 'Master', rep: '1500+', color: '#4ade80', icon: '★', perks: ['Nominasi Moderator', 'Tema profil eksklusif', 'Akses forum internal'] },
+  { name: 'Pemula', rep: '0–49', color: colors.textSecondary, icon: '◎', perks: ['Buat diskusi & komentar', 'Vote standar', 'Bookmark diskusi'] },
+  { name: 'Kontributor', rep: '50–199', color: colors.accent, icon: '◈', perks: ['Vote berbobot', 'Flag / laporkan konten', 'Edit tag diskusi sendiri'] },
+  { name: 'Aktif', rep: '200–749', color: PURPLE, icon: '◆', perks: ['Buat ruang diskusi terbatas', 'Edit tag bersama', 'Statistik kontribusi pribadi'] },
+  { name: 'Ahli', rep: '750–1499', color: colors.gold, icon: '✦', perks: ['Undang Expert', 'Sorotan di profil', 'Akses chat komunitas'] },
+  { name: 'Master', rep: '1500+', color: GREEN, icon: '★', perks: ['Nominasi Moderator', 'Tema profil eksklusif', 'Akses forum internal'] },
 ]
 
 const expertTiers = [
-  { name: 'Expert Pemula', rep: '0–199', color: '#f59e0b', icon: '✦', perks: ['Badge Expert permanen', 'Prioritas flag', 'Usul tag resmi'] },
-  { name: 'Expert Aktif', rep: '200–749', color: '#f59e0b', icon: '✦', perks: ['Jawaban Terverifikasi', 'Sesi Tanya Expert', 'Semua hak USER setara'] },
-  { name: 'Expert Ahli', rep: '750–1499', color: '#f59e0b', icon: '✦', perks: ['Kurasi tag tanpa persetujuan', 'Label Mentor di ruang terbatas'] },
-  { name: 'Expert Master', rep: '1500+', color: '#f59e0b', icon: '✦', perks: ['Rekomendasi calon Expert', 'Panel statistik komunitas', 'Warna emas di leaderboard'] },
+  { name: 'Expert Pemula', rep: '0–199', color: colors.gold, icon: '✦', perks: ['Badge Expert permanen', 'Prioritas flag', 'Usul tag resmi'] },
+  { name: 'Expert Aktif', rep: '200–749', color: colors.gold, icon: '✦', perks: ['Jawaban Terverifikasi', 'Sesi Tanya Expert', 'Semua hak USER setara'] },
+  { name: 'Expert Ahli', rep: '750–1499', color: colors.gold, icon: '✦', perks: ['Kurasi tag tanpa persetujuan', 'Label Mentor di ruang terbatas'] },
+  { name: 'Expert Master', rep: '1500+', color: colors.gold, icon: '✦', perks: ['Rekomendasi calon Expert', 'Panel statistik komunitas', 'Warna emas di leaderboard'] },
 ]
 
 const forbiddenContent = [
@@ -138,27 +144,27 @@ const forbiddenContent = [
 
 const discussionTips = [
   {
-    icon: '🎯', color: '#60a5fa', title: 'Tetap Relevan & Terstruktur',
+    icon: '🎯', color: colors.accent, title: 'Tetap Relevan & Terstruktur',
     tips: ['Pastikan judul diskusi mencerminkan isi dengan jelas.', 'Gunakan tag yang sesuai (contoh: [AI], [Filsafat], [Teknologi]).', 'Pisahkan diskusi panjang menjadi beberapa balasan agar mudah diikuti.'],
   },
   {
-    icon: '🕶️', color: '#94a3b8', title: 'Jaga Anonimitas & Privasi',
+    icon: '🕶️', color: colors.textSecondary, title: 'Jaga Anonimitas & Privasi',
     tips: ['Jangan membagikan informasi pribadi — milik sendiri atau orang lain.', 'Hormati hak pengguna lain untuk tetap anonim.', 'Laporkan jika Anda melihat upaya deanonymization (doxxing).'],
   },
   {
-    icon: '💬', color: '#a78bfa', title: 'Bangun Argumen Berkualitas',
+    icon: '💬', color: PURPLE, title: 'Bangun Argumen Berkualitas',
     tips: ['Dukung pendapat dengan data, pengalaman, atau sumber terpercaya.', 'Hindari serangan pribadi — fokus pada ide, bukan individu.', 'Bertanya dengan sopan jika ada yang kurang jelas.'],
   },
   {
-    icon: '⚠️', color: '#f59e0b', title: 'Konten Sensitif & Etika',
+    icon: '⚠️', color: colors.gold, title: 'Konten Sensitif & Etika',
     tips: ['Jika membahas topik sensitif (keamanan siber, kesehatan mental), beri peringatan di awal.', 'Jangan menyebarkan alat eksploitasi aktif tanpa konteks edukasi yang jelas.', 'Setiap saran medis/hukum harus disertai disclaimer bahwa itu bukan pengganti profesional.'],
   },
   {
-    icon: '🚩', color: '#f87171', title: 'Bantu Moderasi Komunitas',
+    icon: '🚩', color: colors.like, title: 'Bantu Moderasi Komunitas',
     tips: ['Gunakan fitur "Laporkan" untuk konten yang melanggar pedoman.', 'Jangan memberi panggung pada pelanggar — jangan balas, langsung laporkan.', 'Beri apresiasi pada kontribusi positif dengan upvote.'],
   },
   {
-    icon: '📚', color: '#4ade80', title: 'Jadilah Pembelajar & Pengajar',
+    icon: '📚', color: GREEN, title: 'Jadilah Pembelajar & Pengajar',
     tips: ['Tidak ada pertanyaan bodoh — setiap orang memulai dari level berbeda.', 'Jika Anda ahli di suatu bidang, pertimbangkan untuk mengajukan diri sebagai Expert terverifikasi.', 'Bagikan sumber belajar gratis yang bermanfaat bagi komunitas.'],
   },
 ]
@@ -180,12 +186,12 @@ const qualityItems = [
 ]
 
 const badgeData = [
-  { label: 'Verified Expert', color: '#4ade80', bg: 'rgba(74,222,128,0.08)', border: 'rgba(74,222,128,0.2)' },
-  { label: 'Moderator', color: '#fb923c', bg: 'rgba(251,146,60,0.08)', border: 'rgba(251,146,60,0.2)' },
-  { label: 'Admin', color: '#a78bfa', bg: 'rgba(167,139,250,0.08)', border: 'rgba(167,139,250,0.2)' },
-  { label: 'Top Contributor', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
-  { label: 'Anonymized', color: '#94a3b8', bg: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.15)' },
-  { label: 'Publik', color: '#4ade80', bg: 'rgba(74,222,128,0.07)', border: 'rgba(74,222,128,0.18)' },
+  { label: 'Verified Expert', color: colors.gold, bg: colors.goldSoft, border: `${colors.gold}30` },
+  { label: 'Moderator', color: ORANGE, bg: `${ORANGE}14`, border: `${ORANGE}30` },
+  { label: 'Admin', color: colors.like, bg: colors.likeSoft, border: `${colors.like}30` },
+  { label: 'Top Contributor', color: colors.accent, bg: colors.accentSoft, border: `${colors.accent}30` },
+  { label: 'Anonymized', color: colors.textSecondary, bg: `${colors.textSecondary}14`, border: `${colors.textSecondary}25` },
+  { label: 'Publik', color: GREEN, bg: 'rgba(0,186,124,0.07)', border: 'rgba(0,186,124,0.18)' },
 ]
 
 export default function CommunityGuidelinesPage() {
@@ -209,7 +215,7 @@ export default function CommunityGuidelinesPage() {
 
           <header className="legal-hero">
             <div className="legal-hero__badge">
-              <span className="legal-hero__badge-dot" style={{ background: '#a78bfa', boxShadow: '0 0 8px #a78bfa55' }} />
+              <span className="legal-hero__badge-dot" style={{ background: PURPLE, boxShadow: `0 0 8px ${PURPLE}55` }} />
               Panduan &amp; Etika
             </div>
             <h1 className="legal-hero__title">
@@ -225,7 +231,7 @@ export default function CommunityGuidelinesPage() {
             </div>
           </header>
 
-          <div className="legal-summary-card animate-fade-up" style={{ '--summary-color': '#a78bfa' }}>
+          <div className="legal-summary-card animate-fade-up" style={{ '--summary-color': PURPLE }}>
             <div className="legal-summary-card__icon">⬡</div>
             <div>
               <p className="legal-summary-card__title">Filosofi OLION</p>
@@ -247,9 +253,9 @@ export default function CommunityGuidelinesPage() {
             </div>
           </div>
 
-          <div className="legal-card animate-fade-up" style={{ '--legal-accent': '#60a5fa' }}>
+          <div className="legal-card animate-fade-up" style={{ '--legal-accent': colors.accent }}>
             <div className="legal-card__header">
-              <span className="legal-card__icon-wrap" style={{ color: '#60a5fa', borderColor: '#60a5fa25', background: '#60a5fa0f' }}>
+              <span className="legal-card__icon-wrap" style={{ color: colors.accent, borderColor: `${colors.accent}25`, background: colors.accentSoft }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
                 </svg>
@@ -273,9 +279,9 @@ export default function CommunityGuidelinesPage() {
             </div>
           </div>
 
-          <div className="legal-card animate-fade-up" style={{ '--legal-accent': '#fb923c' }}>
+          <div className="legal-card animate-fade-up" style={{ '--legal-accent': ORANGE }}>
             <div className="legal-card__header">
-              <span className="legal-card__icon-wrap" style={{ color: '#fb923c', borderColor: '#fb923c25', background: '#fb923c0f' }}>
+              <span className="legal-card__icon-wrap" style={{ color: ORANGE, borderColor: `${ORANGE}25`, background: `${ORANGE}0f` }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
                 </svg>
@@ -295,13 +301,13 @@ export default function CommunityGuidelinesPage() {
             </div>
             <div className="legal-rep-grid">
               <div>
-                <h3 style={{ fontFamily: "'Syne', sans-serif", marginBottom: '1rem', color: 'var(--text-primary)' }}>👤 User</h3>
+                <h3 style={{ fontFamily: 'system-ui, -apple-system, sans-serif', marginBottom: '1rem', color: 'var(--text-primary)' }}>👤 User</h3>
                 {userTiers.map((t) => (
                   <ReputationTierCard key={t.name} tier={t} type="user" />
                 ))}
               </div>
               <div>
-                <h3 style={{ fontFamily: "'Syne', sans-serif", marginBottom: '1rem', color: 'var(--text-primary)' }}>🥇 Expert</h3>
+                <h3 style={{ fontFamily: 'system-ui, -apple-system, sans-serif', marginBottom: '1rem', color: 'var(--text-primary)' }}>🥇 Expert</h3>
                 {expertTiers.map((t) => (
                   <ReputationTierCard key={t.name} tier={t} type="expert" />
                 ))}
@@ -309,9 +315,9 @@ export default function CommunityGuidelinesPage() {
             </div>
           </div>
 
-          <div className="legal-card animate-fade-up" style={{ '--legal-accent': '#f87171' }}>
+          <div className="legal-card animate-fade-up" style={{ '--legal-accent': colors.like }}>
             <div className="legal-card__header">
-              <span className="legal-card__icon-wrap" style={{ color: '#f87171', borderColor: '#f8717125', background: '#f871710f' }}>
+              <span className="legal-card__icon-wrap" style={{ color: colors.like, borderColor: `${colors.like}25`, background: colors.likeSoft }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
                 </svg>
@@ -336,9 +342,9 @@ export default function CommunityGuidelinesPage() {
             </div>
           </div>
 
-          <div className="legal-card animate-fade-up" style={{ '--legal-accent': '#a78bfa' }}>
+          <div className="legal-card animate-fade-up" style={{ '--legal-accent': PURPLE }}>
             <div className="legal-card__header">
-              <span className="legal-card__icon-wrap" style={{ color: '#a78bfa', borderColor: '#a78bfa25', background: '#a78bfa0f' }}>
+              <span className="legal-card__icon-wrap" style={{ color: PURPLE, borderColor: `${PURPLE}25`, background: `${PURPLE}0f` }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                 </svg>

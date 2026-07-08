@@ -29,3 +29,6 @@ export function DiscussionContent({ discussion }) {
     </article>
   )
 }
+
+
+
