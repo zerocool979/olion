@@ -20,11 +20,13 @@ export function NavLinks() {
 
   const createHref = '/user/create'
   const dashboardHref = (() => {
-    if (!user) return '/guest/index'
+    // FIX: '/guest/index' bukan route yang ada (404) — dulu dipakai selagi
+    // `user` belum ter-hydrate walau `token` sudah ada. Fallback ke beranda publik.
+    if (!user) return '/'
     if (user.role === 'ADMIN') return '/admin/dashboard'
     if (user.role === 'MODERATOR') return '/moderator/dashboard'
     if (user.role === 'EXPERT') return '/expert/dashboard'
-    return '/user/dashboard'
+    return '/user'
   })()
 
   const notificationsHref = '/user/notifications'

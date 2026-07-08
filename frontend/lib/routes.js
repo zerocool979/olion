@@ -30,7 +30,14 @@ export const ROUTES = {
 
   // ── Authenticated user ─────────────────────────────────────────────────────
   user: {
-    dashboard:    '/user/dashboard',
+    // FIX: pointed at the legacy '/user/dashboard' page, which is a stale
+    // duplicate of '/user' (pages/user/index.js) predating the shared
+    // UserLayout (_layout.js) rebuild. UserLayout's own "Beranda" nav item
+    // links to '/user', and even pages/user/dashboard.js's own sidebar links
+    // "Beranda" to '/user' instead of itself — confirming '/user' is the
+    // intended, up-to-date home page. Sending users to the old page meant
+    // they landed on a screen the rest of the app's nav didn't consider "home".
+    dashboard:    '/user',
     logout:       '/user/logout',
     profile:      '/user/profile',
     notifications:'/user/notifications',

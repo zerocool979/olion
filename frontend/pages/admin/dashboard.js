@@ -30,7 +30,7 @@ const STATUS_COLORS = { PENDING: '#f59e0b', RESOLVED: '#10b981', REJECTED: '#ef4
 
 // ── Page utama ─────────────────────────────────────────────────────────────────
 export default function AdminDashboard() {
-  const { user } = useContext(AuthContext)
+  const { user, loading: authLoading } = useContext(AuthContext)
   const router = useRouter()
 
   const [stats,   setStats]   = useState(null)
@@ -47,10 +47,14 @@ export default function AdminDashboard() {
     setTimeout(() => setToast(null), 3000)
   }
 
-  // Guard: hanya ADMIN
+  // Guard: hanya ADMIN. Tunggu AuthContext selesai hydrate (authLoading) supaya
+  // tidak salah redirect saat token masih divalidasi. Jika sudah selesai loading
+  // dan ternyata tidak ada user (belum login) atau role-nya bukan ADMIN, tendang keluar.
   useEffect(() => {
-    if (user && user.role !== 'ADMIN') router.replace('/user/dashboard')
-  }, [user, router])
+    if (authLoading) return
+    if (!user) { router.replace('/guest/login'); return }
+    if (user.role !== 'ADMIN') router.replace('/user')
+  }, [user, authLoading, router])
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
@@ -124,7 +128,7 @@ export default function AdminDashboard() {
             <span style={{ fontSize: 12, background: '#f59e0b22', color: '#f59e0b', padding: '3px 10px', borderRadius: 20, fontWeight: 700 }}>ADMIN</span>
           </div>
           <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-            <Link href="/user/dashboard" style={{ color: colors.textSecondary, fontSize: 13, textDecoration: 'none' }}>← Dashboard User</Link>
+            <Link href="/user" style={{ color: colors.textSecondary, fontSize: 13, textDecoration: 'none' }}>← Dashboard User</Link>
             {user && <Avatar username={user.profile?.username} size={32} />}
           </div>
         </div>

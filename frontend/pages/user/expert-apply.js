@@ -79,7 +79,7 @@ export default function ExpertApplyPage() {
 
         {/* Topbar */}
         <div style={{ borderBottom: `1px solid ${colors.border}`, padding: '14px 24px', display: 'flex', alignItems: 'center', gap: 16, position: 'sticky', top: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)', zIndex: 100 }}>
-          <Link href="/user/dashboard" style={{ color: colors.textSecondary, textDecoration: 'none', fontSize: 20 }}>←</Link>
+          <Link href="/user" style={{ color: colors.textSecondary, textDecoration: 'none', fontSize: 20 }}>←</Link>
           <span style={{ fontWeight: 800, fontSize: 18 }}>Ajukan Verifikasi Pakar</span>
         </div>
 

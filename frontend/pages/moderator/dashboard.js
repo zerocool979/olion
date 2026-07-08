@@ -14,7 +14,7 @@ function SectionTitle({ children }) {
 const STATUS_COLORS = { PENDING: '#f59e0b', RESOLVED: '#10b981', REJECTED: '#ef4444' }
 
 export default function ModeratorDashboard() {
-  const { user } = useContext(AuthContext)
+  const { user, loading: authLoading } = useContext(AuthContext)
   const router   = useRouter()
 
   const [reports, setReports]   = useState([])
@@ -29,10 +29,14 @@ export default function ModeratorDashboard() {
     setTimeout(() => setToast(null), 3000)
   }
 
+  // Guard: hanya MODERATOR/ADMIN. Sama seperti admin/dashboard.js — tunggu
+  // authLoading selesai, lalu tendang keluar jika belum login ATAU role salah
+  // (sebelumnya `user &&` membuat pengguna yang belum login lolos guard ini).
   useEffect(() => {
-    if (user && !['MODERATOR','ADMIN'].includes(user.role))
-      router.replace('/user/dashboard')
-  }, [user, router])
+    if (authLoading) return
+    if (!user) { router.replace('/guest/login'); return }
+    if (!['MODERATOR','ADMIN'].includes(user.role)) router.replace('/user')
+  }, [user, authLoading, router])
 
   const fetchAll = useCallback(async () => {
     setLoading(true)
@@ -99,7 +103,7 @@ export default function ModeratorDashboard() {
             <span style={{ fontSize: 12, background: '#3b82f622', color: '#3b82f6', padding: '3px 10px', borderRadius: 20, fontWeight: 700 }}>MODERATOR</span>
           </div>
           <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-            <Link href="/user/dashboard" style={{ color: colors.textSecondary, fontSize: 13, textDecoration: 'none' }}>← Dashboard User</Link>
+            <Link href="/user" style={{ color: colors.textSecondary, fontSize: 13, textDecoration: 'none' }}>← Dashboard User</Link>
             {user && <Avatar username={user.profile?.username} size={32} />}
           </div>
         </div>

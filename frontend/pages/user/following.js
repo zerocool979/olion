@@ -88,7 +88,7 @@ export default function Following() {
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Link href={`/user/profile/${person.id}`} style={{ fontWeight: 700, fontSize: 15, color: colors.textPrimary, textDecoration: 'none' }}>{uname}</Link>
+                  <Link href={`/user/profile/${encodeURIComponent(uname)}`} style={{ fontWeight: 700, fontSize: 15, color: colors.textPrimary, textDecoration: 'none' }}>{uname}</Link>
                   {person.isExpert && <StatPill variant="tag" tone="accent" label="Pakar" />}
                 </div>
                 <div style={{ fontSize: 12, color: colors.textSecondary, marginTop: 1 }}>{rep.toLocaleString()} rep</div>

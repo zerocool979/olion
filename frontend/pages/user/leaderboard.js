@@ -141,7 +141,7 @@ export default function Leaderboard() {
             const tier   = tierFor(rep)
             const isMe   = u.id === user?.id
             return (
-              <Link key={u.id ?? i} href={`/user/profile/${u.id}`} style={{ textDecoration: 'none' }}>
+              <Link key={u.id ?? i} href={`/user/profile/${encodeURIComponent(uname)}`} style={{ textDecoration: 'none' }}>
                 <div style={{
                   padding: '14px 16px', borderBottom: `1px solid ${colors.border}`,
                   display: 'flex', alignItems: 'center', gap: 12,

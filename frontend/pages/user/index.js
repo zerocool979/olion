@@ -2,7 +2,7 @@
  * pages/user/index.jsx  — Beranda
  * Feed utama + compose + sidebar Top10 + Ikuti + Aktivitas
  */
-import { useState, useEffect, useContext, useCallback } from 'react'
+import { useState, useEffect, useContext, useCallback, useRef } from 'react'
 import { AuthContext } from '../../context/AuthContext'
 import Link from 'next/link'
 import api from '../../lib/api'
@@ -55,6 +55,16 @@ export default function Beranda() {
     ...t, unlocked: reputation >= t.threshold, hint: `${t.threshold.toLocaleString()} rep`,
   }))
 
+  // FIX: dulu polling di bawah membandingkan dengan `feed` yang ditangkap oleh
+  // closure saat effect ini pertama kali berjalan (selalu [] karena setFeed
+  // masih async), jadi `!feed[0]` selalu true dan "newCount" bertambah setiap
+  // 30 detik walau sebenarnya tidak ada diskusi baru. Gunakan ref supaya
+  // pembanding selalu memakai id post terbaru yang sudah ter-render.
+  const latestFeedIdRef = useRef(null)
+  useEffect(() => {
+    latestFeedIdRef.current = feed[0]?.id ?? null
+  }, [feed])
+
   useEffect(() => {
     if (!user) return
 
@@ -86,7 +96,7 @@ export default function Beranda() {
     const poll = setInterval(() => {
       api.get('/discussions?limit=1&sort=recent').then(r => {
         const d = r.data?.data ?? r.data ?? []
-        if (d[0] && (!feed[0] || d[0].id !== feed[0].id)) setNewCount(c => c + 1)
+        if (d[0] && d[0].id !== latestFeedIdRef.current) setNewCount(c => c + 1)
       }).catch(() => {})
     }, 30_000)
     return () => clearInterval(poll)
@@ -250,7 +260,7 @@ export default function Beranda() {
               style={{ textDecoration: "none", display: "block" }}
             >
               <div style={{ cursor: 'pointer' }}>
-                <DiscussionCard key={post.id} post={post} onLike={handleVote} />)
+                <DiscussionCard key={post.id} post={post} onLike={handleVote} />
               </div>
             </Link>
            ))

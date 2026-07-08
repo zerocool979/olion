@@ -21,7 +21,7 @@ function StatCard({ icon, value, label, accent = colors.accent }) {
 }
 
 export default function ExpertDashboard() {
-  const { user } = useContext(AuthContext)
+  const { user, loading: authLoading } = useContext(AuthContext)
   const router   = useRouter()
 
   const [discussions, setDiscussions] = useState([])
@@ -36,10 +36,14 @@ export default function ExpertDashboard() {
     setTimeout(() => setToast(null), 3000)
   }
 
+  // Guard: hanya EXPERT/ADMIN/verified expert. Tunggu authLoading selesai, lalu
+  // tendang keluar jika belum login ATAU role tidak sesuai (sebelumnya `user &&`
+  // membuat pengguna yang belum login lolos guard ini).
   useEffect(() => {
-    if (user && !['EXPERT','ADMIN'].includes(user.role) && !user.isVerifiedExpert)
-      router.replace('/user/dashboard')
-  }, [user, router])
+    if (authLoading) return
+    if (!user) { router.replace('/guest/login'); return }
+    if (!['EXPERT','ADMIN'].includes(user.role) && !user.isVerifiedExpert) router.replace('/user')
+  }, [user, authLoading, router])
 
   const fetchAll = useCallback(async () => {
     if (!user) return
@@ -84,7 +88,7 @@ export default function ExpertDashboard() {
             <span style={{ fontSize: 12, background: '#10b98122', color: '#10b981', padding: '3px 10px', borderRadius: 20, fontWeight: 700 }}>✅ PAKAR TERVERIFIKASI</span>
           </div>
           <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-            <Link href="/user/dashboard" style={{ color: colors.textSecondary, fontSize: 13, textDecoration: 'none' }}>← Dashboard</Link>
+            <Link href="/user" style={{ color: colors.textSecondary, fontSize: 13, textDecoration: 'none' }}>← Dashboard</Link>
             {user && <Avatar username={user.profile?.username} size={32} />}
           </div>
         </div>

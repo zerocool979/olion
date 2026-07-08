@@ -132,7 +132,7 @@ export default function Experts() {
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                          <Link href={`/user/profile/${person.id}`} style={{ fontWeight: 700, fontSize: 15, color: colors.textPrimary, textDecoration: 'none' }}>{uname}</Link>
+                          <Link href={`/user/profile/${encodeURIComponent(uname)}`} style={{ fontWeight: 700, fontSize: 15, color: colors.textPrimary, textDecoration: 'none' }}>{uname}</Link>
                           <StatPill variant="tag" tone="accent" label="Pakar" />
                         </div>
                         {bio && <p style={{ fontSize: 13, color: colors.textSecondary, marginTop: 4, lineHeight: 1.4 }}>{bio.slice(0, 100)}{bio.length > 100 ? '…' : ''}</p>}

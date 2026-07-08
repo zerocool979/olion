@@ -1,41 +1,3 @@
-// =============================================================================
-// schema.prisma — OLION  (DEFINITIF - FINAL MERGED)
-// =============================================================================
-//
-// SUMBER GABUNGAN:
-//   1. backend/prisma/schema.prisma          — schema aktif dengan migrasi
-//   2. backend/prisma/schema.prisma2.bak     — versi terlengkap asli (Follow,
-//                                              Notification, Chat, Tag,
-//                                              ANONYMOUS/IDENTIFIED mode)
-//   3. testing-claude/backend/prisma/schema.prisma — tambahan Claude (Badge,
-//                                              UserBadge, ExpertApplication,
-//                                              Report.targetUserId)
-//
-// KEPUTUSAN DESAIN (EKSPLISIT):
-//   PK          → @default(uuid()) — konsisten dengan seluruh migrasi asli
-//   Discussion  → userId String? nullable + onDelete:SetNull — platform anonim;
-//                 post tetap ada jika user dihapus
-//   Comment     → sama dengan Discussion
-//   Follow      → nama relasi "UserFollows"/"UserFollowedBy" — sesuai migrasi asli
-//   Notification→ nama relasi "NotificationRecipient"/"NotificationActor" — sesuai asli
-//   @@map       → TIDAK dipakai (konsisten dengan seluruh schema asli)
-//   NotificationType → gabungan kedua set (REPLY, EXPERT_VERIFIED dari asli +
-//                      REPORT_RESOLVED, SYSTEM dari Claude)
-//   DiscussionMode   → termasuk ANONYMOUS, IDENTIFIED dari schema2.bak
-//   Report      → userId → reporterId dengan @relation("ReporterUser");
-//                 targetUserId + @relation("ReportedUser") — aktif (bukan komentar)
-//   Tag         → diaktifkan (bukan komentar) — sudah ada di schema2.bak + migrasi
-//   Badge/UserBadge/ExpertApplication → baru, perlu migration terpisah
-//
-// CARA DEPLOY:
-//   # Jika database sudah ada (ada migrasi sebelumnya):
-//   npx prisma migrate dev --name merge_final
-//
-//   # Jika database baru (fresh):
-//   npx prisma migrate dev --name init
-//   node prisma/seed.js
-// =============================================================================
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -45,7 +7,284 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ── Enums ─────────────────────────────────────────────────────────────────────
+model User {
+  id                    String                    @id @default(uuid())
+  email                 String                    @unique
+  password              String
+  role                  Role                      @default(USER)
+  isVerifiedExpert      Boolean                   @default(false)
+  isBanned              Boolean                   @default(false)
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+  comments              Comment[]
+  conversations         ConversationParticipant[]
+  discussions           Discussion[]
+  expertApplications    ExpertApplication[]
+  following             Follow[]                  @relation("UserFollows")
+  followers             Follow[]                  @relation("UserFollowedBy")
+  messagesSent          Message[]
+  notificationsSent     Notification[]            @relation("NotificationActor")
+  notificationsReceived Notification[]            @relation("NotificationRecipient")
+  profile               Profile?
+  reportsMade           Report[]                  @relation("ReporterUser")
+  reportedBy            Report[]                  @relation("ReportedUser")
+  reputations           ReputationLog[]
+  badges                UserBadge[]
+  votes                 Vote[]
+
+  @@index([role])
+  @@index([isBanned])
+  @@index([createdAt(sort: Desc)])
+}
+
+model Profile {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  username  String   @unique
+  bio       String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([username])
+}
+
+model Follow {
+  id          String   @id @default(uuid())
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+  follower    User     @relation("UserFollows", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("UserFollowedBy", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+model Category {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  slug        String       @unique
+  description String?
+  color       String?
+  borderColor String?
+  parentId    String?
+  parent      Category?    @relation("CategoryTree", fields: [parentId], references: [id])
+  children    Category[]   @relation("CategoryTree")
+  discussions Discussion[]
+
+  @@index([slug])
+  @@index([parentId])
+}
+
+model Discussion {
+  id         String          @id @default(uuid())
+  title      String
+  content    String
+  mode       DiscussionMode
+  discipline DisciplineLevel
+  viewCount  Int             @default(0)
+  isHidden   Boolean         @default(false)
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  userId     String?
+  categoryId String
+  comments   Comment[]
+  category   Category        @relation(fields: [categoryId], references: [id])
+  user       User?           @relation(fields: [userId], references: [id])
+  tags       DiscussionTag[]
+  reports    Report[]
+  votes      Vote[]
+
+  @@index([userId])
+  @@index([categoryId])
+  @@index([isHidden])
+  @@index([createdAt(sort: Desc)])
+  @@index([mode])
+}
+
+model Comment {
+  id           String     @id @default(uuid())
+  content      String
+  isHidden     Boolean    @default(false)
+  parentId     String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  userId       String?
+  discussionId String
+  discussion   Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+  parent       Comment?   @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies      Comment[]  @relation("CommentReplies")
+  user         User?      @relation(fields: [userId], references: [id])
+  reports      Report[]
+  votes        Vote[]
+
+  @@index([discussionId])
+  @@index([userId])
+  @@index([parentId])
+}
+
+model Vote {
+  id           String      @id @default(uuid())
+  value        Int
+  createdAt    DateTime    @default(now())
+  userId       String
+  discussionId String?
+  commentId    String?
+  comment      Comment?    @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  discussion   Discussion? @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, discussionId])
+  @@unique([userId, commentId])
+  @@index([discussionId])
+  @@index([commentId])
+}
+
+model Report {
+  id           String       @id @default(uuid())
+  reason       String
+  status       ReportStatus @default(PENDING)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  reporterId   String
+  discussionId String?
+  commentId    String?
+  targetUserId String?
+  comment      Comment?     @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  discussion   Discussion?  @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+  reporter     User         @relation("ReporterUser", fields: [reporterId], references: [id], onDelete: Cascade)
+  targetUser   User?        @relation("ReportedUser", fields: [targetUserId], references: [id])
+
+  @@index([reporterId])
+  @@index([status])
+  @@index([createdAt(sort: Desc)])
+}
+
+model ReputationLog {
+  id        String   @id @default(uuid())
+  point     Int
+  reason    String
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model Tag {
+  id          String          @id @default(uuid())
+  name        String          @unique
+  slug        String          @unique
+  discussions DiscussionTag[]
+
+  @@index([slug])
+}
+
+model DiscussionTag {
+  discussionId String
+  tagId        String
+  discussion   Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+  tag          Tag        @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([discussionId, tagId])
+  @@index([tagId])
+}
+
+model Notification {
+  id           String           @id @default(uuid())
+  type         NotificationType
+  message      String?
+  read         Boolean          @default(false)
+  createdAt    DateTime         @default(now())
+  userId       String
+  actorId      String?
+  discussionId String?
+  commentId    String?
+  actor        User?            @relation("NotificationActor", fields: [actorId], references: [id])
+  user         User             @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, read])
+  @@index([userId, createdAt(sort: Desc)])
+}
+
+model Conversation {
+  id           String                    @id @default(uuid())
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([updatedAt(sort: Desc)])
+}
+
+model ConversationParticipant {
+  id             String       @id @default(uuid())
+  conversationId String
+  userId         String
+  joinedAt       DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  content        String
+  createdAt      DateTime     @default(now())
+  conversationId String
+  senderId       String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([conversationId, createdAt(sort: Desc)])
+}
+
+model Badge {
+  id          String      @id @default(uuid())
+  slug        String      @unique
+  name        String
+  description String
+  icon        String
+  threshold   Int         @default(0)
+  users       UserBadge[]
+
+  @@index([threshold])
+}
+
+model UserBadge {
+  id       String   @id @default(uuid())
+  earnedAt DateTime @default(now())
+  userId   String
+  badgeId  String
+  badge    Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+}
+
+model ExpertApplication {
+  id          String            @id @default(uuid())
+  field       String
+  credentials String
+  status      ApplicationStatus @default(PENDING)
+  reviewNote  String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  userId      String
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([status])
+}
 
 enum Role {
   USER
@@ -67,8 +306,8 @@ enum DiscussionMode {
   EVALUATIF
   ARGUMENTATIF
   PRAKTIS
-  ANONYMOUS    // dari schema2.bak — mode diskusi sepenuhnya anonim
-  IDENTIFIED   // dari schema2.bak — mode diskusi dengan identitas terungkap
+  ANONYMOUS
+  IDENTIFIED
 }
 
 enum DisciplineLevel {
@@ -78,387 +317,19 @@ enum DisciplineLevel {
   PROFESIONAL
 }
 
-// Gabungan NotificationType dari schema2.bak + testing-claude
 enum NotificationType {
-  FOLLOW           // user baru mengikuti kamu
-  VOTE             // konten kamu di-vote
-  COMMENT          // komentar baru di diskusi kamu
-  REPLY            // balasan ke komentar kamu
-  MENTION          // kamu di-mention di diskusi/komentar
-  EXPERT_VERIFIED  // permohonan pakar disetujui (dari asli)
-  REPORT_RESOLVED  // laporanmu diproses moderator (dari Claude)
-  SYSTEM           // notifikasi sistem / badge baru (dari Claude)
+  FOLLOW
+  COMMENT
+  VOTE
+  MENTION
+  REPORT_RESOLVED
+  SYSTEM
+  REPLY
+  EXPERT_VERIFIED
 }
 
-// Enum baru untuk ExpertApplication
 enum ApplicationStatus {
   PENDING
   APPROVED
   REJECTED
-}
-
-// ── User & Profile ────────────────────────────────────────────────────────────
-
-model User {
-  id               String   @id @default(uuid())
-  email            String   @unique
-  password         String
-  role             Role     @default(USER)
-  isVerifiedExpert Boolean  @default(false)
-  isBanned         Boolean  @default(false)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  // Profil publik (opsional karena user anonim mungkin tidak punya profil)
-  profile Profile?
-
-  // Konten
-  discussions Discussion[]
-  comments    Comment[]
-  votes       Vote[]
-
-  // Laporan: dibuat oleh user ini
-  reportsMade  Report[] @relation("ReporterUser")
-  // Laporan: menargetkan user ini
-  reportedBy   Report[] @relation("ReportedUser")
-
-  // Reputasi
-  reputations ReputationLog[]
-
-  // Follow: user ini mengikuti siapa
-  following Follow[] @relation("UserFollows")
-  // Follow: siapa yang mengikuti user ini
-  followers Follow[] @relation("UserFollowedBy")
-
-  // Notifikasi: diterima oleh user ini
-  notificationsReceived Notification[] @relation("NotificationRecipient")
-  // Notifikasi: dipicu oleh aksi user ini
-  notificationsSent     Notification[] @relation("NotificationActor")
-
-  // Chat
-  conversations ConversationParticipant[]
-  messagesSent  Message[]
-
-  // Gamifikasi & Verifikasi
-  badges             UserBadge[]
-  expertApplications ExpertApplication[]
-
-  @@index([role])
-  @@index([isBanned])
-  @@index([createdAt(sort: Desc)])
-}
-
-model Profile {
-  id        String   @id @default(uuid())
-  userId    String   @unique
-  username  String   @unique
-  bio       String?
-  avatarUrl String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // CATATAN: reputation, postCount, totalVotes TIDAK disimpan di sini sebagai
-  // cache field. Dihitung on-the-fly dari ReputationLog/Discussion/Vote.
-  // Tambahkan sebagai cache hanya jika terbukti bottleneck di production.
-
-  @@index([username])
-}
-
-// ── Follow ────────────────────────────────────────────────────────────────────
-
-model Follow {
-  id          String   @id @default(uuid())
-  followerId  String
-  followingId String
-  createdAt   DateTime @default(now())
-
-  // Nama relasi sesuai migrasi asli (schema.prisma2.bak)
-  follower  User @relation("UserFollows",    fields: [followerId],  references: [id], onDelete: Cascade)
-  following User @relation("UserFollowedBy", fields: [followingId], references: [id], onDelete: Cascade)
-
-  @@unique([followerId, followingId])
-  @@index([followerId])
-  @@index([followingId])
-}
-
-// ── Category ──────────────────────────────────────────────────────────────────
-
-model Category {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  slug        String   @unique
-  description String?
-  color       String?        // warna latar kartu kategori di UI
-  borderColor String?        // warna border kartu kategori di UI
-  parentId    String?
-
-  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
-  children Category[] @relation("CategoryTree")
-
-  discussions Discussion[]
-
-  @@index([slug])
-  @@index([parentId])
-}
-
-// ── Discussion ────────────────────────────────────────────────────────────────
-
-model Discussion {
-  id         String          @id @default(uuid())
-  title      String
-  content    String
-  mode       DiscussionMode
-  discipline DisciplineLevel
-  viewCount  Int             @default(0)
-  isHidden   Boolean         @default(false)
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
-
-  // Nullable: platform anonim — post tetap ada jika user dihapus
-  userId     String?
-  categoryId String
-
-  user     User?    @relation(fields: [userId],     references: [id], onDelete: SetNull)
-  category Category @relation(fields: [categoryId], references: [id])
-
-  comments Comment[]
-  votes    Vote[]
-  reports  Report[]
-  tags     DiscussionTag[]
-
-  @@index([userId])
-  @@index([categoryId])
-  @@index([isHidden])
-  @@index([createdAt(sort: Desc)])
-  @@index([mode])
-}
-
-// ── Comment ───────────────────────────────────────────────────────────────────
-
-model Comment {
-  id           String   @id @default(uuid())
-  content      String
-  isHidden     Boolean  @default(false)
-  parentId     String?   // null = komentar root; non-null = reply ke komentar lain
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  // Nullable: platform anonim — komentar tetap ada jika user dihapus
-  userId       String?
-  discussionId String
-
-  user       User?      @relation(fields: [userId],       references: [id], onDelete: SetNull)
-  discussion Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
-
-  // Self-relation untuk threading komentar
-  parent  Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies Comment[] @relation("CommentReplies")
-
-  votes   Vote[]
-  reports Report[]
-
-  @@index([discussionId])
-  @@index([userId])
-  @@index([parentId])
-}
-
-// ── Vote ──────────────────────────────────────────────────────────────────────
-
-model Vote {
-  id           String   @id @default(uuid())
-  value        Int      // hanya 1 (upvote) atau -1 (downvote) — dijaga di aplikasi
-  createdAt    DateTime @default(now())
-
-  userId       String
-  discussionId String?  // null jika vote pada komentar
-  commentId    String?  // null jika vote pada diskusi
-
-  user       User        @relation(fields: [userId],       references: [id], onDelete: Cascade)
-  discussion Discussion? @relation(fields: [discussionId], references: [id], onDelete: Cascade)
-  comment    Comment?    @relation(fields: [commentId],    references: [id], onDelete: Cascade)
-
-  // Satu user, satu vote per diskusi DAN satu vote per komentar
-  @@unique([userId, discussionId])
-  @@unique([userId, commentId])
-  @@index([discussionId])
-  @@index([commentId])
-}
-
-// ── Report & Moderasi ─────────────────────────────────────────────────────────
-
-model Report {
-  id           String       @id @default(uuid())
-  reason       String
-  status       ReportStatus @default(PENDING)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-
-  reporterId   String
-  discussionId String?      // null jika laporan komentar atau user
-  commentId    String?      // null jika laporan diskusi atau user
-  targetUserId String?      // null jika laporan konten (bukan user)
-
-  reporter   User        @relation("ReporterUser", fields: [reporterId],   references: [id], onDelete: Cascade)
-  discussion Discussion? @relation(fields: [discussionId], references: [id], onDelete: Cascade)
-  comment    Comment?    @relation(fields: [commentId],    references: [id], onDelete: Cascade)
-  targetUser User?       @relation("ReportedUser", fields: [targetUserId], references: [id], onDelete: SetNull)
-
-  @@index([reporterId])
-  @@index([status])
-  @@index([createdAt(sort: Desc)])
-}
-
-// ── ReputationLog ─────────────────────────────────────────────────────────────
-
-model ReputationLog {
-  id        String   @id @default(uuid())
-  point     Int      // positif atau negatif
-  reason    String
-  createdAt DateTime @default(now())
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([userId, createdAt(sort: Desc)])
-}
-
-// ── Tag ───────────────────────────────────────────────────────────────────────
-
-model Tag {
-  id   String @id @default(uuid())
-  name String @unique
-  slug String @unique
-
-  discussions DiscussionTag[]
-
-  @@index([slug])
-}
-
-model DiscussionTag {
-  discussionId String
-  tagId        String
-
-  discussion Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
-  tag        Tag        @relation(fields: [tagId],        references: [id], onDelete: Cascade)
-
-  @@id([discussionId, tagId])
-  @@index([tagId])
-}
-
-// ── Notification ──────────────────────────────────────────────────────────────
-
-model Notification {
-  id           String           @id @default(uuid())
-  type         NotificationType
-  message      String?          // opsional: dibuat otomatis dari type, atau kustom
-  read         Boolean          @default(false)
-  createdAt    DateTime         @default(now())
-
-  userId       String           // penerima
-  actorId      String?          // pemicu (user yang melakukan aksi)
-  discussionId String?          // konteks opsional
-  commentId    String?          // konteks opsional
-
-  // Nama relasi sesuai migrasi asli
-  user  User  @relation("NotificationRecipient", fields: [userId],  references: [id], onDelete: Cascade)
-  actor User? @relation("NotificationActor",     fields: [actorId], references: [id], onDelete: SetNull)
-
-  @@index([userId])
-  @@index([userId, read])
-  @@index([userId, createdAt(sort: Desc)])
-}
-
-// ── Chat (DM) ─────────────────────────────────────────────────────────────────
-
-model Conversation {
-  id        String   @id @default(uuid())
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  participants ConversationParticipant[]
-  messages     Message[]
-
-  @@index([updatedAt(sort: Desc)])
-}
-
-model ConversationParticipant {
-  id             String   @id @default(uuid())
-  conversationId String
-  userId         String
-  joinedAt       DateTime @default(now())
-
-  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  user         User         @relation(fields: [userId],         references: [id], onDelete: Cascade)
-
-  @@unique([conversationId, userId])
-  @@index([userId])
-}
-
-model Message {
-  id             String   @id @default(uuid())
-  content        String
-  createdAt      DateTime @default(now())
-
-  conversationId String
-  senderId       String
-
-  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  sender       User         @relation(fields: [senderId],       references: [id], onDelete: Cascade)
-
-  @@index([conversationId])
-  @@index([conversationId, createdAt(sort: Desc)])
-}
-
-// ── Badge & Gamifikasi ────────────────────────────────────────────────────────
-// MODEL BARU — perlu satu migrasi terpisah:
-//   npx prisma migrate dev --name add_badge_system
-
-model Badge {
-  id          String @id @default(uuid())
-  slug        String @unique  // e.g. "first_post", "reputation_100"
-  name        String
-  description String
-  icon        String          // emoji atau path aset
-  threshold   Int    @default(0) // 0 = manual; > 0 = otomatis saat reputasi tercapai
-
-  users UserBadge[]
-
-  @@index([threshold])
-}
-
-model UserBadge {
-  id       String   @id @default(uuid())
-  earnedAt DateTime @default(now())
-
-  userId  String
-  badgeId String
-
-  user  User  @relation(fields: [userId],  references: [id], onDelete: Cascade)
-  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, badgeId])
-  @@index([userId])
-}
-
-// ── ExpertApplication ─────────────────────────────────────────────────────────
-// MODEL BARU — perlu satu migrasi terpisah:
-//   npx prisma migrate dev --name add_expert_application
-
-model ExpertApplication {
-  id          String            @id @default(uuid())
-  field       String            // bidang keahlian yang diajukan
-  credentials String            // bukti: link jurnal, institusi, sertifikasi, dll
-  status      ApplicationStatus @default(PENDING)
-  reviewNote  String?           // catatan penolakan / persetujuan dari admin
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([status])
 }

@@ -8,7 +8,7 @@
  *   ADMIN      → /admin/dashboard
  *   MODERATOR  → /moderator/dashboard
  *   EXPERT     → /expert/dashboard
- *   USER       → /user/dashboard
+ *   USER       → /user
  */
 
 import { useEffect, useContext } from 'react'

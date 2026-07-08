@@ -1,4 +1,4 @@
-import { useContext, useState } from 'react'
+import { useContext, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { AuthContext } from '../../context/AuthContext'
 import { useRouter } from 'next/router'
@@ -8,16 +8,28 @@ export function NavUserMenu() {
   const router = useRouter()
   const [showMenu, setShowMenu] = useState(false)
 
+  // FIX: dropdown sebelumnya tidak pernah tertutup saat mengklik di luar area
+  // menu (tidak ada listener sama sekali — hanya stopPropagation di dalam
+  // menu). Tambahkan listener klik global supaya perilaku dropdown standar.
+  useEffect(() => {
+    if (!showMenu) return
+    const closeOnOutsideClick = () => setShowMenu(false)
+    document.addEventListener('click', closeOnOutsideClick)
+    return () => document.removeEventListener('click', closeOnOutsideClick)
+  }, [showMenu])
+
   const avatarInitial = user?.profile?.username?.[0]?.toUpperCase()
     ?? (user?.role || 'U')[0].toUpperCase()
   const usernameLabel = user?.profile?.username ?? user?.role ?? 'User'
 
   const dashboardHref = (() => {
-    if (!user) return '/guest/index'
+    // FIX: '/guest/index' bukan route yang ada (404) — dulu dipakai selagi
+    // `user` belum ter-hydrate walau `token` sudah ada. Fallback ke beranda publik.
+    if (!user) return '/'
     if (user.role === 'ADMIN') return '/admin/dashboard'
     if (user.role === 'MODERATOR') return '/moderator/dashboard'
     if (user.role === 'EXPERT') return '/expert/dashboard'
-    return '/user/dashboard'
+    return '/user'
   })()
 
   const profileHref       = '/user/profile'

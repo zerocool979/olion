@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useCallback } from "react";
+import { useState, useEffect, useContext, useCallback, useRef } from "react";
 import { AuthContext } from "../../context/AuthContext";
 import Link from "next/link";
 import Image from "next/image";
@@ -83,6 +83,16 @@ export default function UserDashboard() {
     hint: `${tier.threshold.toLocaleString()} rep`,
   }));
 
+  // FIX: the 30s poll below used to compare against `feed` captured by the
+  // effect's closure (always [] since setFeed resolves asynchronously after
+  // the effect runs), so `!feed[0]` was always true and newCount kept
+  // incrementing every 30s even with no new discussion. Track the latest
+  // feed's first id in a ref that always reflects the current render.
+  const latestFeedIdRef = useRef(null);
+  useEffect(() => {
+    latestFeedIdRef.current = feed[0]?.id ?? null;
+  }, [feed]);
+
   /* fetch on mount */
   useEffect(() => {
     if (!user) return;
@@ -140,7 +150,7 @@ export default function UserDashboard() {
         .get("/discussions?limit=1&sort=recent")
         .then((r) => {
           const d = r.data?.data ?? r.data ?? [];
-          if (Array.isArray(d) && d[0] && (!feed[0] || d[0].id !== feed[0].id)) setNewCount((c) => c + 1);
+          if (Array.isArray(d) && d[0] && d[0].id !== latestFeedIdRef.current) setNewCount((c) => c + 1);
         })
         .catch(() => {});
     }, 30_000);
