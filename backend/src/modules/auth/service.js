@@ -147,7 +147,7 @@ module.exports = {
   // ─── ADDED: GET /users/by-username/:username — public profile lookup
   // username hidup di Profile, bukan User — query lewat relasi.
   // Reputasi dihitung dari agregat ReputationLog, bukan field langsung.
-  getByUsername: async (username) => {
+  getByUsername: async (username, viewerId) => {
     const profile = await prisma.profile.findUnique({
       where: { username },
       select: {
@@ -159,7 +159,7 @@ module.exports = {
             isVerifiedExpert: true,
             createdAt: true,
             _count: {
-              select: { discussions: true, votes: true }
+              select: { discussions: true, votes: true, followers: true, following: true }
             }
           }
         }
@@ -173,6 +173,15 @@ module.exports = {
       _sum: { point: true }
     })
 
+    let isFollowed = false
+    if (viewerId && viewerId !== profile.user.id) {
+      const followRow = await prisma.follow.findUnique({
+        where: { followerId_followingId: { followerId: viewerId, followingId: profile.user.id } },
+        select: { id: true },
+      })
+      isFollowed = !!followRow
+    }
+
     return {
       id: profile.user.id,
       username,
@@ -182,6 +191,7 @@ module.exports = {
       createdAt: profile.user.createdAt,
       reputation: repAgg._sum.point ?? 0,
       _count: profile.user._count,
+      isFollowed,
     }
   },
 

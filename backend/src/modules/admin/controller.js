@@ -30,6 +30,7 @@ exports.revokeExpert = async (req, res, next) => {
     const updated = await prisma.user.update({
       where: { id: req.params.id },
       data: { role: 'USER', isVerifiedExpert: false },
+      select: { id: true, email: true, role: true, isVerifiedExpert: true, isBanned: true, profile: true },
     })
     res.json({ data: updated })
   } catch (e) { next(e) }
@@ -64,6 +65,7 @@ exports.setRole = async (req, res, next) => {
     const updated = await prisma.user.update({
       where: { id: req.params.id },
       data:  { role },
+      select: { id: true, email: true, role: true, isVerifiedExpert: true, isBanned: true, profile: true },
     })
     res.json({ data: updated })
   } catch (e) { next(e) }

@@ -15,6 +15,20 @@ async function withReputation(user) {
   return { ...user, reputation: agg._sum.point ?? 0 }
 }
 
+// Menandai setiap orang di `people` dengan isFollowed relatif ke viewerId,
+// dengan satu query batched (bukan N+1 query per orang).
+async function attachIsFollowed(people, viewerId) {
+  if (!viewerId || people.length === 0) {
+    return people.map(p => ({ ...p, isFollowed: false }))
+  }
+  const rows = await prisma.follow.findMany({
+    where: { followerId: viewerId, followingId: { in: people.map(p => p.id) } },
+    select: { followingId: true },
+  })
+  const followedSet = new Set(rows.map(r => r.followingId))
+  return people.map(p => ({ ...p, isFollowed: followedSet.has(p.id) }))
+}
+
 module.exports = {
   // GET /users/:id
   detail: async (req, res, next) => {
@@ -23,7 +37,17 @@ module.exports = {
         where: { id: req.params.id }, select: PUBLIC_USER_SELECT,
       })
       if (!user) return res.status(404).json({ message: 'Pengguna tidak ditemukan' })
-      res.json({ user: await withReputation(user) })
+
+      let isFollowed = false
+      if (req.userId && req.userId !== user.id) {
+        const followRow = await prisma.follow.findUnique({
+          where: { followerId_followingId: { followerId: req.userId, followingId: user.id } },
+          select: { id: true },
+        })
+        isFollowed = !!followRow
+      }
+
+      res.json({ user: { ...(await withReputation(user)), isFollowed } })
     } catch (err) { next(err) }
   },
 
@@ -135,7 +159,9 @@ module.exports = {
         include: { follower: { select: PUBLIC_USER_SELECT } },
         orderBy: { createdAt: 'desc' },
       })
-      res.json({ data: follows.map(f => f.follower) })
+      const people = follows.map(f => f.follower)
+      const withFollowStatus = await attachIsFollowed(people, req.userId)
+      res.json({ data: withFollowStatus })
     } catch (err) { next(err) }
   },
 
@@ -149,7 +175,9 @@ module.exports = {
         include: { following: { select: PUBLIC_USER_SELECT } },
         orderBy: { createdAt: 'desc' },
       })
-      res.json({ data: follows.map(f => f.following) })
+      const people = follows.map(f => f.following)
+      const withFollowStatus = await attachIsFollowed(people, req.userId)
+      res.json({ data: withFollowStatus })
     } catch (err) { next(err) }
   },
 }

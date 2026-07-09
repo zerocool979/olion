@@ -1,7 +1,18 @@
 import { CommentItem } from './CommentItem'
 import { EmptyComments } from './EmptyComments'
 
-export function CommentList({ comments, loading, onVote, onReply, commentVotes, votingCommentId }) {
+export function CommentList({
+  comments,
+  loading,
+  onVote,
+  onReply,
+  commentVotes,
+  votingCommentId,
+  currentUserId,
+  isStaff = false,
+  onEdit,
+  onDelete,
+}) {
   if (loading) {
     return (
       <div role="status" aria-label="Memuat komentar">
@@ -31,11 +42,13 @@ export function CommentList({ comments, loading, onVote, onReply, commentVotes, 
           onReply={onReply}
           voteState={commentVotes[c.id] || null}
           voteLoading={votingCommentId === c.id}
+          commentVotes={commentVotes}
+          currentUserId={currentUserId}
+          isStaff={isStaff}
+          onEdit={onEdit}
+          onDelete={onDelete}
         />
       ))}
     </div>
   )
 }
-
-
-

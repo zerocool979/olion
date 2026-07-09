@@ -2,11 +2,13 @@ import { useContext, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { AuthContext } from '../../context/AuthContext'
 import { useRouter } from 'next/router'
+import { useUnreadNotifications } from '../../hooks/useUnreadNotifications'
 
 export function NavUserMenu() {
   const { user, logout } = useContext(AuthContext)
   const router = useRouter()
   const [showMenu, setShowMenu] = useState(false)
+  const unreadCount = useUnreadNotifications()
 
   // FIX: dropdown sebelumnya tidak pernah tertutup saat mengklik di luar area
   // menu (tidak ada listener sama sekali — hanya stopPropagation di dalam
@@ -189,6 +191,16 @@ export function NavUserMenu() {
             >
               <span style={{ opacity: 0.55, flexShrink: 0 }}>{item.icon}</span>
               {item.label}
+              {item.label === 'Notifikasi' && unreadCount > 0 && (
+                <span style={{
+                  marginLeft: 'auto', background: '#ef4444', color: '#fff',
+                  borderRadius: '999px', fontSize: '0.65rem', fontWeight: 700,
+                  minWidth: '16px', height: '16px', lineHeight: '16px',
+                  textAlign: 'center', padding: '0 4px',
+                }}>
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
             </Link>
           ))}
 

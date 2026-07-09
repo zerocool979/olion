@@ -36,11 +36,12 @@ export default function AdminDashboard() {
   const [stats,   setStats]   = useState(null)
   const [users,   setUsers]   = useState([])
   const [reports, setReports] = useState([])
+  const [expertApps, setExpertApps] = useState([])
   const [uFilter, setUFilter] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
   const [loading, setLoading] = useState(true)
   const [toast,   setToast]   = useState(null)
-  const [tab,     setTab]     = useState('users') // users | reports
+  const [tab,     setTab]     = useState('users') // users | reports | experts
 
   const showToast = (msg, ok = true) => {
     setToast({ msg, ok })
@@ -59,19 +60,32 @@ export default function AdminDashboard() {
   const fetchAll = useCallback(async () => {
     setLoading(true)
     try {
-      const [sRes, uRes, rRes] = await Promise.all([
+      const [sRes, uRes, rRes, eRes] = await Promise.all([
         api.get('/admin/stats'),
         api.get('/admin/users?take=100'),
         api.get('/reports?take=50'),
+        api.get('/admin/expert-applications?status=PENDING&take=50'),
       ])
       setStats(sRes.data.data)
       setUsers(uRes.data.data ?? [])
       setReports(rRes.data.data ?? [])
+      setExpertApps(eRes.data.data ?? [])
     } catch { /* noop */ }
     setLoading(false)
   }, [])
 
   useEffect(() => { fetchAll() }, [fetchAll])
+
+  const reviewApplication = async (id, status) => {
+    const reviewNote = status === 'REJECTED' ? window.prompt('Catatan penolakan (opsional):') ?? '' : ''
+    try {
+      await api.put(`/admin/expert-applications/${id}`, { status, reviewNote })
+      showToast(status === 'APPROVED' ? 'Permohonan disetujui, user kini Expert' : 'Permohonan ditolak')
+      fetchAll()
+    } catch (err) {
+      showToast(err.response?.data?.message ?? 'Gagal memproses permohonan', false)
+    }
+  }
 
   // ── Aksi moderasi ────────────────────────────────────────────────────────────
   const setRole = async (id, role) => {
@@ -156,7 +170,7 @@ export default function AdminDashboard() {
 
           {/* Tab navigasi */}
           <div style={{ display: 'flex', gap: 4, margin: '24px 0 0', borderBottom: `1px solid ${colors.border}` }}>
-            {[['users','👥 Pengguna'], ['reports','🚨 Laporan']].map(([key, label]) => (
+            {[['users','👥 Pengguna'], ['reports','🚨 Laporan'], ['experts',`✅ Permohonan Pakar (${expertApps.length})`]].map(([key, label]) => (
               <button key={key} onClick={() => setTab(key)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '10px 20px', fontSize: 14, fontWeight: tab === key ? 700 : 400, color: tab === key ? colors.accent : colors.textSecondary, borderBottom: tab === key ? `2px solid ${colors.accent}` : '2px solid transparent', transition: 'all 0.15s' }}>
                 {label}
               </button>
@@ -290,6 +304,50 @@ export default function AdminDashboard() {
                             </button>
                           </div>
                         )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* ── Tab: Permohonan Pakar ── */}
+          {tab === 'experts' && (
+            <>
+              <SectionTitle>Permohonan Verifikasi Pakar (Pending)</SectionTitle>
+              {expertApps.length === 0 ? (
+                <div style={{ textAlign: 'center', color: colors.textSecondary, padding: 60 }}>
+                  <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
+                  <div>Tidak ada permohonan yang menunggu</div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {expertApps.map(a => (
+                    <div key={a.id} style={{ background: colors.bgElevated, border: '1px solid #f59e0b55', borderRadius: 10, padding: '16px 20px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                            <Avatar username={a.user?.profile?.username} size={26} />
+                            <strong style={{ fontSize: 13 }}>{a.user?.profile?.username ?? a.user?.email}</strong>
+                          </div>
+                          <div style={{ fontSize: 13, color: colors.textPrimary, marginBottom: 4 }}>
+                            <strong>Bidang:</strong> {a.field}
+                          </div>
+                          <div style={{ fontSize: 12, color: colors.textSecondary, whiteSpace: 'pre-wrap' }}>
+                            <strong>Kredensial:</strong> {a.credentials}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          <button onClick={() => reviewApplication(a.id, 'APPROVED')}
+                            style={{ background: '#10b98122', color: '#10b981', border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+                            ✅ Setujui
+                          </button>
+                          <button onClick={() => reviewApplication(a.id, 'REJECTED')}
+                            style={{ background: '#ef444422', color: '#ef4444', border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
+                            ✖ Tolak
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}

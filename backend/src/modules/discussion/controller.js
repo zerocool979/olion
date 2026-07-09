@@ -10,14 +10,24 @@ module.exports = {
   list: async (req, res, next) => {
     try {
       const skip = parseInt(req.query.skip) || 0
-      const take = Math.min(parseInt(req.query.take) || 20, 50)
-      res.json({ data: await discussionService.list({ skip, take }) })
+      const take = Math.min(parseInt(req.query.take ?? req.query.limit) || 20, 50)
+      const { userId, categoryId, sort, feed, role } = req.query
+
+      // Hanya staff (moderator/admin) yang boleh melihat konten tersembunyi —
+      // publik/guest tetap hanya melihat konten isHidden:false.
+      const isStaff = ['ADMIN', 'MODERATOR'].includes(req.userRole)
+      const isHidden = isStaff && req.query.isHidden === 'true'
+
+      const data = await discussionService.list({
+        skip, take, userId, categoryId, sort, feed, role, viewerId: req.userId, isHidden,
+      })
+      res.json({ data })
     } catch (err) { next(err) }
   },
 
   detail: async (req, res, next) => {
     try {
-      const discussion = await discussionService.detail(req.params.id)
+      const discussion = await discussionService.detail(req.params.id, req.userId)
       if (!discussion) return res.status(404).json({ message: 'Diskusi tidak ditemukan' })
       res.json({ data: discussion })
     } catch (err) { next(err) }

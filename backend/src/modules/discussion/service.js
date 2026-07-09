@@ -1,5 +1,6 @@
 'use strict'
 const prisma = require('../../config/prisma')
+const bookmarkService = require('../bookmark/service')
 
 const DISCUSSION_INCLUDE = {
   user: {
@@ -13,18 +14,51 @@ const DISCUSSION_INCLUDE = {
   },
 }
 
-async function list({ skip = 0, take = 20 } = {}) {
+async function list({
+  skip = 0,
+  take = 20,
+  userId,
+  categoryId,
+  sort = 'recent',
+  feed,
+  role,
+  viewerId,
+  isHidden = false,
+} = {}) {
+  let orderBy
+  if (sort === 'votes') orderBy = { votes: { _count: 'desc' } }
+  else if (sort === 'comments') orderBy = { comments: { _count: 'desc' } }
+  else orderBy = { createdAt: 'desc' }
+
+  const where = { isHidden }
+  if (userId) where.userId = userId
+  if (categoryId) where.categoryId = categoryId
+  if (role) where.user = { role: String(role).toUpperCase() }
+
+  if (feed === 'following') {
+    // Tanpa login, feed following kosong (bukan 401) — konsisten dengan
+    // endpoint publik lain yang tetap bisa dipanggil oleh guest.
+    if (!viewerId) return []
+    const follows = await prisma.follow.findMany({
+      where: { followerId: viewerId },
+      select: { followingId: true },
+    })
+    const ids = follows.map((f) => f.followingId)
+    if (ids.length === 0) return []
+    where.userId = { in: ids }
+  }
+
   return prisma.discussion.findMany({
     skip,
     take,
-    where: { isHidden: false },
-    orderBy: { createdAt: 'desc' },
+    where,
+    orderBy,
     include: DISCUSSION_INCLUDE,
   })
 }
 
-async function detail(id) {
-  return prisma.discussion.findUnique({
+async function detail(id, currentUserId) {
+  const discussion = await prisma.discussion.findUnique({
     where: { id },
     include: {
       user: { include: { profile: true } },
@@ -37,16 +71,50 @@ async function detail(id) {
           replies: {
             where: { isHidden: false },
             orderBy: { createdAt: 'asc' },
-            include: { user: { include: { profile: true } } },
+            include: {
+              user: { include: { profile: true } },
+              votes: currentUserId ? { where: { userId: currentUserId }, select: { value: true } } : false,
+              _count: { select: { votes: true } },
+            },
           },
+          votes: currentUserId ? { where: { userId: currentUserId }, select: { value: true } } : false,
           _count: { select: { votes: true } },
         },
       },
+      votes: currentUserId ? { where: { userId: currentUserId }, select: { value: true } } : false,
       _count: {
         select: { votes: true, comments: true },
       },
     },
   })
+
+  if (!discussion) return null
+
+  // Ratakan userVote per node supaya mudah dipakai frontend, tanpa membocorkan
+  // daftar vote user lain (relasi votes penuh tidak diekspos ke response).
+  const flatten = (node) => {
+    const userVote = Array.isArray(node.votes) ? (node.votes[0]?.value ?? null) : null
+    const { votes, ...rest } = node
+    return { ...rest, userVote }
+  }
+
+  const withReplies = {
+    ...discussion,
+    comments: discussion.comments.map((c) => ({
+      ...flatten(c),
+      replies: c.replies.map(flatten),
+    })),
+  }
+
+  const flat = flatten(withReplies)
+
+  if (currentUserId) {
+    flat.isBookmarked = await bookmarkService.isBookmarked(currentUserId, id)
+  } else {
+    flat.isBookmarked = false
+  }
+
+  return flat
 }
 
 async function create(userId, categoryId, title, content, mode, discipline) {

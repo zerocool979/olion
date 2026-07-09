@@ -2,12 +2,16 @@
 const prisma = require('../../config/prisma')
 
 module.exports = {
-  // GET /notifications?limit=
+  // GET /notifications?limit=&unread=true&type=FOLLOW
   list: async (req, res, next) => {
     try {
       const take = Math.min(parseInt(req.query.limit, 10) || 20, 50)
+      const where = { userId: req.userId }
+      if (req.query.unread === 'true') where.read = false
+      if (req.query.type) where.type = String(req.query.type).toUpperCase()
+
       const notifications = await prisma.notification.findMany({
-        where: { userId: req.userId },
+        where,
         include: {
           actor: { select: { id: true, profile: { select: { username: true } } } },
         },

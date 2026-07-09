@@ -1,9 +1,11 @@
 import { useContext } from 'react'
 import Link from 'next/link'
 import { AuthContext } from '../../context/AuthContext'
+import { useUnreadNotifications } from '../../hooks/useUnreadNotifications'
 
 export function NavLinks() {
   const { token, user } = useContext(AuthContext)
+  const unreadCount = useUnreadNotifications()
 
   if (!token) {
     return (
@@ -42,12 +44,23 @@ export function NavLinks() {
         href={notificationsHref}
         className="btn-ghost"
         title="Notifikasi"
-        style={{ fontSize: '0.875rem', padding: '0.4rem 0.5rem' }}
+        style={{ fontSize: '0.875rem', padding: '0.4rem 0.5rem', position: 'relative' }}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
           <path d="M13.73 21a2 2 0 01-3.46 0"/>
         </svg>
+        {unreadCount > 0 && (
+          <span aria-label={`${unreadCount} notifikasi belum dibaca`} style={{
+            position: 'absolute', top: 2, right: 2,
+            background: '#ef4444', color: '#fff',
+            borderRadius: '999px', fontSize: '0.6rem', fontWeight: 700,
+            minWidth: '14px', height: '14px', lineHeight: '14px',
+            textAlign: 'center', padding: '0 3px',
+          }}>
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
+        )}
       </Link>
 
       {user?.role === 'ADMIN' && (

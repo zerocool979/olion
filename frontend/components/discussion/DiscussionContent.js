@@ -1,5 +1,59 @@
-export function DiscussionContent({ discussion }) {
+export function DiscussionContent({
+  discussion,
+  isEditing = false,
+  editTitle = '',
+  setEditTitle,
+  editContent = '',
+  setEditContent,
+  editSubmitting = false,
+  editError = '',
+  onSaveEdit,
+  onCancelEdit,
+}) {
   const stats = discussion._count ?? {}
+
+  if (isEditing) {
+    return (
+      <form className="dd-content dd-content--edit" onSubmit={onSaveEdit} aria-label="Edit diskusi">
+        <label htmlFor="dd-edit-title" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem', display: 'block' }}>
+          Judul
+        </label>
+        <input
+          id="dd-edit-title"
+          type="text"
+          value={editTitle}
+          onChange={e => setEditTitle(e.target.value)}
+          disabled={editSubmitting}
+          maxLength={200}
+          className="dd-comment-form__textarea"
+          style={{ marginBottom: '0.75rem' }}
+        />
+        <label htmlFor="dd-edit-content" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.3rem', display: 'block' }}>
+          Isi diskusi
+        </label>
+        <textarea
+          id="dd-edit-content"
+          value={editContent}
+          onChange={e => setEditContent(e.target.value)}
+          disabled={editSubmitting}
+          rows={6}
+          className="dd-comment-form__textarea"
+        />
+        {editError && (
+          <p className="dd-comment-form__error" role="alert" style={{ marginTop: '0.5rem' }}>{editError}</p>
+        )}
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+          <button type="submit" className="btn-primary" disabled={editSubmitting} style={{ fontSize: '0.84rem' }}>
+            {editSubmitting ? 'Menyimpan...' : 'Simpan Perubahan'}
+          </button>
+          <button type="button" className="btn-ghost" onClick={onCancelEdit} disabled={editSubmitting} style={{ fontSize: '0.84rem' }}>
+            Batal
+          </button>
+        </div>
+      </form>
+    )
+  }
+
   return (
     <article className="dd-content" aria-label="Isi diskusi">
       <p className="dd-content__body">{discussion.content}</p>
@@ -29,6 +83,3 @@ export function DiscussionContent({ discussion }) {
     </article>
   )
 }
-
-
-

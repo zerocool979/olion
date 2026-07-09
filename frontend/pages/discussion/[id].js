@@ -17,7 +17,7 @@ import {
 export default function GuestDiscussion() {
   const router = useRouter()
   const { id } = router.query
-  const { token } = useContext(AuthContext)
+  const { token, user } = useContext(AuthContext)
   const isLoggedIn = !!token
 
   const {
@@ -28,6 +28,23 @@ export default function GuestDiscussion() {
     voteState,
     voteCount,
     votePending,
+    isBookmarked,
+    bookmarkPending,
+    handleToggleBookmark,
+    isEditing,
+    editTitle,
+    setEditTitle,
+    editContent,
+    setEditContent,
+    editSubmitting,
+    editError,
+    startEdit,
+    cancelEdit,
+    handleSaveEdit,
+    deleting,
+    handleDeleteDiscussion,
+    handleUpdateComment,
+    handleDeleteComment,
     newComment,
     setNewComment,
     submitting,
@@ -45,6 +62,7 @@ export default function GuestDiscussion() {
     handleReply,
     handleCommentVote,
     handleCopyLink,
+    handleShare,
   } = useDiscussion(id)
 
   if (loading) {
@@ -72,11 +90,28 @@ export default function GuestDiscussion() {
     )
   }
 
+  const isOwner = !!user && discussion.userId === user.id
+  const isStaff = user && ['ADMIN', 'MODERATOR'].includes(user.role)
+
   return (
     <div className="page-shell">
       <div className="page-grid-bg" />
       <div className="page-content" style={{ maxWidth: '760px' }}>
-        <DiscussionHeader discussion={discussion} onCopyLink={handleCopyLink} />
+        <DiscussionHeader
+          discussion={discussion}
+          onCopyLink={handleCopyLink}
+          onShare={handleShare}
+          isOwner={isOwner}
+          isStaff={isStaff}
+          isLoggedIn={isLoggedIn}
+          isBookmarked={isBookmarked}
+          bookmarkPending={bookmarkPending}
+          onToggleBookmark={handleToggleBookmark}
+          onEditToggle={isEditing ? cancelEdit : startEdit}
+          isEditing={isEditing}
+          onDelete={handleDeleteDiscussion}
+          deleting={deleting}
+        />
 
         {isLoggedIn && (
           <DiscussionVote
@@ -87,7 +122,18 @@ export default function GuestDiscussion() {
           />
         )}
 
-        <DiscussionContent discussion={discussion} />
+        <DiscussionContent
+          discussion={discussion}
+          isEditing={isEditing}
+          editTitle={editTitle}
+          setEditTitle={setEditTitle}
+          editContent={editContent}
+          setEditContent={setEditContent}
+          editSubmitting={editSubmitting}
+          editError={editError}
+          onSaveEdit={handleSaveEdit}
+          onCancelEdit={cancelEdit}
+        />
 
         <section style={{ marginTop: '2rem' }}>
           <CommentList
@@ -97,6 +143,10 @@ export default function GuestDiscussion() {
             onReply={setReplyTarget}
             commentVotes={commentVotes}
             votingCommentId={votingCommentId}
+            currentUserId={user?.id}
+            isStaff={isStaff}
+            onEdit={handleUpdateComment}
+            onDelete={handleDeleteComment}
           />
 
           {replyTarget && (
@@ -158,6 +208,3 @@ export default function GuestDiscussion() {
     </div>
   )
 }
-
-
-

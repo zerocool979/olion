@@ -2,11 +2,11 @@
  * pages/user/chat.jsx  — Obrolan
  */
 import { useState, useEffect, useRef, useContext, useCallback } from 'react'
+import { useRouter } from 'next/router'
 import { AuthContext } from '../../context/AuthContext'
 import api from '../../lib/api'
-import { Avatar, SkeletonCard, EmptyState, colors } from '../../components/dashboard'
+import { Avatar, SkeletonCard, colors } from '../../components/dashboard'
 import UserLayout from './_layout'
-import Link from 'next/link'
 
 function timeAgo(d) {
   if (!d) return ''
@@ -17,8 +17,16 @@ function timeAgo(d) {
   return `${Math.floor(s / 86400)}h`
 }
 
+// Backend mengembalikan participants sebagai [{ user: { id, profile } }],
+// bukan array flat user — normalisasi supaya konsisten dipakai di UI.
+function normaliseMembers(room) {
+  const raw = room.participants ?? room.members ?? []
+  return raw.map(p => p.user ?? p)
+}
+
 export default function Chat() {
   const { user } = useContext(AuthContext)
+  const router = useRouter()
 
   const [rooms,        setRooms]        = useState([])
   const [roomsLoading, setRoomsLoading] = useState(true)
@@ -27,23 +35,59 @@ export default function Chat() {
   const [msgLoading,   setMsgLoading]   = useState(false)
   const [draft,        setDraft]        = useState('')
   const [sending,      setSending]      = useState(false)
+  const [starting,     setStarting]     = useState(false)
+  const [error,        setError]        = useState('')
   const bottomRef = useRef(null)
 
   const myId = user?.id
 
-  // Load rooms
+  const loadRooms = useCallback(() => {
+    setRoomsLoading(true)
+    return api.get('/chat/conversations')
+      .then(r => {
+        const d = r.data?.data ?? r.data ?? []
+        const arr = Array.isArray(d) ? d : []
+        setRooms(arr)
+        return arr
+      })
+      .catch(() => { setRooms([]); return [] })
+      .finally(() => setRoomsLoading(false))
+  }, [])
+
+  // Load daftar percakapan
   useEffect(() => {
     if (!user) return
-    api.get('/chat/rooms')
-      .then(r => { const d = r.data?.data ?? r.data ?? []; setRooms(Array.isArray(d) ? d : []) })
-      .catch(() => setRooms([]))
-      .finally(() => setRoomsLoading(false))
-  }, [user])
+    loadRooms()
+  }, [user, loadRooms])
+
+  // Deep-link dari halaman lain, mis. tombol "Kirim Pesan" di profil:
+  // /user/chat?userId=xxx → otomatis buka/mulai percakapan dengan orang itu.
+  useEffect(() => {
+    if (!user || !router.isReady) return
+    const targetUserId = router.query.userId
+    if (!targetUserId || typeof targetUserId !== 'string') return
+    if (targetUserId === myId) return
+
+    setStarting(true)
+    setError('')
+    api.post('/chat/conversations', { userId: targetUserId })
+      .then(async (r) => {
+        const conv = r.data?.conversation ?? r.data?.data ?? r.data
+        await loadRooms()
+        setActiveRoom(conv)
+        // Bersihkan query param supaya tidak retrigger saat navigasi lain
+        router.replace('/user/chat', undefined, { shallow: true })
+      })
+      .catch((err) => {
+        setError(err.response?.data?.message ?? 'Gagal memulai percakapan.')
+      })
+      .finally(() => setStarting(false))
+  }, [user, router.isReady, router.query.userId, myId])
 
   // Load messages for active room
   const loadMessages = useCallback((roomId) => {
     setMsgLoading(true)
-    api.get(`/chat/rooms/${roomId}/messages?limit=50`)
+    api.get(`/chat/conversations/${roomId}/messages`)
       .then(r => { const d = r.data?.data ?? r.data ?? []; setMessages(Array.isArray(d) ? d : []) })
       .catch(() => setMessages([]))
       .finally(() => setMsgLoading(false))
@@ -51,18 +95,18 @@ export default function Chat() {
 
   useEffect(() => {
     if (activeRoom) loadMessages(activeRoom.id)
-  }, [activeRoom])
+  }, [activeRoom, loadMessages])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Poll messages every 5s
+  // Poll pesan tiap 5 detik selagi room aktif dibuka
   useEffect(() => {
     if (!activeRoom) return
     const t = setInterval(() => loadMessages(activeRoom.id), 5000)
     return () => clearInterval(t)
-  }, [activeRoom])
+  }, [activeRoom, loadMessages])
 
   const sendMessage = async () => {
     if (!draft.trim() || !activeRoom || sending) return
@@ -70,16 +114,17 @@ export default function Chat() {
     const text = draft.trim()
     setDraft('')
     try {
-      await api.post(`/chat/rooms/${activeRoom.id}/messages`, { content: text })
-      loadMessages(activeRoom.id)
+      await api.post(`/chat/conversations/${activeRoom.id}/messages`, { content: text })
+      await loadMessages(activeRoom.id)
+      loadRooms() // refresh preview pesan terakhir di sidebar
     } catch (err) {
-      console.error(err)
+      setError(err.response?.data?.message ?? 'Gagal mengirim pesan.')
       setDraft(text)
     } finally { setSending(false) }
   }
 
   const otherUser = (room) => {
-    const members = room.members ?? room.participants ?? []
+    const members = normaliseMembers(room)
     return members.find(m => m.id !== myId) ?? members[0] ?? {}
   }
 
@@ -87,7 +132,7 @@ export default function Chat() {
     <div style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 16, padding: '14px 16px' }}>
       <span style={{ fontWeight: 700, fontSize: 15, color: colors.textPrimary, display: 'block', marginBottom: 8 }}>Info Chat</span>
       <p style={{ fontSize: 13, color: colors.textSecondary, lineHeight: 1.5 }}>
-        Semua percakapan bersifat privat. Hanya kamu dan lawan bicara yang dapat melihat pesan ini.
+        Semua percakapan bersifat privat. Hanya kamu dan lawan bicara yang dapat melihat pesan ini. Kunjungi profil seseorang dan klik &quot;Kirim Pesan&quot; untuk memulai percakapan baru.
       </p>
     </div>
   )
@@ -101,6 +146,14 @@ export default function Chat() {
           <div style={{ padding: '14px 16px', borderBottom: `1px solid ${colors.border}`, position: 'sticky', top: 0, background: colors.bg }}>
             <h1 style={{ fontSize: 18, fontWeight: 700, color: colors.textPrimary }}>💬 Obrolan</h1>
           </div>
+
+          {error && (
+            <p role="alert" style={{ padding: '10px 16px', fontSize: 12, color: '#f87171' }}>{error}</p>
+          )}
+
+          {starting && (
+            <p style={{ padding: '10px 16px', fontSize: 12, color: colors.textSecondary }}>Memulai percakapan…</p>
+          )}
 
           {roomsLoading
             ? Array.from({ length: 5 }).map((_, i) => (
@@ -122,7 +175,7 @@ export default function Chat() {
             : rooms.map(room => {
                 const other   = otherUser(room)
                 const uname   = other.profile?.username ?? other.username ?? 'Pengguna'
-                const lastMsg = room.lastMessage ?? room.messages?.[room.messages.length - 1]
+                const lastMsg = room.messages?.[0] ?? room.lastMessage
                 const active  = activeRoom?.id === room.id
                 return (
                   <div key={room.id} onClick={() => setActiveRoom(room)}
@@ -166,9 +219,6 @@ export default function Chat() {
                     <div style={{ fontWeight: 700, fontSize: 15, color: colors.textPrimary }}>
                       {otherUser(activeRoom).profile?.username ?? otherUser(activeRoom).username ?? 'Pengguna'}
                     </div>
-                    <div style={{ fontSize: 11, color: colors.textSecondary }}>
-                      {(otherUser(activeRoom).profile?.reputation ?? otherUser(activeRoom).reputation ?? 0).toLocaleString()} rep
-                    </div>
                   </div>
                 </div>
 
@@ -176,6 +226,12 @@ export default function Chat() {
                 <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {msgLoading
                     ? Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} variant="row" />)
+                    : messages.length === 0
+                    ? (
+                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.textSecondary, fontSize: 13 }}>
+                        Belum ada pesan. Sapa duluan!
+                      </div>
+                    )
                     : messages.map((msg, i) => {
                         const mine = msg.senderId === myId || msg.sender?.id === myId
                         return (
@@ -203,6 +259,7 @@ export default function Chat() {
                     onChange={e => setDraft(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendMessage())}
                     placeholder="Tulis pesan…"
+                    disabled={sending}
                     style={{ flex: 1, padding: '10px 16px', borderRadius: 24, border: `1px solid ${colors.border}`, background: colors.bgElevated, color: colors.textPrimary, fontSize: 14, outline: 'none' }}
                   />
                   <button onClick={sendMessage} disabled={!draft.trim() || sending} style={{
@@ -222,6 +279,3 @@ export default function Chat() {
     </UserLayout>
   )
 }
-
-
-

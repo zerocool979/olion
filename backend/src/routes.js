@@ -2,6 +2,7 @@
 const router    = require('express').Router()
 const rateLimit = require('express-rate-limit')
 const auth      = require('./middlewares/auth')
+const optionalAuth = require('./middlewares/optionalAuth')
 const role      = require('./middlewares/role')
 
 // ── Controllers ───────────────────────────────────────────────────────────────
@@ -20,6 +21,8 @@ const trendingCtrl    = require('./modules/trending/controller')
 const leaderboardCtrl = require('./modules/leaderboard/controller')
 const notifCtrl       = require('./modules/notification/controller')
 const chatCtrl        = require('./modules/chat/controller')
+const bookmarkCtrl    = require('./modules/bookmark/controller')
+const moderatorCtrl   = require('./modules/moderator/controller')
 
 // ── Rate limiters ─────────────────────────────────────────────────────────────
 const authLimiter = rateLimit({
@@ -42,15 +45,15 @@ router.patch ('/auth/password',  auth,        authCtrl.changePassword)
 
 // ── User ──────────────────────────────────────────────────────────────────────
 router.get   ('/users',                       userCtrl.list)
-router.get   ('/users/by-username/:username', authCtrl.getByUsername)
-router.get   ('/users/:id',                   userCtrl.detail)
+router.get   ('/users/by-username/:username', optionalAuth, authCtrl.getByUsername)
+router.get   ('/users/:id',                   optionalAuth, userCtrl.detail)
 router.patch ('/users/me/profile', auth,      userCtrl.updateProfile)
 
 // ── Follow ────────────────────────────────────────────────────────────────────
 router.post  ('/users/:id/follow',         auth, writeLimiter, userCtrl.follow)
 router.delete('/users/:id/follow',         auth,               userCtrl.unfollow)
-router.get   ('/users/:username/followers',      userCtrl.followers)
-router.get   ('/users/:username/following',      userCtrl.followingList)
+router.get   ('/users/:username/followers',      optionalAuth, userCtrl.followers)
+router.get   ('/users/:username/following',      optionalAuth, userCtrl.followingList)
 
 // ── Badges ────────────────────────────────────────────────────────────────────
 router.get('/badges',              badgeCtrl.listAll)
@@ -65,12 +68,18 @@ router.get('/categories',                     categoryCtrl.getAll)
 router.get('/categories/:slug/subcategories', categoryCtrl.getSubcategories)
 
 // ── Discussions ───────────────────────────────────────────────────────────────
-router.get   ('/discussions',     discussionCtrl.list)
-router.get   ('/discussions/:id', discussionCtrl.detail)
+router.get   ('/discussions',     optionalAuth, discussionCtrl.list)
+router.get   ('/discussions/:id', optionalAuth,        discussionCtrl.detail)
 router.post  ('/discussions',     auth, writeLimiter, discussionCtrl.create)
 router.patch ('/discussions/:id', auth,               discussionCtrl.update)
 router.delete('/discussions/:id', auth,               discussionCtrl.remove)
 router.post  ('/discussions/:id/view',                discussionCtrl.incrementView)
+
+// ── Bookmarks ─────────────────────────────────────────────────────────────────
+router.get   ('/bookmarks',                  auth,               bookmarkCtrl.list)
+router.post  ('/discussions/:id/bookmark',   auth, writeLimiter, bookmarkCtrl.add)
+router.delete('/discussions/:id/bookmark',   auth,               bookmarkCtrl.removeByDiscussion)
+router.delete('/bookmarks/:id',              auth,               bookmarkCtrl.removeById)
 
 // ── Search / Trending / Leaderboard ──────────────────────────────────────────
 router.get('/search',      discussionCtrl.search)
@@ -107,6 +116,14 @@ router.post('/chat/conversations/:id/messages', auth, writeLimiter, chatCtrl.sen
 router.post('/reports',     auth, writeLimiter,                   reportCtrl.report)
 router.get ('/reports',     auth, role(['MODERATOR', 'ADMIN']),   reportCtrl.list)
 router.put ('/reports/:id', auth, role(['MODERATOR', 'ADMIN']),   reportCtrl.review)
+
+// ── Moderator: aksi langsung sembunyikan/tampilkan konten ──────────────────────
+const modRole = role(['MODERATOR', 'ADMIN'])
+router.patch('/moderator/discussions/:id/hide',   auth, modRole, moderatorCtrl.hideDiscussion)
+router.patch('/moderator/discussions/:id/unhide', auth, modRole, moderatorCtrl.unhideDiscussion)
+router.patch('/moderator/comments/:id/hide',      auth, modRole, moderatorCtrl.hideComment)
+router.patch('/moderator/comments/:id/unhide',    auth, modRole, moderatorCtrl.unhideComment)
+router.get  ('/moderator/comments/hidden',        auth, modRole, moderatorCtrl.hiddenComments)
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 router.get   ('/admin/stats',                    auth, role('ADMIN'), adminCtrl.stats)

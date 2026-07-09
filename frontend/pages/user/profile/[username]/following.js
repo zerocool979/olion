@@ -80,7 +80,7 @@ export default function FollowingPage() {
     fetchOwner.then(r => {
       const o = r.data?.data ?? r.data
       setOwner(o)
-      return api.get(`/users/${o.id}/following?limit=50`)
+      return api.get(`/users/${encodeURIComponent(slug)}/following?limit=50`)
     }).then(r => {
       const arr = Array.isArray(r.data?.data ?? r.data) ? (r.data?.data ?? r.data) : []
       setFollowing(arr)

@@ -13,6 +13,7 @@ import UserLayout from './_layout'
 
 export default function Following() {
   const { user } = useContext(AuthContext)
+  const myUsername = user?.profile?.username ?? user?.username ?? ''
 
   const [tab,            setTab]            = useState('mengikuti')   // mengikuti | pengikut | disarankan
   const [following,      setFollowing]      = useState([])
@@ -24,7 +25,7 @@ export default function Following() {
   const [followingMap,   setFollowingMap]   = useState({})
 
   useEffect(() => {
-    if (!user) return
+    if (!user || !myUsername) return
 
     // Feed dari orang yang diikuti
     api.get('/discussions?feed=following&limit=10')
@@ -32,8 +33,8 @@ export default function Following() {
       .catch(() => setFollowingFeed([]))
       .finally(() => setFeedLoading(false))
 
-    // Following list
-    api.get('/users/following')
+    // Following list — endpoint publik berbasis username, dipakai untuk diri sendiri
+    api.get(`/users/${encodeURIComponent(myUsername)}/following`)
       .then(r => {
         const d = r.data?.data ?? r.data ?? []
         const arr = Array.isArray(d) ? d : []
@@ -43,7 +44,7 @@ export default function Following() {
       .catch(() => setFollowing([]))
 
     // Followers list
-    api.get('/users/followers')
+    api.get(`/users/${encodeURIComponent(myUsername)}/followers`)
       .then(r => { const d = r.data?.data ?? r.data ?? []; setFollowers(Array.isArray(d) ? d : []) })
       .catch(() => setFollowers([]))
 
@@ -57,7 +58,7 @@ export default function Following() {
       const seen    = new Set(experts.map(e => e.id))
       setSuggested([...experts, ...users.filter(u => !seen.has(u.id) && u.id !== user.id)].slice(0, 10))
     }).finally(() => setLoading(false))
-  }, [user])
+  }, [user, myUsername])
 
   const handleFollow = useCallback((targetId) => {
     const next = !followingMap[targetId]

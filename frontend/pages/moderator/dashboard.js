@@ -19,6 +19,7 @@ export default function ModeratorDashboard() {
 
   const [reports, setReports]   = useState([])
   const [hidden,  setHidden]    = useState([])
+  const [hiddenComments, setHiddenComments] = useState([])
   const [stats,   setStats]     = useState(null)
   const [loading, setLoading]   = useState(true)
   const [tab,     setTab]       = useState('queue')
@@ -43,21 +44,23 @@ export default function ModeratorDashboard() {
     try {
       const [rRes, hDiscRes, hComRes] = await Promise.all([
         api.get('/reports?take=80'),
-        api.get('/discussions?take=50'),
-        api.get('/comments?userId=all&take=50').catch(() => ({ data: { data: [] } })),
+        api.get('/discussions?isHidden=true&take=50'),
+        api.get('/moderator/comments/hidden?take=50').catch(() => ({ data: { data: [] } })),
       ])
       const allReports = rRes.data.data ?? []
       setReports(allReports)
 
-      // Diskusi/komentar yang tersembunyi
-      const hiddenDiscs = (hDiscRes.data.data ?? []).filter(d => d.isHidden)
+      // Diskusi & komentar yang tersembunyi (endpoint sudah role-gated di backend)
+      const hiddenDiscs = hDiscRes.data.data ?? []
+      const hiddenComs  = hComRes.data.data ?? []
       setHidden(hiddenDiscs)
+      setHiddenComments(hiddenComs)
 
       // Statistik sederhana
       const pending  = allReports.filter(r => r.status === 'PENDING').length
       const resolved = allReports.filter(r => r.status === 'RESOLVED').length
       const rejected = allReports.filter(r => r.status === 'REJECTED').length
-      setStats({ pending, resolved, rejected, hiddenContent: hiddenDiscs.length })
+      setStats({ pending, resolved, rejected, hiddenContent: hiddenDiscs.length + hiddenComs.length })
     } catch { /* noop */ }
     setLoading(false)
   }, [])
@@ -73,14 +76,27 @@ export default function ModeratorDashboard() {
   }
 
   const unhideDiscussion = async (id) => {
+    const prev = hidden
+    setHidden(h => h.filter(d => d.id !== id))
     try {
-      await api.patch(`/discussions/${id}`, { isHidden: false }).catch(() =>
-        // fallback jika endpoint patch tidak support isHidden field langsung
-        api.delete(`/discussions/${id}/hide`)
-      )
+      await api.patch(`/moderator/discussions/${id}/unhide`)
       showToast('Diskusi berhasil ditampilkan kembali')
-      fetchAll()
-    } catch { showToast('Gagal menampilkan diskusi', false) }
+    } catch {
+      setHidden(prev)
+      showToast('Gagal menampilkan diskusi', false)
+    }
+  }
+
+  const unhideComment = async (id) => {
+    const prev = hiddenComments
+    setHiddenComments(c => c.filter(x => x.id !== id))
+    try {
+      await api.patch(`/moderator/comments/${id}/unhide`)
+      showToast('Komentar berhasil ditampilkan kembali')
+    } catch {
+      setHiddenComments(prev)
+      showToast('Gagal menampilkan komentar', false)
+    }
   }
 
   const pendingReports = reports.filter(r => r.status === 'PENDING')
@@ -187,9 +203,9 @@ export default function ModeratorDashboard() {
           {/* ── Konten tersembunyi ── */}
           {tab === 'hidden' && (
             <>
-              <SectionTitle>Konten yang Disembunyikan</SectionTitle>
+              <SectionTitle>Diskusi Tersembunyi</SectionTitle>
               {hidden.length === 0 ? (
-                <div style={{ color: colors.textSecondary, padding: 40, textAlign: 'center' }}>Tidak ada konten yang disembunyikan</div>
+                <div style={{ color: colors.textSecondary, padding: 40, textAlign: 'center' }}>Tidak ada diskusi yang disembunyikan</div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {hidden.map(d => (
@@ -199,6 +215,27 @@ export default function ModeratorDashboard() {
                         <div style={{ fontSize: 11, color: colors.textSecondary, marginTop: 3 }}>oleh {d.user?.profile?.username ?? 'Anonim'}</div>
                       </div>
                       <button onClick={() => unhideDiscussion(d.id)} style={{ background: '#10b98122', color: '#10b981', border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 12, cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}>
+                        Tampilkan Kembali
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <SectionTitle>Komentar Tersembunyi</SectionTitle>
+              {hiddenComments.length === 0 ? (
+                <div style={{ color: colors.textSecondary, padding: 40, textAlign: 'center' }}>Tidak ada komentar yang disembunyikan</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {hiddenComments.map(c => (
+                    <div key={c.id} style={{ background: colors.bgElevated, border: `1px solid ${colors.border}`, borderRadius: 10, padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 13, color: colors.textPrimary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.content}</div>
+                        <div style={{ fontSize: 11, color: colors.textSecondary, marginTop: 3 }}>
+                          oleh {c.user?.profile?.username ?? 'Anonim'} · di "{c.discussion?.title ?? 'diskusi'}"
+                        </div>
+                      </div>
+                      <button onClick={() => unhideComment(c.id)} style={{ background: '#10b98122', color: '#10b981', border: 'none', borderRadius: 7, padding: '6px 14px', fontSize: 12, cursor: 'pointer', fontWeight: 600, flexShrink: 0 }}>
                         Tampilkan Kembali
                       </button>
                     </div>

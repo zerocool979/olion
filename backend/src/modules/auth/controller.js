@@ -74,7 +74,7 @@ module.exports = {
   getByUsername: async (req, res, next) => {
     try {
       const { username } = req.params
-      const user = await authService.getByUsername(username)
+      const user = await authService.getByUsername(username, req.userId)
       if (!user) {
         return res.status(404).json({ message: 'Pengguna tidak ditemukan' })
       }

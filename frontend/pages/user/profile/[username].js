@@ -132,7 +132,7 @@ export default function PublicProfile() {
 
     lookup
       .then(r => {
-        const d = r.data?.data ?? r.data
+        const d = r.data?.user ?? r.data?.data ?? r.data
         if (!d) { setNotFound(true); return }
         setProfile(d)
         setIsFollowing(d.isFollowed ?? false)

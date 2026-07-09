@@ -4494,6 +4494,20 @@
   outline: 2px solid rgba(148,163,184,0.5);
   outline-offset: 2px;
 }
+.dd-icon-btn--active {
+  background: rgba(250,204,21,0.12);
+  border-color: rgba(250,204,21,0.4);
+  color: #facc15;
+}
+.dd-icon-btn--danger:hover {
+  background: rgba(239,68,68,0.1);
+  border-color: rgba(239,68,68,0.4);
+  color: #f87171;
+}
+.dd-icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 /* ── Title ─────────────────────────────────────────────────────── */
 .dd-title {

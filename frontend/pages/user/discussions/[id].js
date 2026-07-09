@@ -150,6 +150,23 @@ export default function DiscussionDetail() {
     voteState,
     voteCount,
     votePending,
+    isBookmarked,
+    bookmarkPending,
+    handleToggleBookmark,
+    isEditing,
+    editTitle,
+    setEditTitle,
+    editContent,
+    setEditContent,
+    editSubmitting,
+    editError,
+    startEdit,
+    cancelEdit,
+    handleSaveEdit,
+    deleting,
+    handleDeleteDiscussion,
+    handleUpdateComment,
+    handleDeleteComment,
     newComment,
     setNewComment,
     submitting,
@@ -167,7 +184,11 @@ export default function DiscussionDetail() {
     handleReply,
     handleCommentVote,
     handleCopyLink,
+    handleShare,
   } = useDiscussion(id)
+
+  const isOwner = !!user && discussion?.userId === user.id
+  const isStaff = !!user && ['ADMIN', 'MODERATOR'].includes(user.role)
 
   /* ── diskusi terkait (sidebar) ── */
   const [related,        setRelated]        = useState([])
@@ -321,21 +342,96 @@ export default function DiscussionDetail() {
             </svg>
             Salin Link
           </button>
-          <Link href={`/user/report?targetId=${discussion.id}&type=discussion`} style={{
+
+          <button onClick={handleShare} style={{
             display: 'flex', alignItems: 'center', gap: 8,
-            background: '#fef2f2', border: '1px solid #fecaca',
+            background: colors.bgElevated, border: `1px solid ${colors.border}`,
             borderRadius: 10, padding: '8px 12px',
-            fontSize: 13, color: '#dc2626', textDecoration: 'none',
-            transition: 'background 0.12s',
+            fontSize: 13, color: colors.textPrimary, cursor: 'pointer',
+            width: '100%', textAlign: 'left', transition: 'background 0.12s',
           }}
-          onMouseEnter={e => (e.currentTarget.style.background = '#fee2e2')}
-          onMouseLeave={e => (e.currentTarget.style.background = '#fef2f2')}
+          onMouseEnter={e => (e.currentTarget.style.background = colors.border)}
+          onMouseLeave={e => (e.currentTarget.style.background = colors.bgElevated)}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/>
+              <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
             </svg>
-            Laporkan Diskusi
-          </Link>
+            Bagikan
+          </button>
+
+          {user && (
+            <button onClick={handleToggleBookmark} disabled={bookmarkPending} style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              background: isBookmarked ? '#facc1522' : colors.bgElevated,
+              border: `1px solid ${isBookmarked ? '#facc1566' : colors.border}`,
+              borderRadius: 10, padding: '8px 12px',
+              fontSize: 13, color: isBookmarked ? '#facc15' : colors.textPrimary,
+              cursor: bookmarkPending ? 'default' : 'pointer',
+              width: '100%', textAlign: 'left', transition: 'background 0.12s',
+              opacity: bookmarkPending ? 0.6 : 1,
+            }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill={isBookmarked ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/>
+              </svg>
+              {isBookmarked ? 'Tersimpan' : 'Simpan Bookmark'}
+            </button>
+          )}
+
+          {(isOwner || isStaff) && (
+            <>
+              <button onClick={isEditing ? cancelEdit : startEdit} style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                background: colors.bgElevated, border: `1px solid ${colors.border}`,
+                borderRadius: 10, padding: '8px 12px',
+                fontSize: 13, color: colors.textPrimary, cursor: 'pointer',
+                width: '100%', textAlign: 'left', transition: 'background 0.12s',
+              }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+                {isEditing ? 'Batal Edit' : 'Edit Diskusi'}
+              </button>
+
+              <button onClick={() => {
+                if (window.confirm('Hapus diskusi ini? Tindakan ini tidak bisa dibatalkan.')) {
+                  handleDeleteDiscussion()
+                }
+              }} disabled={deleting} style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                background: '#fef2f2', border: '1px solid #fecaca',
+                borderRadius: 10, padding: '8px 12px',
+                fontSize: 13, color: '#dc2626', cursor: deleting ? 'default' : 'pointer',
+                width: '100%', textAlign: 'left', transition: 'background 0.12s',
+                opacity: deleting ? 0.6 : 1,
+              }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                  <polyline points="3 6 5 6 21 6"/>
+                  <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                </svg>
+                {deleting ? 'Menghapus...' : 'Hapus Diskusi'}
+              </button>
+            </>
+          )}
+
+          {!isOwner && (
+            <Link href={`/user/report?targetId=${discussion.id}&type=discussion`} style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              background: '#fef2f2', border: '1px solid #fecaca',
+              borderRadius: 10, padding: '8px 12px',
+              fontSize: 13, color: '#dc2626', textDecoration: 'none',
+              transition: 'background 0.12s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = '#fee2e2')}
+            onMouseLeave={e => (e.currentTarget.style.background = '#fef2f2')}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/>
+              </svg>
+              Laporkan Diskusi
+            </Link>
+          )}
         </div>
       </div>
 
@@ -424,11 +520,40 @@ export default function DiscussionDetail() {
 
             {/* Header (judul, author, tags, waktu) */}
             <div style={{ paddingTop: 16 }}>
-              <DiscussionHeader discussion={discussion} onCopyLink={handleCopyLink} />
+              <DiscussionHeader
+                discussion={discussion}
+                onCopyLink={handleCopyLink}
+                onShare={handleShare}
+                isOwner={isOwner}
+                isStaff={isStaff}
+                isLoggedIn={!!user}
+                isBookmarked={isBookmarked}
+                bookmarkPending={bookmarkPending}
+                onToggleBookmark={handleToggleBookmark}
+                onEditToggle={isEditing ? cancelEdit : startEdit}
+                isEditing={isEditing}
+                onDelete={() => {
+                  if (window.confirm('Hapus diskusi ini? Tindakan ini tidak bisa dibatalkan.')) {
+                    handleDeleteDiscussion()
+                  }
+                }}
+                deleting={deleting}
+              />
             </div>
 
             {/* Konten diskusi */}
-            <DiscussionContent discussion={discussion} />
+            <DiscussionContent
+              discussion={discussion}
+              isEditing={isEditing}
+              editTitle={editTitle}
+              setEditTitle={setEditTitle}
+              editContent={editContent}
+              setEditContent={setEditContent}
+              editSubmitting={editSubmitting}
+              editError={editError}
+              onSaveEdit={handleSaveEdit}
+              onCancelEdit={cancelEdit}
+            />
 
             {/* Vote bar + lapor */}
             <div style={{
@@ -442,19 +567,21 @@ export default function DiscussionDetail() {
                 votePending={votePending}
                 onVote={handleVote}
               />
-              <Link href={`/user/report?targetId=${discussion.id}&type=discussion`}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 5,
-                  fontSize: 12, color: colors.textSecondary, textDecoration: 'none',
-                }}
-                onMouseEnter={e => (e.currentTarget.style.color = '#dc2626')}
-                onMouseLeave={e => (e.currentTarget.style.color = colors.textSecondary)}
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
-                  <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/>
-                </svg>
-                Laporkan
-              </Link>
+              {!isOwner && (
+                <Link href={`/user/report?targetId=${discussion.id}&type=discussion`}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 5,
+                    fontSize: 12, color: colors.textSecondary, textDecoration: 'none',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#dc2626')}
+                  onMouseLeave={e => (e.currentTarget.style.color = colors.textSecondary)}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+                    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1zM4 22v-7"/>
+                  </svg>
+                  Laporkan
+                </Link>
+              )}
             </div>
 
             {/* ── Komentar ── */}
@@ -480,6 +607,10 @@ export default function DiscussionDetail() {
                 onReply={setReplyTarget}
                 commentVotes={commentVotes}
                 votingCommentId={votingCommentId}
+                currentUserId={user?.id}
+                isStaff={isStaff}
+                onEdit={handleUpdateComment}
+                onDelete={handleDeleteComment}
               />
 
               {/* Reply form */}

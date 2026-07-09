@@ -31,6 +31,7 @@ model User {
   reputations           ReputationLog[]
   badges                UserBadge[]
   votes                 Vote[]
+  bookmarks             Bookmark[]
 
   @@index([role])
   @@index([isBanned])
@@ -97,12 +98,26 @@ model Discussion {
   tags       DiscussionTag[]
   reports    Report[]
   votes      Vote[]
+  bookmarks  Bookmark[]
 
   @@index([userId])
   @@index([categoryId])
   @@index([isHidden])
   @@index([createdAt(sort: Desc)])
   @@index([mode])
+}
+
+model Bookmark {
+  id           String     @id @default(uuid())
+  createdAt    DateTime   @default(now())
+  userId       String
+  discussionId String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  discussion   Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, discussionId])
+  @@index([userId])
+  @@index([discussionId])
 }
 
 model Comment {
