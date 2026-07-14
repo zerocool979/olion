@@ -55,6 +55,8 @@ export default function UserLayout({ children, sidebar }) {
 
   const username   = user?.profile?.username   ?? user?.username   ?? 'Kamu'
   const reputation = user?.profile?.reputation ?? user?.reputation ?? 0
+  const avatarUrl    = user?.profile?.avatarUrl    ?? user?.avatarUrl    ?? null
+  const avatarBorder = user?.profile?.avatarBorder ?? user?.avatarBorder ?? null
 
   return (
     <div style={{
@@ -172,7 +174,7 @@ export default function UserLayout({ children, sidebar }) {
           marginTop: 'auto', borderTop: `1px solid ${colors.border}`,
           padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10,
         }}>
-          <Avatar username={username} size={34} />
+          <Avatar username={username} src={avatarUrl} border={avatarBorder} size={34} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 600, color: colors.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {username}

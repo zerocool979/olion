@@ -202,7 +202,7 @@ export function useDiscussion(id) {
     setNewComment('')
 
     try {
-      await api.post('/comments', { discussionId: id, content: text })
+      await api.post(`/discussions/${id}/comments`, { content: text })
       const res = await api.get(`/discussions/${id}`)
       const latest = normalise(res)
       setDiscussion(latest)
@@ -242,8 +242,7 @@ export function useDiscussion(id) {
     setReplyTarget(null)
 
     try {
-      await api.post('/comments', {
-        discussionId: id,
+      await api.post(`/discussions/${id}/comments`, {
         content: optimisticReply.content,
         parentId: replyTarget.commentId,
       })

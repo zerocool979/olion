@@ -1,12 +1,12 @@
 import Link from 'next/link';
-import Avatar from './Avatar';
+import Avatar from './dashboard/Avatar';
 
 export default function LeaderRow({ u }) {
   return (
     <Link href={`/u/${u.username}`} style={{ textDecoration: 'none' }}>
       <div className="leader-row card">
         <div className="leader-row__rank">#{u.rank}</div>
-        <Avatar username={u.username} size={34} />
+        <Avatar username={u.username} src={u.avatarUrl} border={u.avatarBorder} size={34} />
         <div className="leader-row__info">
           <div className="leader-row__name-row">
             <p className="leader-row__name">{u.username}</p>

@@ -14,9 +14,11 @@ import UserLayout from '../../_layout'
 
 function PersonRow({ person, meId, onFollow, followMap }) {
   const uname    = person.profile?.username ?? person.username ?? 'Anonim'
+  const uavatar  = person.profile?.avatarUrl ?? person.avatarUrl ?? null
+  const uborder  = person.profile?.avatarBorder ?? person.avatarBorder ?? null
   const rep      = person.profile?.reputation ?? person.reputation ?? 0
   const bio      = person.profile?.bio ?? ''
-  const isExpert = person.isExpert ?? person.role === 'expert'
+  const isExpert = person.isVerifiedExpert ?? person.isExpert ?? person.role === 'EXPERT'
   const isFollowing = !!followMap[person.id]
   const isSelf   = person.id === meId
   const href     = `/user/profile/${encodeURIComponent(uname)}`
@@ -26,7 +28,7 @@ function PersonRow({ person, meId, onFollow, followMap }) {
       onMouseEnter={e => (e.currentTarget.style.background = colors.bgElevated)}
       onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
     >
-      <Link href={href} style={{ flexShrink: 0 }}><Avatar username={uname} size={46} /></Link>
+      <Link href={href} style={{ flexShrink: 0 }}><Avatar username={uname} src={uavatar} border={uborder} size={46} /></Link>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
           <div style={{ minWidth: 0 }}>
@@ -42,12 +44,23 @@ function PersonRow({ person, meId, onFollow, followMap }) {
             {bio && <p style={{ fontSize: 13, color: colors.textSecondary, marginTop: 4, lineHeight: 1.4 }}>{bio.length > 90 ? bio.slice(0, 90) + '…' : bio}</p>}
           </div>
           {!isSelf && (
-            <button onClick={() => onFollow(person.id)} style={{
-              border: isFollowing ? `1px solid ${colors.border}` : `1px solid ${colors.accent}`,
-              background: isFollowing ? 'none' : colors.accent,
-              color: isFollowing ? colors.textPrimary : '#fff',
-              borderRadius: 20, padding: '6px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
-            }}>{isFollowing ? 'Mengikuti' : 'Ikuti'}</button>
+            <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+              <Link href={`/user/chat?userId=${person.id}`} aria-label={`Chat dengan ${uname}`} title="Chat" style={{
+                border: `1px solid ${colors.border}`, background: colors.bgElevated,
+                borderRadius: 20, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                textDecoration: 'none', color: colors.textPrimary,
+              }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
+                </svg>
+              </Link>
+              <button onClick={() => onFollow(person.id)} style={{
+                border: isFollowing ? `1px solid ${colors.border}` : `1px solid ${colors.accent}`,
+                background: isFollowing ? 'none' : colors.accent,
+                color: isFollowing ? colors.textPrimary : '#fff',
+                borderRadius: 20, padding: '6px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
+              }}>{isFollowing ? 'Mengikuti' : 'Ikuti'}</button>
+            </div>
           )}
         </div>
       </div>
@@ -105,7 +118,7 @@ export default function FollowingPage() {
   const sidebar = (
     <div style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 16, padding: '14px 16px' }}>
       <Link href={`/user/profile/${encodeURIComponent(ownerName)}`} style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', marginBottom: 14 }}>
-        <Avatar username={ownerName} size={42} />
+        <Avatar username={ownerName} src={owner?.profile?.avatarUrl ?? owner?.avatarUrl} border={owner?.profile?.avatarBorder ?? owner?.avatarBorder} size={42} />
         <div>
           <div style={{ fontWeight: 700, fontSize: 14, color: colors.textPrimary }}>{ownerName}</div>
           <div style={{ fontSize: 12, color: colors.accent }}>Lihat profil →</div>

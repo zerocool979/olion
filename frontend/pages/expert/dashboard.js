@@ -89,14 +89,14 @@ export default function ExpertDashboard() {
           </div>
           <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
             <Link href="/user" style={{ color: colors.textSecondary, fontSize: 13, textDecoration: 'none' }}>← Dashboard</Link>
-            {user && <Avatar username={user.profile?.username} size={32} />}
+            {user && <Avatar username={user.profile?.username} src={user.profile?.avatarUrl} border={user.profile?.avatarBorder} size={32} />}
           </div>
         </div>
 
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '28px 20px' }}>
           {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
-            {user && <Avatar username={user.profile?.username} size={56} />}
+            {user && <Avatar username={user.profile?.username} src={user.profile?.avatarUrl} border={user.profile?.avatarBorder} size={56} />}
             <div>
               <div style={{ fontWeight: 800, fontSize: 20 }}>{user?.profile?.username}</div>
               <div style={{ color: '#10b981', fontSize: 13, fontWeight: 600, marginTop: 2 }}>✅ Pakar Terverifikasi</div>

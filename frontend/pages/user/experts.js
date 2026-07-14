@@ -122,12 +122,14 @@ export default function Experts() {
           ? <EmptyState icon="🎓" title="Tidak ada pakar ditemukan" description="Coba ubah kata kunci atau filter." Link={Link} />
           : filtered.map(person => {
               const uname = person.profile?.username ?? person.username ?? 'Anonim'
+              const uavatar = person.profile?.avatarUrl ?? person.avatarUrl ?? null
+              const uborder = person.profile?.avatarBorder ?? person.avatarBorder ?? null
               const rep   = person.profile?.reputation ?? person.reputation ?? 0
               const bio   = person.profile?.bio ?? ''
               const postC = person._count?.discussions ?? person.postCount ?? 0
               return (
                 <div key={person.id} style={{ padding: '16px', borderBottom: `1px solid ${colors.border}`, display: 'flex', gap: 14 }}>
-                  <Avatar username={uname} size={52} verified />
+                  <Avatar username={uname} src={uavatar} border={uborder} size={52} verified />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                       <div style={{ flex: 1 }}>
@@ -141,14 +143,25 @@ export default function Experts() {
                           <span style={{ fontSize: 12, color: colors.textSecondary }}>📝 {postC} diskusi</span>
                         </div>
                       </div>
-                      <button onClick={() => handleFollow(person.id)} style={{
-                        border: followingMap[person.id] ? `1px solid ${colors.border}` : `1px solid ${colors.accent}`,
-                        background: followingMap[person.id] ? colors.bgElevated : colors.accent,
-                        color: followingMap[person.id] ? colors.textPrimary : '#fff',
-                        borderRadius: 20, padding: '6px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
-                      }}>
-                        {followingMap[person.id] ? 'Mengikuti' : 'Ikuti'}
-                      </button>
+                      <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                        <Link href={`/user/chat?userId=${person.id}`} aria-label={`Chat dengan ${uname}`} title="Chat" style={{
+                          border: `1px solid ${colors.border}`, background: colors.bgElevated,
+                          borderRadius: 20, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          textDecoration: 'none', color: colors.textPrimary,
+                        }}>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/>
+                          </svg>
+                        </Link>
+                        <button onClick={() => handleFollow(person.id)} style={{
+                          border: followingMap[person.id] ? `1px solid ${colors.border}` : `1px solid ${colors.accent}`,
+                          background: followingMap[person.id] ? colors.bgElevated : colors.accent,
+                          color: followingMap[person.id] ? colors.textPrimary : '#fff',
+                          borderRadius: 20, padding: '6px 16px', fontSize: 13, fontWeight: 600, cursor: 'pointer', flexShrink: 0,
+                        }}>
+                          {followingMap[person.id] ? 'Mengikuti' : 'Ikuti'}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

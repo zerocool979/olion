@@ -1,3 +1,21 @@
+// Label ramah-baca untuk enum DiscussionMode & DisciplineLevel di backend.
+// FIX: sebelumnya kode ini salah mengasumsikan `mode` berarti anonim/teridentifikasi
+// — padahal field itu sebenarnya menandai jenis/tujuan diskusi (lihat schema.prisma).
+const MODE_LABELS = {
+  INFORMATIF: 'Informatif',
+  KLARIFIKATIF: 'Klarifikasi',
+  EKSPLORATIF: 'Eksploratif',
+  EVALUATIF: 'Evaluatif',
+  ARGUMENTATIF: 'Argumentatif',
+}
+
+const DISCIPLINE_LABELS = {
+  BEBAS: 'Bebas',
+  RASIONAL: 'Rasional',
+  AKADEMIK: 'Akademik',
+  PROFESIONAL: 'Profesional',
+}
+
 export function DiscussionContent({
   discussion,
   isEditing = false,
@@ -74,9 +92,17 @@ export function DiscussionContent({
         {discussion.mode && (
           <span className="dd-content__stat">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
-              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
             </svg>
-            {discussion.mode === 'ANONYMOUS' ? 'Anonim' : 'Teridentifikasi'}
+            {MODE_LABELS[discussion.mode] ?? discussion.mode}
+          </span>
+        )}
+        {discussion.discipline && (
+          <span className="dd-content__stat">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true">
+              <path d="M22 10v6M2 10l10-5 10 5-10 5-10-5zM6 12v5c3 3 9 3 12 0v-5"/>
+            </svg>
+            {DISCIPLINE_LABELS[discussion.discipline] ?? discussion.discipline}
           </span>
         )}
       </footer>

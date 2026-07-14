@@ -13,7 +13,7 @@ exports.create = async ({ content, discussionId, parentId }, userId) => {
   // Pastikan diskusi ada
   const discussion = await prisma.discussion.findUnique({
     where: { id: discussionId },
-    select: { id: true }
+    select: { id: true, userId: true, title: true }
   })
   if (!discussion) {
     const err = new Error('Diskusi tidak ditemukan')
@@ -22,8 +22,9 @@ exports.create = async ({ content, discussionId, parentId }, userId) => {
   }
 
   // Validasi parentId jika ada (thread reply)
+  let parent = null
   if (parentId) {
-    const parent = await prisma.comment.findUnique({ where: { id: parentId } })
+    parent = await prisma.comment.findUnique({ where: { id: parentId } })
     if (!parent || parent.discussionId !== discussionId) {
       const err = new Error('Komentar induk tidak valid')
       err.statusCode = 400
@@ -34,7 +35,7 @@ exports.create = async ({ content, discussionId, parentId }, userId) => {
   // Badge first_answer (fire-and-forget)
   badgeSvc.awardSlug(userId, 'first_answer').catch(() => {})
 
-  return prisma.comment.create({
+  const comment = await prisma.comment.create({
     data: {
       content: content.trim(),
       discussionId,
@@ -46,6 +47,14 @@ exports.create = async ({ content, discussionId, parentId }, userId) => {
       replies: true,
     },
   })
+
+  // Info tambahan untuk controller memicu notifikasi — tidak disimpan di DB,
+  // hanya dilampirkan ke object return supaya controller tidak query ulang.
+  comment._discussionOwnerId = discussion.userId
+  comment._discussionTitle = discussion.title
+  comment._parentOwnerId = parent?.userId ?? null
+
+  return comment
 }
 
 exports.getByDiscussion = (discussionId) => {

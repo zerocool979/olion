@@ -13,7 +13,7 @@ module.exports = {
       const notifications = await prisma.notification.findMany({
         where,
         include: {
-          actor: { select: { id: true, profile: { select: { username: true } } } },
+          actor: { select: { id: true, profile: { select: { username: true, avatarUrl: true, avatarBorder: true } } } },
         },
         orderBy: { createdAt: 'desc' },
         take,

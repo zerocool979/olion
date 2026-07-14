@@ -85,7 +85,8 @@ exports.listByUser = async (userId, limit) => {
       discussion: {
         select: {
           id: true, title: true, content: true, createdAt: true,
-          user: { select: { id: true, profile: { select: { username: true } } } },
+          user: { select: { id: true, isVerifiedExpert: true, profile: { select: { username: true, avatarUrl: true, avatarBorder: true } } } },
+          _count: { select: { comments: true, votes: true } },
         },
       },
     },

@@ -41,8 +41,8 @@ export default function Chat() {
 
   const myId = user?.id
 
-  const loadRooms = useCallback(() => {
-    setRoomsLoading(true)
+  const loadRooms = useCallback((silent = false) => {
+    if (!silent) setRoomsLoading(true)
     return api.get('/chat/conversations')
       .then(r => {
         const d = r.data?.data ?? r.data ?? []
@@ -50,8 +50,8 @@ export default function Chat() {
         setRooms(arr)
         return arr
       })
-      .catch(() => { setRooms([]); return [] })
-      .finally(() => setRoomsLoading(false))
+      .catch(() => { if (!silent) setRooms([]); return [] })
+      .finally(() => { if (!silent) setRoomsLoading(false) })
   }, [])
 
   // Load daftar percakapan
@@ -84,13 +84,15 @@ export default function Chat() {
       .finally(() => setStarting(false))
   }, [user, router.isReady, router.query.userId, myId])
 
-  // Load messages for active room
-  const loadMessages = useCallback((roomId) => {
-    setMsgLoading(true)
-    api.get(`/chat/conversations/${roomId}/messages`)
+  // Load messages for active room. `silent=true` dipakai untuk polling
+  // background — supaya tidak memicu tampilan skeleton yang membuat seluruh
+  // panel chat terasa "reload" setiap beberapa detik.
+  const loadMessages = useCallback((roomId, silent = false) => {
+    if (!silent) setMsgLoading(true)
+    return api.get(`/chat/conversations/${roomId}/messages`)
       .then(r => { const d = r.data?.data ?? r.data ?? []; setMessages(Array.isArray(d) ? d : []) })
-      .catch(() => setMessages([]))
-      .finally(() => setMsgLoading(false))
+      .catch(() => { if (!silent) setMessages([]) })
+      .finally(() => { if (!silent) setMsgLoading(false) })
   }, [])
 
   useEffect(() => {
@@ -101,10 +103,10 @@ export default function Chat() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Poll pesan tiap 5 detik selagi room aktif dibuka
+  // Poll pesan tiap 5 detik selagi room aktif dibuka (silent — tanpa skeleton)
   useEffect(() => {
     if (!activeRoom) return
-    const t = setInterval(() => loadMessages(activeRoom.id), 5000)
+    const t = setInterval(() => loadMessages(activeRoom.id, true), 5000)
     return () => clearInterval(t)
   }, [activeRoom, loadMessages])
 
@@ -116,7 +118,7 @@ export default function Chat() {
     try {
       await api.post(`/chat/conversations/${activeRoom.id}/messages`, { content: text })
       await loadMessages(activeRoom.id)
-      loadRooms() // refresh preview pesan terakhir di sidebar
+      loadRooms(true) // refresh preview pesan terakhir di sidebar (silent, tanpa skeleton)
     } catch (err) {
       setError(err.response?.data?.message ?? 'Gagal mengirim pesan.')
       setDraft(text)
@@ -175,6 +177,8 @@ export default function Chat() {
             : rooms.map(room => {
                 const other   = otherUser(room)
                 const uname   = other.profile?.username ?? other.username ?? 'Pengguna'
+                const uavatar = other.profile?.avatarUrl ?? null
+                const uborder = other.profile?.avatarBorder ?? null
                 const lastMsg = room.messages?.[0] ?? room.lastMessage
                 const active  = activeRoom?.id === room.id
                 return (
@@ -183,7 +187,7 @@ export default function Chat() {
                     onMouseEnter={e => !active && (e.currentTarget.style.background = colors.bgElevated)}
                     onMouseLeave={e => !active && (e.currentTarget.style.background = 'transparent')}
                   >
-                    <Avatar username={uname} size={40} />
+                    <Avatar username={uname} src={uavatar} border={uborder} size={40} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span style={{ fontWeight: 600, fontSize: 14, color: colors.textPrimary }}>{uname}</span>
@@ -214,7 +218,12 @@ export default function Chat() {
               <>
                 {/* Header */}
                 <div style={{ padding: '12px 16px', borderBottom: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: 10, background: colors.bg, position: 'sticky', top: 0 }}>
-                  <Avatar username={otherUser(activeRoom).profile?.username ?? otherUser(activeRoom).username ?? '?'} size={36} />
+                  <Avatar
+                    username={otherUser(activeRoom).profile?.username ?? otherUser(activeRoom).username ?? '?'}
+                    src={otherUser(activeRoom).profile?.avatarUrl ?? null}
+                    border={otherUser(activeRoom).profile?.avatarBorder ?? null}
+                    size={36}
+                  />
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 15, color: colors.textPrimary }}>
                       {otherUser(activeRoom).profile?.username ?? otherUser(activeRoom).username ?? 'Pengguna'}

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { AuthContext } from '../../context/AuthContext'
 import api from '../../lib/api'
 import { colors } from '../../components/dashboard'
+import GoogleAuthButton from '../../components/auth/GoogleAuthButton'
 
 export default function Login() {
   const { login } = useContext(AuthContext)
@@ -15,6 +16,23 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [emailFocused, setEmailFocused] = useState(false)
   const [passwordFocused, setPasswordFocused] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
+
+  const handleGoogleCredential = async (idToken) => {
+    setError('')
+    setGoogleLoading(true)
+    try {
+      const res = await api.post('/auth/google', { idToken })
+      login(res.data.token, res.data.user)
+      router.push('/dashboard')
+    } catch (err) {
+      setError(err.response?.data?.message || 'Masuk dengan Google gagal. Silakan coba lagi.')
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
+
+  const handleGoogleError = (message) => setError(message)
 
   const submit = async (e) => {
     e.preventDefault()
@@ -357,6 +375,16 @@ export default function Login() {
               )}
             </button>
           </form>
+
+          {/* ── MASUK DENGAN GOOGLE ── */}
+          <div style={{ marginTop: '1rem' }}>
+            <GoogleAuthButton
+              onCredential={handleGoogleCredential}
+              onError={handleGoogleError}
+              disabled={loading || googleLoading}
+              label={googleLoading ? 'Memproses...' : 'Masuk dengan akun Google'}
+            />
+          </div>
 
           {/* Divider */}
           <div

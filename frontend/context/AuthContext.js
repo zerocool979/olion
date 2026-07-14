@@ -72,6 +72,32 @@ export function AuthProvider({ children }) {
     setUser(userData)
   }
 
+  // ─── FIX: sebelumnya TIDAK ADA cara untuk memperbarui `user` setelah login awal.
+  // Halaman edit-profil memanggil `setUser?.()` yang sebenarnya tidak pernah ada
+  // di context ini (no-op diam-diam) — akibatnya kartu profil di sidebar, status
+  // follow "diri sendiri", dsb selalu memakai data BASI dari saat login pertama.
+  //
+  // updateUser: merge lokal (optimistic) — dipakai segera setelah aksi berhasil
+  // supaya UI langsung sinkron tanpa nunggu round-trip network tambahan.
+  const updateUser = useCallback((updater) => {
+    setUser(prev => {
+      if (!prev) return prev
+      return typeof updater === 'function' ? updater(prev) : { ...prev, ...updater }
+    })
+  }, [])
+
+  // refreshUser: re-fetch /auth/me — dipakai kalau butuh data paling akurat
+  // dari server (mis. setelah aksi yang mengubah banyak field sekaligus).
+  const refreshUser = useCallback(async () => {
+    try {
+      const res = await api.get('/auth/me')
+      setUser(res.data.user)
+      return res.data.user
+    } catch {
+      return null
+    }
+  }, [])
+
   const logout = () => {
     localStorage.removeItem('token')
     setTokenState(null)
@@ -79,7 +105,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ token, user, login, logout, loading }}>
+    <AuthContext.Provider value={{ token, user, login, logout, loading, updateUser, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )

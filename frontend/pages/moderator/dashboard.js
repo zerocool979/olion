@@ -120,7 +120,7 @@ export default function ModeratorDashboard() {
           </div>
           <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
             <Link href="/user" style={{ color: colors.textSecondary, fontSize: 13, textDecoration: 'none' }}>← Dashboard User</Link>
-            {user && <Avatar username={user.profile?.username} size={32} />}
+            {user && <Avatar username={user.profile?.username} src={user.profile?.avatarUrl} border={user.profile?.avatarBorder} size={32} />}
           </div>
         </div>
 

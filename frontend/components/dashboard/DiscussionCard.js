@@ -35,17 +35,24 @@ function compactNumber(n = 0) {
  * - onOpen(post): called when the card itself is clicked (open detail)
  */
 export default function DiscussionCard({ post, onLike, onComment, onOpen }) {
-  const author = post.author?.profile ?? post.author ?? {};
+  // FIX: backend SELALU mengirim penulis sebagai `post.user` (lihat
+  // DISCUSSION_INCLUDE di discussion/service.js dan semua endpoint terkait),
+  // bukan `post.author`. Karena komponen ini hanya mencari `post.author`,
+  // nama & foto penulis tidak pernah tampil di kartu diskusi manapun di
+  // seluruh app — selalu jatuh ke "Anonim" tanpa avatar asli.
+  const authorSource = post.user ?? post.author ?? {};
+  const author = authorSource.profile ?? authorSource ?? {};
   const username = author.username ?? "Anonim";
   const avatarSrc = author.avatarUrl ?? author.avatar ?? null;
-  const verified = post.author?.isExpert ?? author.isExpert ?? false;
+  const avatarBorder = author.avatarBorder ?? null;
+  const verified = authorSource.isVerifiedExpert ?? post.author?.isExpert ?? author.isExpert ?? false;
   const text = post.title ?? post.content ?? "";
   const category = post.category?.name ?? post.category ?? null;
   const votes = post._count?.votes ?? post.votes ?? 0;
   const comments = post._count?.comments ?? post.commentCount ?? 0;
   const views = post.viewCount ?? post.views ?? 0;
 
-  const [liked, setLiked] = useState(Boolean(post.likedByMe));
+  const [liked, setLiked] = useState(Boolean(post.likedByMe ?? (post.userVote === 1)));
 
   const handleLike = (e) => {
     e.stopPropagation();
@@ -73,7 +80,7 @@ export default function DiscussionCard({ post, onLike, onComment, onOpen }) {
       onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = colors.bgHover)}
       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
     >
-      <Avatar username={username} src={avatarSrc} verified={verified} />
+      <Avatar username={username} src={avatarSrc} border={avatarBorder} verified={verified} />
 
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3, flexWrap: "wrap" }}>

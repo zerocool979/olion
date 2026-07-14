@@ -2,6 +2,7 @@
 const service = require('./service')
 const voteService = require('../vote/service')
 const prisma = require('../../config/prisma')
+const { notifyMentions } = require('../../utils/mentions')
 
 module.exports = {
   // POST /discussions/:id/comments  { content, parentId? }
@@ -14,6 +15,34 @@ module.exports = {
         { content, discussionId, parentId },
         req.userId
       )
+
+      // ── Notifikasi: balasan ke komentar (prioritas) atau komentar baru di diskusi ──
+      if (comment._parentOwnerId && comment._parentOwnerId !== req.userId) {
+        prisma.notification.create({
+          data: {
+            userId: comment._parentOwnerId,
+            actorId: req.userId,
+            type: 'REPLY',
+            discussionId,
+            commentId: comment.id,
+            message: 'membalas komentar kamu',
+          },
+        }).catch(() => {})
+      } else if (comment._discussionOwnerId && comment._discussionOwnerId !== req.userId) {
+        prisma.notification.create({
+          data: {
+            userId: comment._discussionOwnerId,
+            actorId: req.userId,
+            type: 'COMMENT',
+            discussionId,
+            commentId: comment.id,
+            message: `mengomentari diskusi "${(comment._discussionTitle ?? '').slice(0, 60)}"`,
+          },
+        }).catch(() => {})
+      }
+
+      notifyMentions({ text: content, actorId: req.userId, discussionId, commentId: comment.id })
+
       res.status(201).json({ data: comment })
     } catch (e) { next(e) }
   },
@@ -46,12 +75,13 @@ module.exports = {
     } catch (e) { next(e) }
   },
 
-  // PATCH /comments/:id — hanya pemilik
+  // PATCH /comments/:id — pemilik, atau moderator/admin
   update: async (req, res, next) => {
     try {
       const existing = await prisma.comment.findUnique({ where: { id: req.params.id } })
       if (!existing) return res.status(404).json({ message: 'Komentar tidak ditemukan' })
-      if (existing.userId !== req.userId)
+      const isStaff = ['ADMIN', 'MODERATOR'].includes(req.userRole)
+      if (!isStaff && existing.userId !== req.userId)
         return res.status(403).json({ message: 'Tidak diizinkan mengubah komentar ini' })
 
       const { content } = req.body
@@ -66,12 +96,13 @@ module.exports = {
     } catch (e) { next(e) }
   },
 
-  // DELETE /comments/:id — hanya pemilik
+  // DELETE /comments/:id — pemilik, atau moderator/admin
   remove: async (req, res, next) => {
     try {
       const existing = await prisma.comment.findUnique({ where: { id: req.params.id } })
       if (!existing) return res.status(404).json({ message: 'Komentar tidak ditemukan' })
-      if (existing.userId !== req.userId)
+      const isStaff = ['ADMIN', 'MODERATOR'].includes(req.userRole)
+      if (!isStaff && existing.userId !== req.userId)
         return res.status(403).json({ message: 'Tidak diizinkan menghapus komentar ini' })
 
       await prisma.comment.delete({ where: { id: req.params.id } })

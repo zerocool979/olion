@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Link from 'next/link'
-import { Avatar } from './Avatar'
+import Avatar from '../dashboard/Avatar'
 import { timeAgo } from '../../lib/timeAgo'
 
 export function CommentItem({
@@ -17,6 +17,8 @@ export function CommentItem({
   onDelete,
 }) {
   const username = comment.user?.profile?.username ?? 'Anonim'
+  const avatarUrl = comment.user?.profile?.avatarUrl ?? null
+  const avatarBorder = comment.user?.profile?.avatarBorder ?? null
   const isExpert = comment.user?.isVerifiedExpert
   const isOptimistic = comment._optimistic
   const isOwner = !!currentUserId && comment.userId === currentUserId
@@ -60,7 +62,7 @@ export function CommentItem({
 
   return (
     <article className={`dd-comment${isOptimistic ? ' dd-comment--optimistic' : ''}`}>
-      <Avatar username={username} size={32} />
+      <Avatar username={username} src={avatarUrl} border={avatarBorder} size={32} />
       <div className="dd-comment__body">
         <header className="dd-comment__header">
           <div className="dd-comment__author-row">

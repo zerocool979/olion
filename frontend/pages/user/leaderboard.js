@@ -61,7 +61,7 @@ export default function Leaderboard() {
       <div style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: 16, padding: '14px 16px' }}>
         <span style={{ fontWeight: 700, fontSize: 15, color: colors.textPrimary, display: 'block', marginBottom: 12 }}>📍 Posisiku</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-          <Avatar username={username} size={40} />
+          <Avatar username={username} src={user?.profile?.avatarUrl} border={user?.profile?.avatarBorder} size={40} />
           <div>
             <div style={{ fontWeight: 700, fontSize: 14, color: colors.textPrimary }}>{username}</div>
             <div style={{ fontSize: 12, color: colors.textSecondary }}>{reputation.toLocaleString()} rep</div>
@@ -103,7 +103,7 @@ export default function Leaderboard() {
           {/* 2nd */}
           <div style={{ textAlign: 'center', marginTop: 16 }}>
             <div style={{ fontSize: 28, marginBottom: 4 }}>🥈</div>
-            <Avatar username={leaders[1]?.profile?.username ?? leaders[1]?.username ?? '?'} size={52} />
+            <Avatar username={leaders[1]?.profile?.username ?? leaders[1]?.username ?? '?'} src={leaders[1]?.profile?.avatarUrl ?? leaders[1]?.avatarUrl} border={leaders[1]?.profile?.avatarBorder ?? leaders[1]?.avatarBorder} size={52} />
             <div style={{ fontSize: 13, fontWeight: 600, color: colors.textPrimary, marginTop: 6, maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {leaders[1]?.profile?.username ?? leaders[1]?.username ?? 'Anonim'}
             </div>
@@ -112,7 +112,7 @@ export default function Leaderboard() {
           {/* 1st */}
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 36, marginBottom: 4 }}>🥇</div>
-            <Avatar username={leaders[0]?.profile?.username ?? leaders[0]?.username ?? '?'} size={68} />
+            <Avatar username={leaders[0]?.profile?.username ?? leaders[0]?.username ?? '?'} src={leaders[0]?.profile?.avatarUrl ?? leaders[0]?.avatarUrl} border={leaders[0]?.profile?.avatarBorder ?? leaders[0]?.avatarBorder} size={68} />
             <div style={{ fontSize: 14, fontWeight: 700, color: colors.textPrimary, marginTop: 6, maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {leaders[0]?.profile?.username ?? leaders[0]?.username ?? 'Anonim'}
             </div>
@@ -121,7 +121,7 @@ export default function Leaderboard() {
           {/* 3rd */}
           <div style={{ textAlign: 'center', marginTop: 16 }}>
             <div style={{ fontSize: 28, marginBottom: 4 }}>🥉</div>
-            <Avatar username={leaders[2]?.profile?.username ?? leaders[2]?.username ?? '?'} size={52} />
+            <Avatar username={leaders[2]?.profile?.username ?? leaders[2]?.username ?? '?'} src={leaders[2]?.profile?.avatarUrl ?? leaders[2]?.avatarUrl} border={leaders[2]?.profile?.avatarBorder ?? leaders[2]?.avatarBorder} size={52} />
             <div style={{ fontSize: 13, fontWeight: 600, color: colors.textPrimary, marginTop: 6, maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {leaders[2]?.profile?.username ?? leaders[2]?.username ?? 'Anonim'}
             </div>
@@ -137,6 +137,8 @@ export default function Leaderboard() {
         ? <EmptyState icon="🏆" title="Belum ada data peringkat" Link={Link} />
         : leaders.map((u, i) => {
             const uname  = u.profile?.username ?? u.username ?? 'Anonim'
+            const uavatar = u.profile?.avatarUrl ?? u.avatarUrl ?? null
+            const uborder = u.profile?.avatarBorder ?? u.avatarBorder ?? null
             const rep    = u.profile?.reputation ?? u.reputation ?? 0
             const tier   = tierFor(rep)
             const isMe   = u.id === user?.id
@@ -155,7 +157,7 @@ export default function Leaderboard() {
                   <div style={{ width: 32, textAlign: 'center', fontWeight: 700, fontSize: 15, color: i < 3 ? '#f59e0b' : colors.textSecondary, flexShrink: 0 }}>
                     {MEDAL[i] ?? `${i + 1}`}
                   </div>
-                  <Avatar username={uname} size={40} verified={u.isExpert ?? u.role === 'expert'} />
+                  <Avatar username={uname} src={uavatar} border={uborder} size={40} verified={u.isVerifiedExpert ?? u.role === 'EXPERT'} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <span style={{ fontWeight: 600, fontSize: 14, color: colors.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180 }}>{uname}</span>

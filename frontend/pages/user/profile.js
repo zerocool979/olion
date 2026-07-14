@@ -15,6 +15,7 @@ import api from '../../lib/api'
 import {
   Avatar, StatPill, EmptyState,
   DiscussionCard, AchievementPanel, SkeletonCard, colors,
+  AVATAR_BORDER_PRESETS,
 } from '../../components/dashboard'
 import UserLayout from './_layout'
 
@@ -59,9 +60,52 @@ function ProfileBanner({ isExpert }) {
 }
 
 /* ─── EditForm ─── */
-function EditForm({ form, onChange, onSave, onCancel, saving }) {
+function EditForm({ form, onChange, onSave, onCancel, saving, saveError }) {
   return (
     <div style={{ marginBottom: 14 }}>
+      {/* Preview + pemilih bingkai */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 14 }}>
+        <Avatar username={form.username || '?'} src={form.avatarUrl || undefined} border={form.avatarBorder} size={64} />
+        <div style={{ flex: 1 }}>
+          <label style={{ fontSize: 12, color: colors.textSecondary, display: 'block', marginBottom: 4 }}>
+            URL Foto Profil
+          </label>
+          <input
+            value={form.avatarUrl}
+            onChange={e => onChange({ ...form, avatarUrl: e.target.value })}
+            placeholder="https://…"
+            style={{
+              display: 'block', width: '100%', padding: '7px 10px',
+              borderRadius: 8, border: `1px solid ${colors.border}`,
+              background: colors.bgElevated, color: colors.textPrimary,
+              fontSize: 13, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
+            }}
+          />
+        </div>
+      </div>
+
+      <label style={{ fontSize: 12, color: colors.textSecondary, display: 'block', marginBottom: 6 }}>
+        Bingkai Avatar
+      </label>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+        {AVATAR_BORDER_PRESETS.map(p => (
+          <button
+            key={p.value}
+            type="button"
+            onClick={() => onChange({ ...form, avatarBorder: p.value })}
+            style={{
+              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+              background: 'none', border: 'none', cursor: 'pointer', padding: 4,
+              borderRadius: 8,
+              outline: form.avatarBorder === p.value ? `2px solid ${colors.accent}` : '2px solid transparent',
+            }}
+          >
+            <Avatar username={form.username || '?'} src={form.avatarUrl || undefined} border={p.value === 'none' ? undefined : p.value} size={34} />
+            <span style={{ fontSize: 10, color: colors.textSecondary }}>{p.label}</span>
+          </button>
+        ))}
+      </div>
+
       <input
         value={form.username}
         onChange={e => onChange({ ...form, username: e.target.value })}
@@ -87,6 +131,11 @@ function EditForm({ form, onChange, onSave, onCancel, saving }) {
           boxSizing: 'border-box', fontFamily: 'inherit', lineHeight: 1.5,
         }}
       />
+      {saveError && (
+        <div style={{ padding: '8px 12px', borderRadius: 8, background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: 13, marginTop: 10 }}>
+          ⚠️ {saveError}
+        </div>
+      )}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 10 }}>
         <button onClick={onCancel} style={{
           border: `1px solid ${colors.border}`, background: 'none',
@@ -110,7 +159,7 @@ function EditForm({ form, onChange, onSave, onCancel, saving }) {
    MAIN — halaman profil diri sendiri
 ═══════════════════════════════════════════ */
 export default function MyProfile() {
-  const { user: me, setUser } = useContext(AuthContext)
+  const { user: me, updateUser } = useContext(AuthContext)
   const router = useRouter()
 
   const [profile,      setProfile]      = useState(null)
@@ -122,18 +171,31 @@ export default function MyProfile() {
   const [comments,     setComments]     = useState([])
   const [postsLoading, setPostsLoading] = useState(false)
   const [editing,      setEditing]      = useState(false)
-  const [editForm,     setEditForm]     = useState({ username: '', bio: '' })
+  const [editForm,     setEditForm]     = useState({ username: '', bio: '', avatarUrl: '', avatarBorder: 'none' })
   const [saving,       setSaving]       = useState(false)
   const [saveError,    setSaveError]    = useState('')
 
   /* ── fetch own profile ── */
   useEffect(() => {
+    // FIX AKAR MASALAH: /auth/me membalas { user: {...} }, tapi kode lama
+    // mengambil `r.data?.data ?? r.data` — karena tidak ada `.data.data`,
+    // ini jatuh ke `r.data` MENTAH (masih terbungkus { user: {...} }), bukan
+    // objek user itu sendiri. Akibatnya SEMUA turunan di bawah (username,
+    // bio, reputasi, jumlah diskusi/follower) diam-diam selalu jatuh ke nilai
+    // default/kosong — inilah sebab halaman ini terasa "tidak sinkron" dengan
+    // /user/profile/[username] yang fetch dari endpoint berbeda dengan bentuk
+    // yang benar.
     api.get('/auth/me')
       .then(r => {
-        const d = r.data?.data ?? r.data
+        const d = r.data?.user ?? r.data?.data ?? r.data
         if (!d) { setLoadError(true); return }
         setProfile(d)
-        setEditForm({ username: d?.profile?.username ?? d?.username ?? '', bio: d?.profile?.bio ?? '' })
+        setEditForm({
+          username: d?.profile?.username ?? d?.username ?? '',
+          bio: d?.profile?.bio ?? d?.bio ?? '',
+          avatarUrl: d?.profile?.avatarUrl ?? d?.avatarUrl ?? '',
+          avatarBorder: d?.profile?.avatarBorder ?? d?.avatarBorder ?? 'none',
+        })
       })
       .catch(() => setLoadError(true))
       .finally(() => setLoading(false))
@@ -170,13 +232,31 @@ export default function MyProfile() {
     if (!editForm.username.trim()) return
     setSaving(true); setSaveError('')
     try {
-      await api.patch('/users/me/profile', editForm)
-      setProfile(prev => ({ ...prev, profile: { ...prev?.profile, ...editForm } }))
-      // sync ke AuthContext jika ada setter
-      setUser?.(prev => prev ? ({ ...prev, profile: { ...prev?.profile, ...editForm } }) : prev)
+      const res = await api.patch('/users/me/profile', {
+        username: editForm.username,
+        bio: editForm.bio,
+        avatarUrl: editForm.avatarUrl,
+        avatarBorder: editForm.avatarBorder,
+      })
+      // FIX: pakai data resmi dari server (sudah di-trim/divalidasi backend),
+      // bukan input mentah — supaya tidak ada selisih antara apa yang
+      // ditampilkan lokal vs apa yang sebenarnya tersimpan di database.
+      const savedProfile = res.data?.profile ?? {
+        username: editForm.username.trim(), bio: editForm.bio,
+        avatarUrl: editForm.avatarUrl || null, avatarBorder: editForm.avatarBorder === 'none' ? null : editForm.avatarBorder,
+      }
+
+      setProfile(prev => ({ ...prev, profile: { ...prev?.profile, ...savedProfile } }))
+
+      // FIX: sebelumnya memanggil `setUser?.()` yang tidak pernah ada di
+      // AuthContext (no-op) — akibatnya kartu profil di sidebar tidak update,
+      // dan halaman publik salah mengira kita "orang lain" (nampilin tombol
+      // Ikuti di profil sendiri) karena username lama masih nyangkut di context.
+      updateUser(prev => ({ ...prev, profile: { ...prev?.profile, ...savedProfile } }))
+
       setEditing(false)
-      // URL publik profil menggunakan username baru
-      router.replace(`/user/profile/${encodeURIComponent(editForm.username.trim())}`)
+      // URL publik profil menggunakan username baru (hasil resmi dari server)
+      router.replace(`/user/profile/${encodeURIComponent(savedProfile.username)}`)
     } catch (err) {
       setSaveError(err?.response?.data?.message ?? 'Gagal menyimpan profil.')
     } finally { setSaving(false) }
@@ -189,11 +269,13 @@ export default function MyProfile() {
   /* ── derived ── */
   const username   = profile?.profile?.username   ?? profile?.username   ?? 'Anonim'
   const bio        = profile?.profile?.bio        ?? ''
+  const avatarUrl    = profile?.profile?.avatarUrl    ?? profile?.avatarUrl    ?? null
+  const avatarBorder = profile?.profile?.avatarBorder ?? profile?.avatarBorder ?? null
   const reputation = profile?.profile?.reputation ?? profile?.reputation ?? 0
   const postCount  = profile?._count?.discussions ?? profile?.postCount  ?? 0
   const voteCount  = profile?.profile?.totalVotes ?? profile?._count?.votes ?? 0
   const joinDate   = profile?.createdAt
-  const isExpert   = profile?.role === 'expert'   || profile?.isExpert
+  const isExpert   = profile?.isVerifiedExpert || profile?.role === 'EXPERT'
   const followers  = profile?._count?.followers   ?? profile?.followerCount  ?? 0
   const following  = profile?._count?.following   ?? profile?.followingCount ?? 0
   const tier       = tierFor(reputation)
@@ -215,6 +297,14 @@ export default function MyProfile() {
           <StatPill icon="👥" value={followers}                   label="Pengikut" />
           <StatPill icon="➕" value={following}                   label="Mengikuti" />
         </div>
+        <Link href="/user/chat" style={{
+          marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          width: '100%', padding: '8px 0', boxSizing: 'border-box',
+          background: colors.accent, color: '#fff', textDecoration: 'none',
+          borderRadius: 20, fontSize: 13, fontWeight: 700,
+        }}>
+          💬 Buka Pesan
+        </Link>
       </div>
 
       {/* Badge */}
@@ -293,7 +383,7 @@ export default function MyProfile() {
             {/* Avatar + tombol Edit */}
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: -36, marginBottom: 10 }}>
               <div style={{ position: 'relative' }}>
-                <Avatar username={username} size={72} />
+                <Avatar username={username} src={avatarUrl} border={avatarBorder} size={72} />
                 {isExpert && (
                   <span style={{
                     position: 'absolute', bottom: 0, right: -2,
@@ -321,14 +411,7 @@ export default function MyProfile() {
             {/* Edit form atau tampilan nama */}
             {editing
               ? (
-                <>
-                  <EditForm form={editForm} onChange={setEditForm} onSave={handleSave} onCancel={() => { setEditing(false); setSaveError('') }} saving={saving} />
-                  {saveError && (
-                    <div style={{ padding: '8px 12px', borderRadius: 8, background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: 13, marginBottom: 10 }}>
-                      ⚠️ {saveError}
-                    </div>
-                  )}
-                </>
+                <EditForm form={editForm} onChange={setEditForm} onSave={handleSave} onCancel={() => { setEditing(false); setSaveError('') }} saving={saving} saveError={saveError} />
               )
               : (
                 <>

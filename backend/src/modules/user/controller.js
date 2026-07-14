@@ -4,7 +4,7 @@ const reputationSvc = require('../reputation/service')
 
 const PUBLIC_USER_SELECT = {
   id: true, role: true, isVerifiedExpert: true, isBanned: true, createdAt: true,
-  profile: { select: { username: true, bio: true } },
+  profile: { select: { username: true, bio: true, avatarUrl: true, avatarBorder: true } },
   _count:  { select: { discussions: true, comments: true, followers: true, following: true } },
 }
 
@@ -88,10 +88,10 @@ module.exports = {
     } catch (err) { next(err) }
   },
 
-  // PATCH /users/me/profile  { username?, bio? }
+  // PATCH /users/me/profile  { username?, bio?, avatarUrl?, avatarBorder? }
   updateProfile: async (req, res, next) => {
     try {
-      const { username, bio } = req.body
+      const { username, bio, avatarUrl, avatarBorder } = req.body
       const data = {}
 
       if (username !== undefined) {
@@ -109,9 +109,29 @@ module.exports = {
       }
       if (bio !== undefined) data.bio = bio.trim().slice(0, 300)
 
+      if (avatarUrl !== undefined) {
+        const trimmed = avatarUrl.trim()
+        if (trimmed === '') {
+          data.avatarUrl = null // izinkan hapus foto profil
+        } else {
+          if (trimmed.length > 500)
+            return res.status(400).json({ message: 'URL foto profil terlalu panjang' })
+          if (!/^https?:\/\/.+/i.test(trimmed))
+            return res.status(400).json({ message: 'URL foto profil harus diawali http:// atau https://' })
+          data.avatarUrl = trimmed
+        }
+      }
+
+      if (avatarBorder !== undefined) {
+        const VALID_BORDERS = ['none', 'gold', 'blue', 'fire', 'emerald', 'rainbow']
+        if (!VALID_BORDERS.includes(avatarBorder))
+          return res.status(400).json({ message: `avatarBorder harus salah satu dari: ${VALID_BORDERS.join(', ')}` })
+        data.avatarBorder = avatarBorder === 'none' ? null : avatarBorder
+      }
+
       const profile = await prisma.profile.update({
         where: { userId: req.userId }, data,
-        select: { username: true, bio: true },
+        select: { username: true, bio: true, avatarUrl: true, avatarBorder: true },
       })
       res.json({ profile })
     } catch (err) { next(err) }
@@ -124,7 +144,7 @@ module.exports = {
       if (followingId === req.userId)
         return res.status(400).json({ message: 'Tidak bisa mengikuti diri sendiri' })
 
-      const target = await prisma.user.findUnique({ where: { id: followingId } })
+      const target = await prisma.user.findUnique({ where: { id: followingId }, select: { id: true } })
       if (!target) return res.status(404).json({ message: 'Pengguna tidak ditemukan' })
 
       const follow = await prisma.follow.upsert({

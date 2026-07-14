@@ -3,6 +3,7 @@ const discussionService = require('./service')
 const badgeSvc = require('../badge/service')
 const reputationSvc = require('../reputation/service')
 const prisma = require('../../config/prisma')
+const { notifyMentions } = require('../../utils/mentions')
 
 const REP_CREATE_DISCUSSION = 5
 
@@ -35,19 +36,39 @@ module.exports = {
 
   create: async (req, res, next) => {
     try {
-      const { categoryId, title, content, mode, discipline } = req.body
+      const { categoryId, title, content } = req.body
 
       if (!categoryId || !title?.trim() || !content?.trim()) {
         return res.status(400).json({ message: 'categoryId, title, dan content harus diisi' })
       }
 
+      // FIX: `mode` dan `discipline` wajib diisi di skema (tidak ada default),
+      // tapi form lama tidak pernah mengirim keduanya sama sekali → Prisma
+      // selalu menolak dengan "Argument `mode` is missing". Sekarang divalidasi
+      // kalau dikirim, dan diberi default yang masuk akal kalau tidak dikirim,
+      // supaya endpoint ini tidak pernah crash gara-gara field opsional ini.
+      const VALID_MODES = ['INFORMATIF', 'KLARIFIKATIF', 'EKSPLORATIF', 'EVALUATIF', 'ARGUMENTATIF']
+      const VALID_DISCIPLINES = ['BEBAS', 'RASIONAL', 'AKADEMIK', 'PROFESIONAL']
+
+      const mode = req.body.mode
+      const discipline = req.body.discipline
+
+      if (mode !== undefined && !VALID_MODES.includes(mode)) {
+        return res.status(400).json({ message: `mode harus salah satu dari: ${VALID_MODES.join(', ')}` })
+      }
+      if (discipline !== undefined && !VALID_DISCIPLINES.includes(discipline)) {
+        return res.status(400).json({ message: `discipline harus salah satu dari: ${VALID_DISCIPLINES.join(', ')}` })
+      }
+
       const discussion = await discussionService.create(
-        req.userId, categoryId, title.trim(), content.trim(), mode, discipline
+        req.userId, categoryId, title.trim(), content.trim(),
+        mode || 'EKSPLORATIF', discipline || 'BEBAS'
       )
 
       // Reputasi + badge untuk kontribusi diskusi baru
       reputationSvc.addPoint(req.userId, REP_CREATE_DISCUSSION, 'Membuat diskusi baru').catch(() => {})
       badgeSvc.awardSlug(req.userId, 'first_post').catch(() => {})
+      notifyMentions({ text: `${title} ${content}`, actorId: req.userId, discussionId: discussion.id })
 
       res.status(201).json({ data: discussion })
     } catch (err) { next(err) }

@@ -25,7 +25,7 @@ async function getLeaderboard({ period = 'all', limit = 50 } = {}) {
     where: { isBanned: false },
     select: {
       id: true, role: true, isVerifiedExpert: true, createdAt: true,
-      profile: { select: { username: true, bio: true } },
+      profile: { select: { username: true, bio: true, avatarUrl: true, avatarBorder: true } },
       _count: { select: { discussions: true, comments: true } },
     },
   })
@@ -48,6 +48,8 @@ async function getLeaderboard({ period = 'all', limit = 50 } = {}) {
     id: u.id,
     username: u.profile?.username ?? `Anon#${u.id.slice(-4)}`,
     bio: u.profile?.bio ?? '',
+    avatarUrl: u.profile?.avatarUrl ?? null,
+    avatarBorder: u.profile?.avatarBorder ?? null,
     isVerifiedExpert: u.isVerifiedExpert,
     role: u.role,
     reputation: Math.max(0, repMap[u.id] || 0),

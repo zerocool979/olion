@@ -68,7 +68,7 @@ module.exports = {
           user: {
             select: {
               id: true, email: true, role: true,
-              profile: { select: { username: true, bio: true } },
+              profile: { select: { username: true, bio: true, avatarUrl: true, avatarBorder: true } },
             },
           },
         },

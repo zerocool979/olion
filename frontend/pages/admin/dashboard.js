@@ -143,7 +143,7 @@ export default function AdminDashboard() {
           </div>
           <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
             <Link href="/user" style={{ color: colors.textSecondary, fontSize: 13, textDecoration: 'none' }}>← Dashboard User</Link>
-            {user && <Avatar username={user.profile?.username} size={32} />}
+            {user && <Avatar username={user.profile?.username} src={user.profile?.avatarUrl} border={user.profile?.avatarBorder} size={32} />}
           </div>
         </div>
 
@@ -207,7 +207,7 @@ export default function AdminDashboard() {
                         onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                         <td style={{ padding: '10px 14px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <Avatar username={u.profile?.username} size={30} />
+                            <Avatar username={u.profile?.username} src={u.profile?.avatarUrl} border={u.profile?.avatarBorder} size={30} />
                             <span style={{ fontWeight: 600 }}>{u.profile?.username ?? 'Tanpa username'}</span>
                           </div>
                         </td>
@@ -328,7 +328,7 @@ export default function AdminDashboard() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 10 }}>
                         <div style={{ flex: 1 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                            <Avatar username={a.user?.profile?.username} size={26} />
+                            <Avatar username={a.user?.profile?.username} src={a.user?.profile?.avatarUrl} border={a.user?.profile?.avatarBorder} size={26} />
                             <strong style={{ fontSize: 13 }}>{a.user?.profile?.username ?? a.user?.email}</strong>
                           </div>
                           <div style={{ fontSize: 13, color: colors.textPrimary, marginBottom: 4 }}>

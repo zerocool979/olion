@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import ModeBadge from './ModeBadge';
 import StatPill from './StatPill';
-import Avatar from './Avatar';
+import Avatar from './dashboard/Avatar';
 import { useContext } from 'react'
 import DiscussionLink from './DiscussionLink'
 
@@ -36,7 +36,7 @@ export default function DiscussionCard({ discussion, index }) {
         <div className="discussion-card__footer">
           {/* Author */}
           <div className="discussion-card__author">
-            <Avatar username={discussion.user?.profile?.username} size={24} />
+            <Avatar username={discussion.user?.profile?.username} src={discussion.user?.profile?.avatarUrl} border={discussion.user?.profile?.avatarBorder} size={24} />
             <span className="discussion-card__username">
               {discussion.user?.profile?.username || 'Anonim'}
             </span>

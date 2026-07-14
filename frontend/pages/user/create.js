@@ -9,6 +9,26 @@ import api from '../../lib/api'
 import { Avatar, StatPill, colors } from '../../components/dashboard'
 import UserLayout from './_layout'
 
+// FIX: field ini wajib diisi di skema (Discussion.mode / Discussion.discipline,
+// tanpa default) tapi form ini tadinya tidak pernah menampilkan/mengirimnya —
+// menyebabkan setiap POST /discussions gagal dengan "Argument `mode` is
+// missing". Sekarang jadi pilihan asli di form, dengan default paling netral
+// (Eksploratif / Bebas) supaya tetap satu-klik-jadi kalau user tidak peduli.
+const MODE_OPTIONS = [
+  { value: 'EKSPLORATIF',  label: 'Eksploratif — mengeksplorasi ide' },
+  { value: 'INFORMATIF',   label: 'Informatif — berbagi informasi' },
+  { value: 'KLARIFIKATIF', label: 'Klarifikasi — mencari kejelasan' },
+  { value: 'EVALUATIF',    label: 'Evaluatif — menilai/mengevaluasi' },
+  { value: 'ARGUMENTATIF', label: 'Argumentatif — mengajukan argumen' },
+]
+
+const DISCIPLINE_OPTIONS = [
+  { value: 'BEBAS',        label: 'Bebas — santai & terbuka' },
+  { value: 'RASIONAL',     label: 'Rasional — berbasis nalar/logika' },
+  { value: 'AKADEMIK',     label: 'Akademik — berbasis referensi ilmiah' },
+  { value: 'PROFESIONAL',  label: 'Profesional — konteks kerja/industri' },
+]
+
 export default function CreateDiscussion() {
   const { user } = useContext(AuthContext)
   const router = useRouter()
@@ -16,6 +36,8 @@ export default function CreateDiscussion() {
   const [title,      setTitle]      = useState('')
   const [content,    setContent]    = useState('')
   const [categoryId, setCategoryId] = useState('')
+  const [mode,       setMode]       = useState('EKSPLORATIF')
+  const [discipline, setDiscipline] = useState('BEBAS')
   const [tags,       setTags]       = useState('')
   const [categories, setCategories] = useState([])
   const [submitting, setSubmitting] = useState(false)
@@ -29,6 +51,29 @@ export default function CreateDiscussion() {
       .catch(() => {})
   }, [])
 
+  // FIX: sebelumnya halaman ini tidak pernah membaca query param sama sekali —
+  // apa pun yang diketik user di kartu "Mulai Diskusi" pada beranda hilang
+  // begitu saja begitu sampai di sini. Sekarang title & kategori (by slug)
+  // dibawa masuk otomatis begitu router siap.
+  useEffect(() => {
+    if (!router.isReady) return
+    const q = router.query
+    if (typeof q.title === 'string' && q.title.trim()) {
+      setTitle(prev => prev || q.title)
+    }
+  }, [router.isReady, router.query.title])
+
+  useEffect(() => {
+    if (!router.isReady || categories.length === 0) return
+    const slug = router.query.category
+    if (typeof slug !== 'string' || !slug) return
+
+    // Kategori bisa berupa root atau anak (children) — cari di keduanya.
+    const flat = categories.flatMap(c => [c, ...(c.children ?? [])])
+    const match = flat.find(c => c.slug === slug)
+    if (match) setCategoryId(prev => prev || match.id)
+  }, [router.isReady, router.query.category, categories])
+
   const handleSubmit = async () => {
     setError('')
     if (!title.trim()) return setError('Judul wajib diisi.')
@@ -41,6 +86,8 @@ export default function CreateDiscussion() {
         title:    title.trim(),
         content:  content.trim(),
         categoryId: categoryId || undefined,
+        mode,
+        discipline,
         tags:     tagArray,
       })
       const id = r.data?.data?.id ?? r.data?.id
@@ -89,7 +136,7 @@ export default function CreateDiscussion() {
 
       {/* Form */}
       <div style={{ padding: '16px', display: 'flex', gap: 12 }}>
-        <Avatar username={username} size={42} />
+        <Avatar username={username} src={user?.profile?.avatarUrl} border={user?.profile?.avatarBorder} size={42} />
         <div style={{ flex: 1, minWidth: 0 }}>
 
           {/* Title */}
@@ -106,6 +153,20 @@ export default function CreateDiscussion() {
             <option value="">Pilih kategori…</option>
             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
+
+          {/* Mode & Tingkat diskusi */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+            <select value={mode} onChange={e => setMode(e.target.value)}
+              style={{ padding: '6px 12px', borderRadius: 20, border: `1px solid ${colors.border}`, background: colors.bgElevated, color: colors.textPrimary, fontSize: 13, cursor: 'pointer', outline: 'none' }}
+            >
+              {MODE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            <select value={discipline} onChange={e => setDiscipline(e.target.value)}
+              style={{ padding: '6px 12px', borderRadius: 20, border: `1px solid ${colors.border}`, background: colors.bgElevated, color: colors.textPrimary, fontSize: 13, cursor: 'pointer', outline: 'none' }}
+            >
+              {DISCIPLINE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
 
           {/* Content */}
           <textarea

@@ -286,7 +286,7 @@ export default function DiscussionDetail() {
           ✍️ Penulis
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Avatar username={authorName} size={40} />
+          <Avatar username={authorName} src={discussion?.user?.profile?.avatarUrl} border={discussion?.user?.profile?.avatarBorder} size={40} />
           <div>
             <div style={{ fontWeight: 700, fontSize: 14, color: colors.textPrimary }}>{authorName}</div>
             {isExpert && (

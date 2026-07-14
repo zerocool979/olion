@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import Avatar from './Avatar';
+import Avatar from './dashboard/Avatar';
 
 function getMedalClass(rank) {
   if (rank === 1) return 'podium-card--gold';
@@ -26,7 +26,7 @@ export default function PodiumCard({ u }) {
     <Link href={`/u/${u.username}`} style={{ textDecoration: 'none' }}>
       <div className={`podium-card card ${medalClass}`}>
         <div className="podium-emoji">{emoji}</div>
-        <Avatar username={u.username} size={44} />
+        <Avatar username={u.username} src={u.avatarUrl} border={u.avatarBorder} size={44} />
         <p className="podium-username">{u.username}</p>
         {u.isVerifiedExpert && (
           <span className="badge badge-expert podium-expert">✦ Expert</span>

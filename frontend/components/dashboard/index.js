@@ -1,4 +1,4 @@
-export { default as Avatar } from "./Avatar";
+export { default as Avatar, AVATAR_BORDER_PRESETS } from "./Avatar";
 export { default as StatPill } from "./StatPill";
 export { default as EmptyState } from "./EmptyState";
 export { default as DiscussionCard } from "./DiscussionCard";

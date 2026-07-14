@@ -193,11 +193,13 @@ export default function PublicProfile() {
   /* ── derived ── */
   const displayUsername = profile?.profile?.username ?? profile?.username ?? username
   const bio             = profile?.profile?.bio      ?? ''
+  const avatarUrl        = profile?.profile?.avatarUrl    ?? profile?.avatarUrl    ?? null
+  const avatarBorder     = profile?.profile?.avatarBorder ?? profile?.avatarBorder ?? null
   const reputation      = profile?.profile?.reputation ?? profile?.reputation ?? 0
   const postCount       = profile?._count?.discussions ?? profile?.postCount  ?? 0
   const voteCount       = profile?.profile?.totalVotes ?? profile?._count?.votes ?? 0
   const joinDate        = profile?.createdAt
-  const isExpert        = profile?.role === 'expert' || profile?.isExpert
+  const isExpert        = profile?.isVerifiedExpert || profile?.role === 'EXPERT'
   const followers       = profile?._count?.followers  ?? profile?.followerCount  ?? 0
   const following       = profile?._count?.following  ?? profile?.followingCount ?? 0
   const tier            = tierFor(reputation)
@@ -345,7 +347,7 @@ export default function PublicProfile() {
               {/* Avatar row */}
               <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: -36, marginBottom: 10 }}>
                 <div style={{ position: 'relative' }}>
-                  <Avatar username={displayUsername} size={72} />
+                  <Avatar username={displayUsername} src={avatarUrl} border={avatarBorder} size={72} />
                   {isExpert && (
                     <span style={{
                       position: 'absolute', bottom: 0, right: -2,

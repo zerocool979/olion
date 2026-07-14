@@ -56,6 +56,29 @@ module.exports = {
     }
   },
 
+  // ─── POST /auth/google  { idToken }
+  google: async (req, res, next) => {
+    try {
+      const { idToken, credential } = req.body
+      // Google Identity Services mengirim field "credential" pada onSuccess
+      // callback; terima juga "idToken" untuk fleksibilitas nama field.
+      const token = idToken || credential
+      if (!token) {
+        return res.status(400).json({ message: 'idToken harus diisi' })
+      }
+
+      const result = await authService.loginWithGoogle(token)
+
+      return res.status(200).json({
+        message: 'Login Google berhasil',
+        user: result.user,
+        token: result.token
+      })
+    } catch (err) {
+      next(err)
+    }
+  },
+
   // ─── ADDED: /auth/me untuk server-side token validation
   me: async (req, res, next) => {
     try {
@@ -88,15 +111,18 @@ module.exports = {
   changePassword: async (req, res, next) => {
     try {
       const { oldPassword, newPassword } = req.body
-      if (!oldPassword || !newPassword) {
-        return res.status(400).json({ message: 'Password lama dan baru harus diisi' })
+      if (!newPassword) {
+        return res.status(400).json({ message: 'Password baru harus diisi' })
       }
       if (newPassword.length < 6) {
         return res.status(400).json({ message: 'Password baru minimal 6 karakter' })
       }
 
+      // oldPassword hanya wajib kalau akun ini SUDAH punya password.
+      // Akun Google-only boleh set password pertama kali tanpa oldPassword —
+      // authService.changePassword yang menentukan mana yang berlaku.
       await authService.changePassword(req.userId, oldPassword, newPassword)
-      return res.status(200).json({ message: 'Password berhasil diubah' })
+      return res.status(200).json({ message: 'Password berhasil disimpan' })
     } catch (err) {
       next(err)
     }

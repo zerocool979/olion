@@ -17,6 +17,8 @@ async function triggerReputation(vote, previousValue) {
     let ownerId = null
     let upPts   = 0
     let downPts = 0
+    let discussionId = null
+    let commentId = null
 
     if (vote.discussionId) {
       const d = await prisma.discussion.findUnique({
@@ -25,13 +27,16 @@ async function triggerReputation(vote, previousValue) {
       ownerId = d?.userId
       upPts   = REP_UPVOTE_DISCUSSION
       downPts = REP_DOWNVOTE_DISCUSSION
+      discussionId = vote.discussionId
     } else if (vote.commentId) {
       const c = await prisma.comment.findUnique({
-        where: { id: vote.commentId }, select: { userId: true }
+        where: { id: vote.commentId }, select: { userId: true, discussionId: true }
       })
       ownerId = c?.userId
       upPts   = REP_UPVOTE_COMMENT
       downPts = REP_DOWNVOTE_COMMENT
+      commentId = vote.commentId
+      discussionId = c?.discussionId ?? null
     }
 
     if (!ownerId || ownerId === vote.userId) return // jangan reward diri sendiri
@@ -43,6 +48,21 @@ async function triggerReputation(vote, previousValue) {
     const delta = reversal + gain
     if (delta !== 0) {
       await reputationSvc.addPoint(ownerId, delta, `Vote ${vote.value > 0 ? 'positif' : 'negatif'}`)
+    }
+
+    // ── Notifikasi vote — hanya untuk upvote baru (bukan downvote/un-vote),
+    // supaya tidak spam notifikasi negatif ke penulis konten.
+    if (vote.value === 1 && previousValue !== 1) {
+      prisma.notification.create({
+        data: {
+          userId: ownerId,
+          actorId: vote.userId,
+          type: 'VOTE',
+          discussionId,
+          commentId,
+          message: commentId ? 'menyukai komentar kamu' : 'menyukai diskusi kamu',
+        },
+      }).catch(() => {})
     }
   } catch (err) {
     // Reputasi tidak boleh gagalkan endpoint utama

@@ -1,15 +1,18 @@
-const MODE_STYLES = {
-  ANONYMOUS: 'mode-badge mode-badge--anonymous',
-  IDENTIFIED: 'mode-badge mode-badge--identified',
+// FIX: sebelumnya mengira `mode` bernilai ANONYMOUS/IDENTIFIED (bukan enum
+// yang sungguh ada di backend — lihat schema.prisma DiscussionMode), jadi
+// selalu jatuh ke fallback yang menampilkan nama enum mentah apa adanya
+// (mis. "ARGUMENTATIF"). Sekarang dipetakan ke label yang sama dipakai di
+// seluruh app (DiscussionContent, DiscussionMeta, BookmarkCard).
+const MODE_LABELS = {
+  INFORMATIF: 'Informatif',
+  KLARIFIKATIF: 'Klarifikasi',
+  EKSPLORATIF: 'Eksploratif',
+  EVALUATIF: 'Evaluatif',
+  ARGUMENTATIF: 'Argumentatif',
 };
 
 export default function ModeBadge({ mode }) {
-  const className = MODE_STYLES[mode] || 'mode-badge mode-badge--default';
-  const label =
-    mode === 'ANONYMOUS' ? 'Anonim' : mode === 'IDENTIFIED' ? 'Publik' : mode;
-
-  return <span className={className}>{label}</span>;
+  if (!mode) return null;
+  const label = MODE_LABELS[mode] ?? mode;
+  return <span className="mode-badge mode-badge--identified">{label}</span>;
 }
-
-
-

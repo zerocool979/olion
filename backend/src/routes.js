@@ -40,6 +40,7 @@ router.use('/stats', statsRoutes)
 // ── Auth ──────────────────────────────────────────────────────────────────────
 router.post  ('/auth/register',  authLimiter, authCtrl.register)
 router.post  ('/auth/login',     authLimiter, authCtrl.login)
+router.post  ('/auth/google',    authLimiter, authCtrl.google)
 router.get   ('/auth/me',        auth,        authCtrl.me)
 router.patch ('/auth/password',  auth,        authCtrl.changePassword)
 

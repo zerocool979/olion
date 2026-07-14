@@ -1,7 +1,7 @@
 const prisma = require('../../config/prisma')
 
 const PARTICIPANT_SELECT = {
-  user: { select: { id: true, profile: { select: { username: true } } } },
+  user: { select: { id: true, profile: { select: { username: true, avatarUrl: true, avatarBorder: true } } } },
 }
 
 module.exports = {
@@ -29,7 +29,7 @@ module.exports = {
       if (!otherId) return res.status(400).json({ message: 'userId harus diisi' })
       if (otherId === req.userId) return res.status(400).json({ message: 'Tidak bisa chat dengan diri sendiri' })
 
-      const otherExists = await prisma.user.findUnique({ where: { id: otherId } })
+      const otherExists = await prisma.user.findUnique({ where: { id: otherId }, select: { id: true } })
       if (!otherExists) return res.status(404).json({ message: 'Pengguna tidak ditemukan' })
 
       // cari conversation 1:1 yang sudah ada antara dua user ini
@@ -73,7 +73,7 @@ module.exports = {
       const messages = await prisma.message.findMany({
         where: { conversationId: req.params.id },
         orderBy: { createdAt: 'asc' },
-        include: { sender: { select: { id: true, profile: { select: { username: true } } } } },
+        include: { sender: { select: { id: true, profile: { select: { username: true, avatarUrl: true, avatarBorder: true } } } } },
       })
 
       return res.status(200).json({ data: messages })
@@ -101,7 +101,7 @@ module.exports = {
           conversationId: req.params.id,
           senderId: req.userId,
         },
-        include: { sender: { select: { id: true, profile: { select: { username: true } } } } },
+        include: { sender: { select: { id: true, profile: { select: { username: true, avatarUrl: true, avatarBorder: true } } } } },
       })
 
       await prisma.conversation.update({

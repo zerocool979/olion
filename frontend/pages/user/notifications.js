@@ -17,6 +17,7 @@ const FILTERS = [
   { val: 'mention',  label: 'Sebutan' },
   { val: 'vote',     label: 'Vote' },
   { val: 'comment',  label: 'Komentar' },
+  { val: 'reply',    label: 'Balasan' },
   { val: 'follow',   label: 'Follow' },
 ]
 
@@ -193,7 +194,7 @@ export default function Notifications() {
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <ActivityItem
-                    avatar={<Avatar username={actor.username ?? typeIcon} size={36} />}
+                    avatar={<Avatar username={actor.username ?? typeIcon} src={actor.avatarUrl ?? null} border={actor.avatarBorder ?? null} size={36} />}
                     primary={<span style={{ color: colors.textPrimary }}>{actor.username ?? 'Sistem'}</span>}
                     secondary={n.message ?? n.text ?? n.type ?? ''}
                     timestamp={timeAgo(n.createdAt)}

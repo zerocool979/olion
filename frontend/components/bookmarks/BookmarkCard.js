@@ -1,7 +1,15 @@
 import { useState, useRef } from 'react'
 import Link from 'next/link'
-import Avatar from '../Avatar'
+import Avatar from '../dashboard/Avatar'
 import { timeAgo } from '../../lib/timeAgo'
+
+const MODE_LABELS = {
+  INFORMATIF: 'Informatif',
+  KLARIFIKATIF: 'Klarifikasi',
+  EKSPLORATIF: 'Eksploratif',
+  EVALUATIF: 'Evaluatif',
+  ARGUMENTATIF: 'Argumentatif',
+}
 
 export function BookmarkCard({ item, onRemove }) {
   const d = item.discussion ?? item
@@ -32,10 +40,15 @@ export function BookmarkCard({ item, onRemove }) {
   }
 
   const username = d.user?.profile?.username ?? 'Anonim'
+  const avatarUrl = d.user?.profile?.avatarUrl ?? null
+  const avatarBorder = d.user?.profile?.avatarBorder ?? null
   const catLabel = d.category?.parent
     ? `${d.category.parent.name} › ${d.category.name}`
     : d.category?.name ?? ''
-  const isAnon = d.mode !== 'IDENTIFIED'
+  // FIX: sama seperti bug yang sudah diperbaiki di DiscussionContent.js &
+  // DiscussionMeta.js — `mode` bukan soal anonim/publik ('IDENTIFIED' bukan
+  // nilai enum yang valid sama sekali), tapi jenis/tujuan diskusi.
+  const modeLabel = MODE_LABELS[d.mode] ?? null
 
   return (
     <Link href={`/user/discussions/${d.id}`} style={{ textDecoration: 'none', display: 'block' }}>
@@ -95,20 +108,22 @@ export function BookmarkCard({ item, onRemove }) {
               {catLabel}
             </span>
           )}
-          <span style={{
-            fontFamily: "'Syne', sans-serif",
-            fontWeight: 600,
-            fontSize: '0.6rem',
-            letterSpacing: '0.05em',
-            textTransform: 'uppercase',
-            padding: '0.15rem 0.4rem',
-            borderRadius: '4px',
-            background: isAnon ? 'rgba(148,163,184,0.06)' : 'rgba(74,222,128,0.07)',
-            border: `1px solid ${isAnon ? 'rgba(148,163,184,0.12)' : 'rgba(74,222,128,0.15)'}`,
-            color: isAnon ? '#94a3b8' : '#4ade80',
-          }}>
-            {isAnon ? 'Anonim' : 'Publik'}
-          </span>
+          {modeLabel && (
+            <span style={{
+              fontFamily: "'Syne', sans-serif",
+              fontWeight: 600,
+              fontSize: '0.6rem',
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase',
+              padding: '0.15rem 0.4rem',
+              borderRadius: '4px',
+              background: 'rgba(74,222,128,0.07)',
+              border: '1px solid rgba(74,222,128,0.15)',
+              color: '#4ade80',
+            }}>
+              {modeLabel}
+            </span>
+          )}
         </div>
 
         <h3 style={{
@@ -140,7 +155,7 @@ export function BookmarkCard({ item, onRemove }) {
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-            <Avatar username={username} size={18} />
+            <Avatar username={username} src={avatarUrl} border={avatarBorder} size={18} />
             <span style={{ fontSize: '0.78rem', color: '#718496' }}>{username}</span>
             {d.user?.isVerifiedExpert && (
               <span style={{

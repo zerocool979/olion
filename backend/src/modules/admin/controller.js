@@ -18,7 +18,7 @@ exports.users = async (req, res, next) => {
 
 exports.verifyExpert = async (req, res, next) => {
   try {
-    const user = await prisma.user.findUnique({ where: { id: req.params.id } })
+    const user = await prisma.user.findUnique({ where: { id: req.params.id }, select: { id: true } })
     if (!user) return res.status(404).json({ message: 'Pengguna tidak ditemukan' })
     const updated = await service.verifyExpert(req.params.id)
     res.json({ data: updated })
@@ -40,7 +40,7 @@ exports.banUser = async (req, res, next) => {
   try {
     if (req.params.id === req.userId)
       return res.status(400).json({ message: 'Tidak bisa ban diri sendiri' })
-    const user = await prisma.user.findUnique({ where: { id: req.params.id } })
+    const user = await prisma.user.findUnique({ where: { id: req.params.id }, select: { id: true, role: true } })
     if (!user) return res.status(404).json({ message: 'Pengguna tidak ditemukan' })
     if (user.role === 'ADMIN')
       return res.status(403).json({ message: 'Tidak bisa ban admin lain' })

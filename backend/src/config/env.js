@@ -5,7 +5,11 @@ module.exports = {
   DATABASE_URL: process.env.DATABASE_URL,
   JWT_SECRET: process.env.JWT_SECRET,
   JWT_EXPIRE: '7d',
-  NODE_ENV: process.env.NODE_ENV || 'development'
+  NODE_ENV: process.env.NODE_ENV || 'development',
+  // Client ID OAuth Google (dari Google Cloud Console → Credentials).
+  // Harus SAMA dengan NEXT_PUBLIC_GOOGLE_CLIENT_ID di frontend/.env.local —
+  // dipakai untuk memverifikasi bahwa ID token berasal dari aplikasi ini.
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
 }
 
 
