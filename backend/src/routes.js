@@ -23,6 +23,7 @@ const notifCtrl       = require('./modules/notification/controller')
 const chatCtrl        = require('./modules/chat/controller')
 const bookmarkCtrl    = require('./modules/bookmark/controller')
 const moderatorCtrl   = require('./modules/moderator/controller')
+const liaCtrl         = require('./modules/lia/controller')
 
 // ── Rate limiters ─────────────────────────────────────────────────────────────
 const authLimiter = rateLimit({
@@ -32,6 +33,12 @@ const authLimiter = rateLimit({
 const writeLimiter = rateLimit({
   windowMs: 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false,
   message: { message: 'Terlalu banyak permintaan. Coba lagi sebentar.' },
+})
+// LIA (chatbot RAG) publik/boleh guest — limit lebih ketat karena tiap
+// pertanyaan memicu panggilan model embedding + Claude API (biaya nyata).
+const liaLimiter = rateLimit({
+  windowMs: 60 * 1000, max: 12, standardHeaders: true, legacyHeaders: false,
+  message: { message: 'Terlalu banyak pertanyaan ke LIA. Coba lagi sebentar.' },
 })
 
 // ── Public stats ──────────────────────────────────────────────────────────────
@@ -125,6 +132,18 @@ router.patch('/moderator/discussions/:id/unhide', auth, modRole, moderatorCtrl.u
 router.patch('/moderator/comments/:id/hide',      auth, modRole, moderatorCtrl.hideComment)
 router.patch('/moderator/comments/:id/unhide',    auth, modRole, moderatorCtrl.unhideComment)
 router.get  ('/moderator/comments/hidden',        auth, modRole, moderatorCtrl.hiddenComments)
+
+// ── LIA — Chatbot Knowledge Base (RAG) ──────────────────────────────────────────
+// Ingest (kelola dokumen KB): hanya admin, biar tidak sembarang orang bisa
+// menambah/menghapus isi knowledge base yang dipakai LIA menjawab.
+router.post  ('/ingest/text',            auth, role('ADMIN'), writeLimiter, liaCtrl.ingestText)
+router.post  ('/ingest/file',            auth, role('ADMIN'), liaCtrl.uploadMiddleware, liaCtrl.ingestFile)
+router.get   ('/ingest/documents',       auth, role('ADMIN'), liaCtrl.listDocuments)
+router.delete('/ingest/documents/:id',   auth, role('ADMIN'), liaCtrl.deleteDocument)
+// Tanya-jawab: publik (guest boleh), tapi optionalAuth supaya riwayat
+// tersimpan per-akun kalau kebetulan sedang login, + rate limit ketat.
+router.post  ('/lia',           optionalAuth, liaLimiter, liaCtrl.ask)
+router.get   ('/lia/history',   optionalAuth,              liaCtrl.history)
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 router.get   ('/admin/stats',                    auth, role('ADMIN'), adminCtrl.stats)

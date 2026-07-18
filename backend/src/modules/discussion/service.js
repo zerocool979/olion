@@ -63,24 +63,6 @@ async function detail(id, currentUserId) {
     include: {
       user: { include: { profile: true } },
       category: { include: { parent: true } },
-      comments: {
-        where: { isHidden: false, parentId: null },
-        orderBy: { createdAt: 'asc' },
-        include: {
-          user: { include: { profile: true } },
-          replies: {
-            where: { isHidden: false },
-            orderBy: { createdAt: 'asc' },
-            include: {
-              user: { include: { profile: true } },
-              votes: currentUserId ? { where: { userId: currentUserId }, select: { value: true } } : false,
-              _count: { select: { votes: true } },
-            },
-          },
-          votes: currentUserId ? { where: { userId: currentUserId }, select: { value: true } } : false,
-          _count: { select: { votes: true } },
-        },
-      },
       votes: currentUserId ? { where: { userId: currentUserId }, select: { value: true } } : false,
       _count: {
         select: { votes: true, comments: true },
@@ -90,23 +72,52 @@ async function detail(id, currentUserId) {
 
   if (!discussion) return null
 
+  // FIX: sebelumnya komentar diambil lewat Prisma `include` bersarang yang
+  // cuma menjangkau 2 level (komentar utama + balasannya) — balasan dari
+  // balasan tidak pernah ikut ter-include sama sekali, jadi walau berhasil
+  // dibuat di database, tidak akan pernah muncul lagi setelah refresh.
+  // Sekarang komentar diambil flat (satu query, semua kedalaman sekaligus),
+  // lalu pohonnya dibangun di sini — mendukung balas-membalas tanpa batas.
+  const flatComments = await prisma.comment.findMany({
+    where: { discussionId: id, isHidden: false },
+    orderBy: { createdAt: 'asc' },
+    include: {
+      user: { include: { profile: true } },
+      votes: currentUserId ? { where: { userId: currentUserId }, select: { value: true } } : false,
+      _count: { select: { votes: true } },
+    },
+  })
+
   // Ratakan userVote per node supaya mudah dipakai frontend, tanpa membocorkan
   // daftar vote user lain (relasi votes penuh tidak diekspos ke response).
   const flatten = (node) => {
     const userVote = Array.isArray(node.votes) ? (node.votes[0]?.value ?? null) : null
     const { votes, ...rest } = node
-    return { ...rest, userVote }
+    return { ...rest, userVote, replies: [] }
+  }
+
+  const byId = new Map()
+  for (const c of flatComments) byId.set(c.id, flatten(c))
+
+  const roots = []
+  for (const c of flatComments) {
+    const node = byId.get(c.id)
+    if (c.parentId && byId.has(c.parentId)) {
+      byId.get(c.parentId).replies.push(node)
+    } else {
+      roots.push(node)
+    }
   }
 
   const withReplies = {
     ...discussion,
-    comments: discussion.comments.map((c) => ({
-      ...flatten(c),
-      replies: c.replies.map(flatten),
-    })),
+    comments: roots,
   }
 
-  const flat = flatten(withReplies)
+  // flatten() dipakai ulang di sini murni untuk meratakan userVote milik
+  // objek diskusi itu sendiri; field `replies: []` tambahan dari flatten()
+  // tidak relevan untuk objek diskusi dan diabaikan lewat destructuring.
+  const { replies: _unused, ...flat } = flatten(withReplies)
 
   if (currentUserId) {
     flat.isBookmarked = await bookmarkService.isBookmarked(currentUserId, id)

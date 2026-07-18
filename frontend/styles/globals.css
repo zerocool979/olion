@@ -4997,10 +4997,29 @@
   padding: 0.2rem 0.5rem;
   font-size: 0.8rem;
   cursor: pointer;
+  /* FIX: elemen <button> TIDAK mewarisi `color` dari induknya seperti elemen
+     biasa — beda dari <a> (yang di rule `a{color:inherit}` di atas). Tanpa
+     baris ini, teks tombol jatuh ke warna default browser (biasanya hitam)
+     dan jadi tak terlihat sama sekali di atas tema gelap ini. Ini sebabnya
+     tombol vote/Balas/Edit/Hapus tampak seperti kotak kosong, sementara
+     "Laporkan" (yang berupa <a>) tetap terlihat normal. */
+  color: var(--text-primary, #e7e9ea);
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.dd-comment__vote-btn:hover, .dd-comment__reply-btn:hover {
+  background: rgba(255,255,255,0.06);
+  border-color: var(--text-secondary, #71767b);
+}
+.dd-comment__vote-btn:disabled, .dd-comment__reply-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 .dd-comment__vote-btn[aria-pressed="true"] {
   background: var(--primary-light);
   border-color: var(--primary);
+  color: var(--primary, #1d9bf0);
 }
 .dd-comment__replies {
   margin-left: 2rem;
@@ -5008,6 +5027,102 @@
   border-left: 2px solid var(--border-light);
   padding-left: 1rem;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Shell layout untuk /user/* (_layout.js) — dulu grid 3 kolom statis
+   (220px 1fr 300px) tanpa penanganan responsif sama sekali, jadi di layar
+   kecil kolom kanan/kiri saling berebut ruang atau bikin scroll horizontal.
+   Sekarang: nav kiri bisa di-collapse ke mode ikon (desktop), dan berubah
+   jadi drawer off-canvas yang bisa dibuka/tutup lewat tombol hamburger
+   (mobile) — kolom kanan otomatis turun ke bawah konten utama di layar
+   sempit karena grid 1 kolom.
+   ═══════════════════════════════════════════════════════════════════════ */
+.ol-shell {
+  display: grid;
+  grid-template-columns: 220px 1fr 300px;
+  min-height: 100vh;
+  transition: grid-template-columns 0.2s ease;
+}
+.ol-shell--collapsed {
+  grid-template-columns: 76px 1fr 300px;
+}
+.ol-mobile-topbar { display: none; }
+.ol-nav-overlay { display: none; }
+.ol-nav-toggle-desktop { display: flex; }
+
+@media (max-width: 900px) {
+  .ol-shell, .ol-shell--collapsed {
+    grid-template-columns: 1fr;
+  }
+  .ol-nav {
+    position: fixed !important;
+    top: 0; left: 0; bottom: 0;
+    width: 260px !important;
+    height: 100vh !important;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    z-index: 200;
+  }
+  .ol-nav.ol-nav--open {
+    transform: translateX(0);
+  }
+  .ol-nav-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 190;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s ease;
+  }
+  .ol-nav-overlay.ol-nav-overlay--visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .ol-mobile-topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-color, #2f3336);
+    background: #000;
+  }
+  .ol-nav-toggle-desktop { display: none; }
+  .ol-main { min-height: auto !important; }
+}
+
+.ol-nav-toggle-btn {
+  background: none;
+  border: 1px solid var(--border-color, #2f3336);
+  color: var(--text-primary, #e7e9ea);
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.ol-nav-toggle-btn:hover {
+  background: var(--bg-elevated, #16181c);
+}
+
+/* Chat: dua panel (daftar percakapan + isi obrolan) berdampingan di desktop,
+   tapi di layar sempit keduanya sekaligus bikin isi pesan kepepet jadi
+   ~90px. Di mobile, tampilkan salah satu saja tergantung ada percakapan
+   aktif atau tidak — pola umum aplikasi chat. */
+@media (max-width: 900px) {
+  .ol-chat-shell.ol-chat-shell--room-open .ol-chat-list { display: none; }
+  .ol-chat-shell:not(.ol-chat-shell--room-open) .ol-chat-main { display: none; }
+  .ol-chat-list { width: 100% !important; }
+  .ol-chat-back-btn { display: inline-flex !important; }
+}
+.ol-chat-back-btn { display: none; }
 
 
 

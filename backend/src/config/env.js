@@ -10,6 +10,9 @@ module.exports = {
   // Harus SAMA dengan NEXT_PUBLIC_GOOGLE_CLIENT_ID di frontend/.env.local —
   // dipakai untuk memverifikasi bahwa ID token berasal dari aplikasi ini.
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+  // API key Claude (Anthropic) — dipakai fitur chatbot LIA (RAG knowledge
+  // base) untuk generation jawaban. Ambil dari https://console.anthropic.com
+  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
 }
 
 

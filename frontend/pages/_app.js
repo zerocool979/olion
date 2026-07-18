@@ -1,6 +1,7 @@
 import '../styles/globals.css'
 import { AuthProvider, AuthContext } from '../context/AuthContext'
 import Nav from '../components/Nav'
+import LiaWidget from '../components/lia/LiaWidget'
 import { useContext } from 'react'
 import { useRouter } from 'next/router'
 
@@ -38,6 +39,8 @@ export default function App({ Component, pageProps }) {
       <Guard>
         <Component {...pageProps} />
       </Guard>
+      {/* LIA — chatbot knowledge base, tersedia di semua halaman (guest & user) */}
+      <LiaWidget />
     </AuthProvider>
   )
 }

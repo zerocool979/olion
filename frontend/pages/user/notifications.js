@@ -108,6 +108,7 @@ export default function Notifications() {
   }
 
   const deleteNotif = async (id, e) => {
+    e.preventDefault()
     e.stopPropagation()
     const prev = notifs
     const wasUnread = notifs.find(n => n.id === id)?.read === false
@@ -179,19 +180,37 @@ export default function Notifications() {
         : notifs.map((n, i) => {
             const actor   = n.actor?.profile ?? n.actor ?? {}
             const typeIcon = TYPE_ICON[n.type] ?? TYPE_ICON.default
-            return (
-              <div key={n.id ?? i}
-                onClick={() => !n.read && markRead(n.id)}
-                style={{
-                  background: n.read ? 'transparent' : colors.bgElevated,
-                  borderBottom: `1px solid ${colors.border}`,
-                  cursor: 'pointer', transition: 'background 0.12s',
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  opacity: deletingId === n.id ? 0.4 : 1,
-                }}
-                onMouseEnter={e => (e.currentTarget.style.background = colors.bgElevated)}
-                onMouseLeave={e => (e.currentTarget.style.background = n.read ? 'transparent' : colors.bgElevated)}
-              >
+
+            // FIX: notifikasi dulu tidak bisa diklik ke kontennya sama sekali
+            // (cuma menandai terbaca). Sekarang setiap jenis diarahkan ke
+            // tempat yang relevan — Komentar/Balasan/Vote/Mention mengikuti
+            // pola link yang sama dipakai tab "Komentar" di /user/profile
+            // (langsung ke halaman diskusinya), Follow mengarah ke profil
+            // orang yang mem-follow.
+            let targetHref = null
+            if (['COMMENT', 'REPLY', 'VOTE', 'MENTION'].includes(n.type) && n.discussionId) {
+              targetHref = `/user/discussions/${n.discussionId}`
+            } else if (n.type === 'FOLLOW' && actor.username) {
+              targetHref = `/user/profile/${encodeURIComponent(actor.username)}`
+            }
+
+            const handleClick = () => { if (!n.read) markRead(n.id) }
+
+            const rowStyle = {
+              background: n.read ? 'transparent' : colors.bgElevated,
+              borderBottom: `1px solid ${colors.border}`,
+              cursor: 'pointer', transition: 'background 0.12s',
+              display: 'flex', alignItems: 'center', gap: 8,
+              opacity: deletingId === n.id ? 0.4 : 1,
+              textDecoration: 'none', color: 'inherit',
+            }
+            const rowHoverProps = {
+              onMouseEnter: e => (e.currentTarget.style.background = colors.bgElevated),
+              onMouseLeave: e => (e.currentTarget.style.background = n.read ? 'transparent' : colors.bgElevated),
+            }
+
+            const content = (
+              <>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <ActivityItem
                     avatar={<Avatar username={actor.username ?? typeIcon} src={actor.avatarUrl ?? null} border={actor.avatarBorder ?? null} size={36} />}
@@ -216,6 +235,16 @@ export default function Notifications() {
                     <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
                   </svg>
                 </button>
+              </>
+            )
+
+            return targetHref ? (
+              <Link key={n.id ?? i} href={targetHref} onClick={handleClick} style={rowStyle} {...rowHoverProps}>
+                {content}
+              </Link>
+            ) : (
+              <div key={n.id ?? i} onClick={handleClick} style={rowStyle} {...rowHoverProps}>
+                {content}
               </div>
             )
           })

@@ -468,13 +468,28 @@ export default function MyProfile() {
             : tab === 'diskusi' && (
                 posts.length === 0
                   ? <EmptyState icon="📝" title="Belum ada diskusi" description="Bagikan pertanyaan atau wawasanmu." actionLabel="Buat Diskusi" actionHref="/user/create" Link={Link} />
-                  : posts.map(d => <DiscussionCard key={d.id} post={d} onLike={handleVote} />)
+                  : posts.map(d => (
+                      <Link key={d.id} href={`/user/discussions/${d.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+                        <div style={{ cursor: 'pointer' }}>
+                          <DiscussionCard post={d} onLike={handleVote} />
+                        </div>
+                      </Link>
+                    ))
               )
           }
           {!postsLoading && tab === 'disukai' && (
             likedPosts.length === 0
               ? <EmptyState icon="👍" title="Belum ada diskusi yang disukai" Link={Link} />
-              : likedPosts.map(d => <DiscussionCard key={d.id} post={d.discussion ?? d} onLike={handleVote} />)
+              : likedPosts.map(d => {
+                  const discussion = d.discussion ?? d
+                  return (
+                    <Link key={discussion.id} href={`/user/discussions/${discussion.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+                      <div style={{ cursor: 'pointer' }}>
+                        <DiscussionCard post={discussion} onLike={handleVote} />
+                      </div>
+                    </Link>
+                  )
+                })
           )}
           {!postsLoading && tab === 'komentar' && (
             comments.length === 0

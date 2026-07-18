@@ -33,6 +33,8 @@ model User {
   badges                UserBadge[]
   votes                 Vote[]
   bookmarks             Bookmark[]
+  liaDocuments          Document[]
+  liaChatLogs           ChatLog[]
 
   @@index([role])
   @@index([isBanned])
@@ -233,6 +235,10 @@ model Conversation {
   id           String                    @id @default(uuid())
   createdAt    DateTime                  @default(now())
   updatedAt    DateTime                  @updatedAt
+  // Kunci unik pasangan 2 partisipan (userId diurut lalu digabung), dipakai
+  // via upsert supaya percakapan 1:1 antara dua orang yang sama TIDAK
+  // PERNAH bisa duplikat, bahkan kalau ada race condition (dua klik cepat).
+  pairKey      String?                   @unique
   participants ConversationParticipant[]
   messages     Message[]
 
@@ -349,4 +355,56 @@ enum ApplicationStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LIA — Chatbot Knowledge Base (RAG: Retrieval-Augmented Generation)
+// ═══════════════════════════════════════════════════════════════════════════
+// Document: satu dokumen sumber (FAQ, panduan, dsb) yang di-ingest ke KB.
+// Chunk: potongan teks dari Document + embedding-nya, dipakai untuk
+//   pencarian kemiripan (cosine similarity) saat menjawab pertanyaan.
+// ChatLog: riwayat tanya-jawab, dipakai untuk fitur "riwayat percakapan"
+//   di widget serta audit/analitik ringan.
+
+model Document {
+  id        String   @id @default(uuid())
+  title     String
+  source    String? // nama file asli / label sumber, opsional
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String? // admin yang meng-upload — nullable, jaga-jaga akun dihapus
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  chunks    Chunk[]
+
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
+}
+
+model Chunk {
+  id         String   @id @default(uuid())
+  content    String
+  // Embedding disimpan sebagai JSON string (array of floats, 384 dimensi
+  // dari model all-MiniLM-L6-v2). PostgreSQL tanpa ekstensi pgvector masih
+  // sanggup brute-force cosine similarity di JS untuk KB skala kecil-menengah
+  // (ribuan chunk) — lihat services/lia/vectorStore.js.
+  embedding  String
+  chunkIndex Int
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@index([documentId])
+}
+
+model ChatLog {
+  id        String   @id @default(uuid())
+  question  String
+  answer    String
+  sourceIds String // JSON array of chunk id yang dipakai sebagai konteks jawaban
+  userId    String? // nullable — endpoint LIA boleh dipakai tanpa login
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt(sort: Desc)])
 }

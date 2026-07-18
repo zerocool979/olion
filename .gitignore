@@ -48,3 +48,6 @@ backend/Dockerfile
 
 # Docker
 docker-compose.yml
+
+# Base Knowladge
+backend/uploads

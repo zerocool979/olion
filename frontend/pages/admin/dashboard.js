@@ -169,12 +169,15 @@ export default function AdminDashboard() {
           )}
 
           {/* Tab navigasi */}
-          <div style={{ display: 'flex', gap: 4, margin: '24px 0 0', borderBottom: `1px solid ${colors.border}` }}>
+          <div style={{ display: 'flex', gap: 4, margin: '24px 0 0', borderBottom: `1px solid ${colors.border}`, alignItems: 'center' }}>
             {[['users','👥 Pengguna'], ['reports','🚨 Laporan'], ['experts',`✅ Permohonan Pakar (${expertApps.length})`]].map(([key, label]) => (
               <button key={key} onClick={() => setTab(key)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '10px 20px', fontSize: 14, fontWeight: tab === key ? 700 : 400, color: tab === key ? colors.accent : colors.textSecondary, borderBottom: tab === key ? `2px solid ${colors.accent}` : '2px solid transparent', transition: 'all 0.15s' }}>
                 {label}
               </button>
             ))}
+            <Link href="/admin/knowledge-base" style={{ marginLeft: 'auto', padding: '10px 20px', fontSize: 14, color: colors.textSecondary, textDecoration: 'none' }}>
+              🤖 Knowledge Base LIA →
+            </Link>
           </div>
 
           {/* ── Tab: Pengguna ── */}

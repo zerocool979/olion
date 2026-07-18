@@ -32,23 +32,19 @@ module.exports = {
       const otherExists = await prisma.user.findUnique({ where: { id: otherId }, select: { id: true } })
       if (!otherExists) return res.status(404).json({ message: 'Pengguna tidak ditemukan' })
 
-      // cari conversation 1:1 yang sudah ada antara dua user ini
-      const existing = await prisma.conversation.findFirst({
-        where: {
-          AND: [
-            { participants: { some: { userId: req.userId } } },
-            { participants: { some: { userId: otherId } } },
-          ],
-        },
-        include: { participants: { select: PARTICIPANT_SELECT } },
-      })
+      // FIX: sebelumnya "cek dulu baru buat" (findFirst lalu create) — antara
+      // dua langkah itu ada celah race condition (dua klik "Chat" nyaris
+      // bersamaan bisa lolos jadi 2 conversation berbeda untuk pasangan
+      // orang yang sama). pairKey + upsert menjamin atomik di level database:
+      // walau dua request datang bersamaan, cuma satu yang akan berhasil
+      // "create", yang satunya otomatis dapat conversation yang sama.
+      const pairKey = [req.userId, otherId].sort().join(':')
 
-      if (existing) {
-        return res.status(200).json({ conversation: existing })
-      }
-
-      const conversation = await prisma.conversation.create({
-        data: {
+      const conversation = await prisma.conversation.upsert({
+        where: { pairKey },
+        update: {}, // sudah ada — tidak perlu ubah apa pun, tinggal dipakai
+        create: {
+          pairKey,
           participants: {
             create: [{ userId: req.userId }, { userId: otherId }],
           },
@@ -56,7 +52,7 @@ module.exports = {
         include: { participants: { select: PARTICIPANT_SELECT } },
       })
 
-      return res.status(201).json({ conversation })
+      return res.status(200).json({ conversation })
     } catch (err) {
       next(err)
     }

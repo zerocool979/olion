@@ -141,10 +141,10 @@ export default function Chat() {
 
   return (
     <UserLayout sidebar={sidebar}>
-      <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
+      <div className={`ol-chat-shell${activeRoom ? ' ol-chat-shell--room-open' : ''}`} style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
 
         {/* Room list */}
-        <div style={{ width: 280, borderRight: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', overflowY: 'auto', flexShrink: 0 }}>
+        <div className="ol-chat-list" style={{ width: 280, borderRight: `1px solid ${colors.border}`, display: 'flex', flexDirection: 'column', overflowY: 'auto', flexShrink: 0 }}>
           <div style={{ padding: '14px 16px', borderBottom: `1px solid ${colors.border}`, position: 'sticky', top: 0, background: colors.bg }}>
             <h1 style={{ fontSize: 18, fontWeight: 700, color: colors.textPrimary }}>💬 Obrolan</h1>
           </div>
@@ -204,7 +204,7 @@ export default function Chat() {
         </div>
 
         {/* Message area */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div className="ol-chat-main" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           {!activeRoom
             ? (
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: colors.textSecondary }}>
@@ -218,6 +218,16 @@ export default function Chat() {
               <>
                 {/* Header */}
                 <div style={{ padding: '12px 16px', borderBottom: `1px solid ${colors.border}`, display: 'flex', alignItems: 'center', gap: 10, background: colors.bg, position: 'sticky', top: 0 }}>
+                  <button
+                    className="ol-chat-back-btn"
+                    onClick={() => setActiveRoom(null)}
+                    aria-label="Kembali ke daftar percakapan"
+                    style={{ background: 'none', border: 'none', color: colors.textPrimary, cursor: 'pointer', padding: 4, alignItems: 'center', flexShrink: 0 }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="15 18 9 12 15 6"/>
+                    </svg>
+                  </button>
                   <Avatar
                     username={otherUser(activeRoom).profile?.username ?? otherUser(activeRoom).username ?? '?'}
                     src={otherUser(activeRoom).profile?.avatarUrl ?? null}

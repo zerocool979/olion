@@ -11,8 +11,19 @@
  *       </UserLayout>
  *     )
  *   }
+ *
+ * FIX: sebelumnya ini grid 3 kolom statis (220px 1fr 300px) tanpa penanganan
+ * responsif sama sekali — di layar HP kolom-kolomnya saling berebut ruang.
+ * Sekarang:
+ *  - Desktop: nav kiri bisa di-collapse ke mode ikon-saja lewat tombol panah
+ *    (dipersist ke localStorage supaya kepilih lagi tiap buka halaman baru).
+ *  - Mobile (<900px): nav kiri jadi drawer off-canvas (tersembunyi secara
+ *    default), dibuka lewat tombol hamburger di topbar mobile, ditutup lewat
+ *    tombol ✕ atau tap di luar (overlay), dan otomatis tertutup tiap
+ *    berpindah halaman. Kolom kanan turun ke bawah konten utama (grid jadi
+ *    1 kolom), bukan hilang — semua widget tetap bisa diakses.
  */
-import { useContext, useState, useRef, useCallback } from 'react'
+import { useContext, useState, useRef, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/router'
 import Image from 'next/image'
@@ -30,12 +41,39 @@ const NAV = [
   { icon: '👤', label: 'Profil',     href: '/user/profile' },
 ]
 
+const SIDEBAR_COLLAPSE_KEY = 'olion:navCollapsed'
+
 export default function UserLayout({ children, sidebar }) {
   const { user, logout } = useContext(AuthContext)
   const router = useRouter()
   const [moreOpen,     setMoreOpen]     = useState(false)
   const [globalSearch, setGlobalSearch] = useState('')
+  const [collapsed,    setCollapsed]    = useState(false)  // desktop icon-only mode
+  const [navOpen,      setNavOpen]      = useState(false)  // mobile drawer open/closed
   const globalDebounce = useRef(null)
+
+  // Ingat preferensi collapse desktop antar kunjungan
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(SIDEBAR_COLLAPSE_KEY)
+      if (saved === '1') setCollapsed(true)
+    } catch { /* localStorage tidak tersedia (SSR/private mode) — abaikan */ }
+  }, [])
+
+  const toggleCollapsed = useCallback(() => {
+    setCollapsed(prev => {
+      const next = !prev
+      try { localStorage.setItem(SIDEBAR_COLLAPSE_KEY, next ? '1' : '0') } catch {}
+      return next
+    })
+  }, [])
+
+  // Drawer mobile otomatis tertutup tiap pindah halaman
+  useEffect(() => {
+    const close = () => setNavOpen(false)
+    router.events?.on('routeChangeStart', close)
+    return () => router.events?.off('routeChangeStart', close)
+  }, [router.events])
 
   const handleGlobalSearch = useCallback((val) => {
     setGlobalSearch(val)
@@ -59,17 +97,41 @@ export default function UserLayout({ children, sidebar }) {
   const avatarBorder = user?.profile?.avatarBorder ?? user?.avatarBorder ?? null
 
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: '220px 1fr 300px',
-      minHeight: '100vh',
+    <div className={`ol-shell${collapsed ? ' ol-shell--collapsed' : ''}`} style={{
       fontFamily: 'system-ui, -apple-system, sans-serif',
       background: colors.bg,
       color: colors.textPrimary,
     }}>
 
+      {/* ══ TOPBAR MOBILE (hanya tampil <900px) ══ */}
+      <div className="ol-mobile-topbar">
+        <button
+          onClick={() => setNavOpen(true)}
+          aria-label="Buka menu navigasi"
+          className="ol-nav-toggle-btn"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+        <Image src={olionLogo} alt="OLION" width={26} height={26} style={{ borderRadius: '50%', objectFit: 'cover' }} />
+        <span style={{ fontWeight: 700, fontSize: 15 }}>OLION</span>
+        <Link href="/user/notifications" style={{ marginLeft: 'auto', color: colors.textPrimary, display: 'flex' }} aria-label="Notifikasi">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/>
+          </svg>
+        </Link>
+      </div>
+
+      {/* Overlay gelap di belakang drawer mobile — tap untuk menutup */}
+      <div
+        className={`ol-nav-overlay${navOpen ? ' ol-nav-overlay--visible' : ''}`}
+        onClick={() => setNavOpen(false)}
+        aria-hidden="true"
+      />
+
       {/* ══ KOLOM KIRI — NAVIGASI ══ */}
-      <nav style={{
+      <nav className={`ol-nav${navOpen ? ' ol-nav--open' : ''}`} style={{
         borderRight: `1px solid ${colors.border}`,
         display: 'flex',
         flexDirection: 'column',
@@ -80,20 +142,47 @@ export default function UserLayout({ children, sidebar }) {
         top: 0,
         height: '100vh',
       }}>
-        {/* Logo */}
-        <div style={{ padding: '12px 20px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Image src={olionLogo} alt="OLION" width={32} height={32}
-            style={{ borderRadius: '50%', objectFit: 'cover' }} />
-          <span style={{ fontWeight: 700, fontSize: 16, color: colors.textPrimary }}>OLION</span>
+        {/* Logo + toggle collapse (desktop) / toggle tutup (mobile) */}
+        <div style={{ padding: '12px 16px 16px', display: 'flex', alignItems: 'center', gap: 10, justifyContent: collapsed ? 'center' : 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, overflow: 'hidden' }}>
+            <Image src={olionLogo} alt="OLION" width={32} height={32}
+              style={{ borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+            {!collapsed && <span style={{ fontWeight: 700, fontSize: 16, color: colors.textPrimary, whiteSpace: 'nowrap' }}>OLION</span>}
+          </div>
+          {/* Tombol collapse — desktop saja */}
+          <button
+            onClick={toggleCollapsed}
+            aria-label={collapsed ? 'Buka sidebar' : 'Tutup sidebar'}
+            title={collapsed ? 'Buka sidebar' : 'Tutup sidebar'}
+            className="ol-nav-toggle-btn ol-nav-toggle-desktop"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+              style={{ transform: collapsed ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </button>
+          {/* Tombol tutup drawer — mobile saja (dikendalikan lewat media query, sembunyikan tombol collapse desktop di atas) */}
+          <button
+            onClick={() => setNavOpen(false)}
+            aria-label="Tutup menu"
+            className="ol-nav-toggle-btn"
+            style={{ display: navOpen ? 'flex' : 'none' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
         </div>
 
         {/* Nav Items */}
         {NAV.map(item => {
           const active = router.pathname === item.href
           return (
-            <Link key={item.href} href={item.href} style={{
+            <Link key={item.href} href={item.href} title={collapsed ? item.label : undefined} style={{
               display: 'flex', alignItems: 'center', gap: 14,
-              padding: '10px 20px', textDecoration: 'none',
+              padding: collapsed ? '10px 0' : '10px 20px',
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              textDecoration: 'none',
               fontWeight: active ? 700 : 400,
               color: active ? colors.textPrimary : colors.textSecondary,
               fontSize: 15, position: 'relative', transition: 'background 0.12s',
@@ -104,10 +193,10 @@ export default function UserLayout({ children, sidebar }) {
             onMouseEnter={e => !active && (e.currentTarget.style.background = colors.bgElevated)}
             onMouseLeave={e => !active && (e.currentTarget.style.background = 'transparent')}
             >
-              <span style={{ fontSize: 18, width: 22, textAlign: 'center' }}>{item.icon}</span>
-              {item.label}
+              <span style={{ fontSize: 18, width: 22, textAlign: 'center', flexShrink: 0 }}>{item.icon}</span>
+              {!collapsed && item.label}
               {item.dot && (
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: colors.accent, position: 'absolute', top: 10, left: 34 }} />
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: colors.accent, position: 'absolute', top: 10, left: collapsed ? '50%' : 34 }} />
               )}
             </Link>
           )
@@ -117,7 +206,8 @@ export default function UserLayout({ children, sidebar }) {
         <div style={{ position: 'relative', margin: '0 8px' }}>
           <button onClick={() => setMoreOpen(o => !o)} style={{
             display: 'flex', alignItems: 'center', gap: 14,
-            padding: '10px 12px', width: '100%',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            padding: collapsed ? '10px 0' : '10px 12px', width: collapsed ? 'auto' : '100%',
             background: 'none', border: 'none', cursor: 'pointer',
             color: colors.textSecondary, fontSize: 15,
             borderRadius: 8, transition: 'background 0.12s',
@@ -126,7 +216,7 @@ export default function UserLayout({ children, sidebar }) {
           onMouseLeave={e => (e.currentTarget.style.background = 'none')}
           >
             <span style={{ fontSize: 18, width: 22, textAlign: 'center' }}>···</span>
-            Lainnya
+            {!collapsed && 'Lainnya'}
           </button>
           {moreOpen && (
             <div style={{
@@ -158,35 +248,40 @@ export default function UserLayout({ children, sidebar }) {
         </div>
 
         {/* CTA */}
-        <div style={{ padding: '12px 16px', marginTop: 8 }}>
-          <Link href="/user/create" style={{
-            display: 'block', textAlign: 'center',
+        <div style={{ padding: collapsed ? '12px 8px' : '12px 16px', marginTop: 8 }}>
+          <Link href="/user/create" title={collapsed ? 'Buat Diskusi' : undefined} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center',
             background: colors.textPrimary, color: colors.bg,
             textDecoration: 'none', borderRadius: 24,
             padding: '10px 0', fontSize: 15, fontWeight: 700,
           }}>
-            + Buat Diskusi
+            {collapsed ? '+' : '+ Buat Diskusi'}
           </Link>
         </div>
 
         {/* User footer */}
         <div style={{
           marginTop: 'auto', borderTop: `1px solid ${colors.border}`,
-          padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10,
+          padding: collapsed ? '12px 8px' : '12px 16px', display: 'flex', alignItems: 'center', gap: 10,
+          justifyContent: collapsed ? 'center' : 'flex-start',
         }}>
           <Avatar username={username} src={avatarUrl} border={avatarBorder} size={34} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: colors.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {username}
-            </div>
-            <div style={{ fontSize: 11, color: colors.textSecondary }}>{reputation.toLocaleString()} rep</div>
-          </div>
-          <span style={{ color: colors.textSecondary, fontSize: 16, cursor: 'pointer' }}>···</span>
+          {!collapsed && (
+            <>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: colors.textPrimary, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {username}
+                </div>
+                <div style={{ fontSize: 11, color: colors.textSecondary }}>{reputation.toLocaleString()} rep</div>
+              </div>
+              <span style={{ color: colors.textSecondary, fontSize: 16, cursor: 'pointer' }}>···</span>
+            </>
+          )}
         </div>
       </nav>
 
       {/* ══ KOLOM TENGAH — konten halaman ══ */}
-      <main style={{
+      <main className="ol-main" style={{
         borderRight: `1px solid ${colors.border}`,
         display: 'flex',
         flexDirection: 'column',
@@ -251,6 +346,3 @@ export default function UserLayout({ children, sidebar }) {
     </div>
   )
 }
-
-
-
