@@ -32,8 +32,20 @@ exports.getAll = async (req, res) => {
 
     res.json({ success: true, data: categoriesWithTotal })
   } catch (error) {
-    console.error('[category.getAll]', error)
-    res.status(500).json({ success: false, message: 'Gagal mengambil kategori' })
+    // DEBUG SEMENTARA: console.error(obj) polos "termakan" oleh log pipeline
+    // Railway (properti Error tidak ikut ter-JSON-kan otomatis). Log field
+    // terpisah supaya kelihatan di Railway, DAN kirim balik ke response
+    // supaya langsung terlihat di browser tanpa gali log — hapus/kembalikan
+    // ke pesan generik setelah akar masalah ketemu.
+    console.error('[category.getAll] name:', error.name)
+    console.error('[category.getAll] code:', error.code)
+    console.error('[category.getAll] message:', error.message)
+    console.error('[category.getAll] meta:', JSON.stringify(error.meta))
+    res.status(500).json({
+      success: false,
+      message: 'Gagal mengambil kategori',
+      debug: { name: error.name, code: error.code, message: error.message, meta: error.meta },
+    })
   }
 }
 
@@ -62,6 +74,3 @@ exports.getSubcategories = async (req, res) => {
     res.status(500).json({ success: false, message: 'Gagal mengambil subkategori' })
   }
 }
-
-
-
