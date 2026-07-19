@@ -13,6 +13,11 @@ module.exports = {
   // API key Claude (Anthropic) — dipakai fitur chatbot LIA (RAG knowledge
   // base) untuk generation jawaban. Ambil dari https://console.anthropic.com
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+  // API key Gemini (Google) — dipakai LIA sebagai model UTAMA (default).
+  // Ambil dari https://aistudio.google.com/apikey. Kalau Gemini gagal
+  // merespons (error/timeout) atau key ini kosong, LIA otomatis jatuh ke
+  // Claude (ANTHROPIC_API_KEY) sebagai cadangan — lihat modules/lia/llm.js.
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY,
 }
 
 

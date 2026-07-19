@@ -122,7 +122,7 @@ async function ask({ question, topK = 4, userId = null }) {
     }
   }
 
-  const answer = await generateAnswer(trimmed, relevantChunks)
+  const { answer, model } = await generateAnswer(trimmed, relevantChunks)
 
   const chatLog = await prisma.chatLog.create({
     data: {
@@ -136,6 +136,7 @@ async function ask({ question, topK = 4, userId = null }) {
   return {
     id: chatLog.id,
     answer,
+    model, // 'gemini' atau 'claude' — informatif, dipakai frontend kalau perlu
     sources: relevantChunks.map((c) => ({
       documentId: c.document?.id ?? null,
       documentTitle: c.document?.title ?? 'Tanpa judul',

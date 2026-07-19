@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useContext, useCallback } from 'react'
+import { useRouter } from 'next/router'
 import { AuthContext } from '../../context/AuthContext'
 import api from '../../lib/api'
 import { colors } from '../dashboard/tokens'
@@ -15,6 +16,7 @@ const WELCOME = {
 
 export default function LiaWidget() {
   const { token } = useContext(AuthContext)
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState([WELCOME])
   const [input, setInput] = useState('')
@@ -84,6 +86,13 @@ export default function LiaWidget() {
       sendMessage()
     }
   }
+
+  // FIX: tombol mengambang LIA (bottom:20,right:20) ada di semua halaman,
+  // tapi di halaman Chat posisinya persis bertabrakan dengan tombol kirim
+  // pesan — di layar sempit (HP) ini bisa menutupi tombol kirim sepenuhnya,
+  // bikin terasa "tidak bisa membalas pesan" padahal sebenarnya cuma
+  // ketutupan. Sembunyikan LIA saja saat di halaman Chat.
+  if (router.pathname === '/user/chat') return null
 
   return (
     <>

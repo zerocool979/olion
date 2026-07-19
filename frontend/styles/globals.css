@@ -5093,6 +5093,20 @@
   }
   .ol-nav-toggle-desktop { display: none; }
   .ol-main { min-height: auto !important; }
+
+  /* FIX: chat.js mengandalkan height:100% berantai (list+jendela pesan+kotak
+     ketik) yang butuh induk dengan tinggi PASTI. Aturan ".ol-main { min-height:
+     auto }" di atas menghilangkan itu di mobile — akibatnya kotak ketik pesan
+     tidak ke-render dengan benar / tidak terjangkau di HP, padahal normal di
+     desktop. Beri .ol-chat-shell tinggi eksplisit sendiri (bukan warisan dari
+     induk) supaya konsisten di semua ukuran layar. dvh dipakai karena 100vh
+     di banyak browser mobile TIDAK memperhitungkan address bar yang
+     collapse/expand — dvh iya (browser lama otomatis abaikan baris ini dan
+     pakai fallback vh di atasnya). */
+  .ol-chat-shell {
+    height: calc(100vh - 52px) !important;
+    height: calc(100dvh - 52px) !important;
+  }
 }
 
 .ol-nav-toggle-btn {
