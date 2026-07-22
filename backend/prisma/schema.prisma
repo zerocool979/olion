@@ -259,7 +259,10 @@ model ConversationParticipant {
 
 model Message {
   id             String       @id @default(uuid())
-  content        String
+  content        String?      // opsional — pesan bisa berupa lampiran saja tanpa teks
+  attachmentUrl  String?      // URL Cloudinary (foto/file persisten, bukan disk lokal)
+  attachmentType String?      // 'image' | 'file'
+  attachmentName String?      // nama file asli, dipakai untuk lampiran non-gambar
   createdAt      DateTime     @default(now())
   conversationId String
   senderId       String

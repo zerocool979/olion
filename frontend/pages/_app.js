@@ -1,7 +1,9 @@
 import '../styles/globals.css'
 import { AuthProvider, AuthContext } from '../context/AuthContext'
+import { CallProvider } from '../context/CallContext'
 import Nav from '../components/Nav'
 import LiaWidget from '../components/lia/LiaWidget'
+import CallOverlay from '../components/call/CallOverlay'
 import { useContext } from 'react'
 import { useRouter } from 'next/router'
 
@@ -36,11 +38,16 @@ function Guard({ children }) {
 export default function App({ Component, pageProps }) {
   return (
     <AuthProvider>
-      <Guard>
-        <Component {...pageProps} />
-      </Guard>
-      {/* LIA — chatbot knowledge base, tersedia di semua halaman (guest & user) */}
-      <LiaWidget />
+      <CallProvider>
+        <Guard>
+          <Component {...pageProps} />
+        </Guard>
+        {/* LIA — chatbot knowledge base, tersedia di semua halaman (guest & user) */}
+        <LiaWidget />
+        {/* Panggilan audio/video — global supaya panggilan masuk tetap
+            berdering walau user sedang di halaman lain, bukan cuma di /user/chat */}
+        <CallOverlay />
+      </CallProvider>
     </AuthProvider>
   )
 }

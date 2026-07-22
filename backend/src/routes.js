@@ -116,9 +116,11 @@ router.delete('/notifications/:id',          auth, notifCtrl.remove)
 
 // ── Chat ──────────────────────────────────────────────────────────────────────
 router.get ('/chat/conversations',              auth, chatCtrl.listConversations)
+router.get ('/chat/ice-servers',                auth, chatCtrl.getIceServers)
 router.post('/chat/conversations',              auth, writeLimiter, chatCtrl.startConversation)
 router.get ('/chat/conversations/:id/messages', auth, chatCtrl.listMessages)
 router.post('/chat/conversations/:id/messages', auth, writeLimiter, chatCtrl.sendMessage)
+router.post('/chat/upload',                     auth, writeLimiter, chatCtrl.uploadMiddleware, chatCtrl.uploadAttachment)
 
 // ── Reports ───────────────────────────────────────────────────────────────────
 router.post('/reports',     auth, writeLimiter,                   reportCtrl.report)

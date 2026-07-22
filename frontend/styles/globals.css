@@ -5051,6 +5051,15 @@
 .ol-nav-toggle-desktop { display: flex; }
 
 @media (max-width: 900px) {
+  :root {
+    /* Sumber tunggal tinggi topbar mobile — dipakai ulang oleh
+       .ol-mobile-topbar (min-height) DAN .ol-chat-shell (top offset).
+       Didefinisikan di :root (bukan di .ol-mobile-topbar) supaya kedua
+       elemen itu — yang posisinya bersaudara, bukan induk-anak — sama-sama
+       bisa membacanya. Ubah angka ini SEKALI di sini kalau topbar berubah
+       tinggi, tidak perlu cari-cari tempat lain. */
+    --ol-topbar-h: 55px;
+  }
   .ol-shell, .ol-shell--collapsed {
     grid-template-columns: 1fr;
   }
@@ -5090,22 +5099,31 @@
     padding: 10px 14px;
     border-bottom: 1px solid var(--border-color, #2f3336);
     background: #000;
+    min-height: var(--ol-topbar-h);
+    box-sizing: border-box;
   }
   .ol-nav-toggle-desktop { display: none; }
   .ol-main { min-height: auto !important; }
 
-  /* FIX: chat.js mengandalkan height:100% berantai (list+jendela pesan+kotak
-     ketik) yang butuh induk dengan tinggi PASTI. Aturan ".ol-main { min-height:
-     auto }" di atas menghilangkan itu di mobile — akibatnya kotak ketik pesan
-     tidak ke-render dengan benar / tidak terjangkau di HP, padahal normal di
-     desktop. Beri .ol-chat-shell tinggi eksplisit sendiri (bukan warisan dari
-     induk) supaya konsisten di semua ukuran layar. dvh dipakai karena 100vh
-     di banyak browser mobile TIDAK memperhitungkan address bar yang
-     collapse/expand — dvh iya (browser lama otomatis abaikan baris ini dan
-     pakai fallback vh di atasnya). */
+  /* FIX (v2 — lebih defensif): percobaan sebelumnya masih menurunkan tinggi
+     dari rantai warisan CSS (calc(100dvh - Xpx) di elemen yang statusnya
+     masih 'position: static' di dalam alur dokumen) — kalau ADA perubahan
+     lain di layout induk nanti, ini gampang rapuh lagi seperti kemarin.
+     Sekarang .ol-chat-shell dilepas total dari alur dokumen pakai
+     `position: fixed`, nempel langsung ke viewport (top di bawah topbar
+     mobile, bottom benar-benar ke tepi layar) — TIDAK BERGANTUNG SAMA
+     SEKALI pada tinggi elemen induk mana pun. Sekalipun nanti ada yang
+     mengubah CSS .ol-main/.ol-shell lagi, halaman Chat tidak akan ikut
+     rusak lagi. */
   .ol-chat-shell {
-    height: calc(100vh - 52px) !important;
-    height: calc(100dvh - 52px) !important;
+    position: fixed !important;
+    top: var(--ol-topbar-h);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: auto !important;
+    z-index: 50;
+    background: #000;
   }
 }
 

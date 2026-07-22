@@ -4,8 +4,10 @@
 import { useState, useEffect, useRef, useContext, useCallback } from 'react'
 import { useRouter } from 'next/router'
 import { AuthContext } from '../../context/AuthContext'
+import { CallContext } from '../../context/CallContext'
 import api from '../../lib/api'
 import { Avatar, SkeletonCard, colors } from '../../components/dashboard'
+import EmojiPicker from '../../components/chat/EmojiPicker'
 import UserLayout from './_layout'
 
 function timeAgo(d) {
@@ -26,6 +28,7 @@ function normaliseMembers(room) {
 
 export default function Chat() {
   const { user } = useContext(AuthContext)
+  const callCtx = useContext(CallContext)
   const router = useRouter()
 
   const [rooms,        setRooms]        = useState([])
@@ -37,7 +40,12 @@ export default function Chat() {
   const [sending,      setSending]      = useState(false)
   const [starting,     setStarting]     = useState(false)
   const [error,        setError]        = useState('')
+  const [showEmoji,    setShowEmoji]    = useState(false)
+  const [pendingFile,  setPendingFile]  = useState(null)   // { file, previewUrl, type }
+  const [uploading,    setUploading]    = useState(false)
   const bottomRef = useRef(null)
+  const fileInputRef = useRef(null)
+  const inputRef = useRef(null)
 
   const myId = user?.id
 
@@ -97,6 +105,13 @@ export default function Chat() {
 
   useEffect(() => {
     if (activeRoom) loadMessages(activeRoom.id)
+    // Ganti percakapan → batalkan file yang sempat dipilih tapi belum terkirim,
+    // dan lepas object URL preview-nya (cegah memory leak)
+    setPendingFile(prev => {
+      if (prev?.previewUrl) URL.revokeObjectURL(prev.previewUrl)
+      return null
+    })
+    setShowEmoji(false)
   }, [activeRoom, loadMessages])
 
   useEffect(() => {
@@ -111,18 +126,66 @@ export default function Chat() {
   }, [activeRoom, loadMessages])
 
   const sendMessage = async () => {
-    if (!draft.trim() || !activeRoom || sending) return
+    if ((!draft.trim() && !pendingFile) || !activeRoom || sending) return
     setSending(true)
     const text = draft.trim()
     setDraft('')
+    setShowEmoji(false)
+
     try {
-      await api.post(`/chat/conversations/${activeRoom.id}/messages`, { content: text })
+      let attachmentUrl = null, attachmentType = null, attachmentName = null
+
+      if (pendingFile) {
+        setUploading(true)
+        const fd = new FormData()
+        fd.append('file', pendingFile.file)
+        const up = await api.post('/chat/upload', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+        attachmentUrl = up.data.url
+        attachmentType = up.data.type
+        attachmentName = up.data.name
+        setUploading(false)
+      }
+
+      await api.post(`/chat/conversations/${activeRoom.id}/messages`, {
+        content: text || undefined,
+        attachmentUrl: attachmentUrl || undefined,
+        attachmentType: attachmentType || undefined,
+        attachmentName: attachmentName || undefined,
+      })
+      clearPendingFile()
       await loadMessages(activeRoom.id)
       loadRooms(true) // refresh preview pesan terakhir di sidebar (silent, tanpa skeleton)
     } catch (err) {
+      setUploading(false)
       setError(err.response?.data?.message ?? 'Gagal mengirim pesan.')
-      setDraft(text)
+      setDraft(text) // kembalikan draft supaya tidak hilang kalau gagal
     } finally { setSending(false) }
+  }
+
+  const handlePickFile = (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // supaya bisa pilih file yang sama lagi kalau dibatalkan
+    if (!file) return
+    if (file.size > 15 * 1024 * 1024) {
+      setError('Ukuran file maksimal 15MB')
+      return
+    }
+    const isImage = file.type.startsWith('image/')
+    setPendingFile({
+      file,
+      type: isImage ? 'image' : 'file',
+      previewUrl: isImage ? URL.createObjectURL(file) : null,
+    })
+  }
+
+  const clearPendingFile = () => {
+    if (pendingFile?.previewUrl) URL.revokeObjectURL(pendingFile.previewUrl)
+    setPendingFile(null)
+  }
+
+  const handleEmojiSelect = (emoji) => {
+    setDraft(prev => prev + emoji)
+    inputRef.current?.focus()
   }
 
   const otherUser = (room) => {
@@ -239,6 +302,37 @@ export default function Chat() {
                       {otherUser(activeRoom).profile?.username ?? otherUser(activeRoom).username ?? 'Pengguna'}
                     </div>
                   </div>
+
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, flexShrink: 0 }}>
+                    <button
+                      onClick={() => {
+                        const other = otherUser(activeRoom)
+                        callCtx.startCall(other.id, other.profile?.username ?? other.username ?? 'Pengguna', activeRoom.id, 'audio')
+                      }}
+                      disabled={callCtx.callState !== 'idle'}
+                      aria-label="Panggilan suara"
+                      title="Panggilan suara"
+                      style={{ background: 'none', border: 'none', color: colors.textPrimary, cursor: callCtx.callState === 'idle' ? 'pointer' : 'default', padding: 8, opacity: callCtx.callState === 'idle' ? 1 : 0.4 }}
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => {
+                        const other = otherUser(activeRoom)
+                        callCtx.startCall(other.id, other.profile?.username ?? other.username ?? 'Pengguna', activeRoom.id, 'video')
+                      }}
+                      disabled={callCtx.callState !== 'idle'}
+                      aria-label="Panggilan video"
+                      title="Panggilan video"
+                      style={{ background: 'none', border: 'none', color: colors.textPrimary, cursor: callCtx.callState === 'idle' ? 'pointer' : 'default', padding: 8, opacity: callCtx.callState === 'idle' ? 1 : 0.4 }}
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Messages */}
@@ -256,13 +350,34 @@ export default function Chat() {
                         return (
                           <div key={msg.id ?? i} style={{ display: 'flex', justifyContent: mine ? 'flex-end' : 'flex-start' }}>
                             <div style={{
-                              maxWidth: '72%', padding: '8px 14px', borderRadius: mine ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                              maxWidth: '72%', padding: msg.attachmentType === 'image' ? 4 : '8px 14px',
+                              borderRadius: mine ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                               background: mine ? colors.accent : colors.bgElevated,
                               color: mine ? '#fff' : colors.textPrimary,
                               fontSize: 14, lineHeight: 1.5,
                             }}>
-                              {msg.content}
-                              <div style={{ fontSize: 10, opacity: 0.7, marginTop: 3, textAlign: 'right' }}>{timeAgo(msg.createdAt)}</div>
+                              {msg.attachmentType === 'image' && (
+                                <a href={msg.attachmentUrl} target="_blank" rel="noopener noreferrer">
+                                  <img src={msg.attachmentUrl} alt="Lampiran gambar" style={{
+                                    display: 'block', maxWidth: '100%', maxHeight: 260, borderRadius: 14,
+                                  }} />
+                                </a>
+                              )}
+                              {msg.attachmentType === 'file' && (
+                                <a href={msg.attachmentUrl} target="_blank" rel="noopener noreferrer" style={{
+                                  display: 'flex', alignItems: 'center', gap: 8, color: 'inherit', textDecoration: 'none',
+                                  padding: msg.content ? '0 0 6px' : 0,
+                                }}>
+                                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                                  </svg>
+                                  <span style={{ fontSize: 13, textDecoration: 'underline', wordBreak: 'break-all' }}>{msg.attachmentName ?? 'File'}</span>
+                                </a>
+                              )}
+                              {msg.content && (
+                                <div style={msg.attachmentType === 'image' ? { padding: '6px 8px 2px' } : undefined}>{msg.content}</div>
+                              )}
+                              <div style={{ fontSize: 10, opacity: 0.7, marginTop: 3, textAlign: 'right', padding: msg.attachmentType === 'image' ? '0 8px' : 0 }}>{timeAgo(msg.createdAt)}</div>
                             </div>
                           </div>
                         )
@@ -271,24 +386,89 @@ export default function Chat() {
                   <div ref={bottomRef} />
                 </div>
 
+                <div style={{ borderTop: `1px solid ${colors.border}` }}>
+                {/* Preview file yang mau dikirim */}
+                {pendingFile && (
+                  <div style={{ padding: '10px 16px 0', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 8, background: colors.bgElevated, border: `1px solid ${colors.border}`, borderRadius: 12, padding: 8 }}>
+                      {pendingFile.type === 'image' ? (
+                        <img src={pendingFile.previewUrl} alt="Preview" style={{ width: 52, height: 52, objectFit: 'cover', borderRadius: 8 }} />
+                      ) : (
+                        <div style={{ width: 52, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={colors.textSecondary} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                          </svg>
+                        </div>
+                      )}
+                      <span style={{ fontSize: 12, color: colors.textSecondary, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {pendingFile.file.name}
+                      </span>
+                      <button onClick={clearPendingFile} aria-label="Batal kirim file" style={{
+                        background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '50%',
+                        width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', color: colors.textPrimary, flexShrink: 0, marginLeft: 4,
+                      }}>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                      </button>
+                    </div>
+                    {uploading && <span style={{ fontSize: 12, color: colors.textSecondary }}>Mengupload…</span>}
+                  </div>
+                )}
+
+                {error && (
+                  <p role="alert" style={{ padding: '6px 16px 0', fontSize: 12, color: '#f87171' }}>{error}</p>
+                )}
+
                 {/* Input */}
-                <div style={{ padding: '12px 16px', borderTop: `1px solid ${colors.border}`, display: 'flex', gap: 8 }}>
+                <div style={{ padding: '10px 16px', display: 'flex', gap: 8, alignItems: 'center', position: 'relative' }}>
+                  <input ref={fileInputRef} type="file" onChange={handlePickFile} style={{ display: 'none' }} />
+
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={sending}
+                    aria-label="Lampirkan foto atau file"
+                    title="Lampirkan foto/file"
+                    style={{ background: 'none', border: 'none', color: colors.textSecondary, cursor: 'pointer', padding: 6, flexShrink: 0, display: 'flex' }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/>
+                    </svg>
+                  </button>
+
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={() => setShowEmoji(o => !o)}
+                      aria-label="Pilih emoji"
+                      title="Emoji"
+                      style={{ background: 'none', border: 'none', color: colors.textSecondary, cursor: 'pointer', padding: 6, display: 'flex' }}
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>
+                      </svg>
+                    </button>
+                    {showEmoji && <EmojiPicker onSelect={handleEmojiSelect} onClose={() => setShowEmoji(false)} />}
+                  </div>
+
                   <input
+                    ref={inputRef}
                     value={draft}
                     onChange={e => setDraft(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendMessage())}
                     placeholder="Tulis pesan…"
                     disabled={sending}
-                    style={{ flex: 1, padding: '10px 16px', borderRadius: 24, border: `1px solid ${colors.border}`, background: colors.bgElevated, color: colors.textPrimary, fontSize: 14, outline: 'none' }}
+                    style={{ flex: 1, padding: '10px 16px', borderRadius: 24, border: `1px solid ${colors.border}`, background: colors.bgElevated, color: colors.textPrimary, fontSize: 14, outline: 'none', minWidth: 0 }}
                   />
-                  <button onClick={sendMessage} disabled={!draft.trim() || sending} style={{
-                    background: draft.trim() ? colors.accent : colors.bgElevated,
-                    color: draft.trim() ? '#fff' : colors.textSecondary,
-                    border: 'none', borderRadius: 24, padding: '0 20px',
-                    fontSize: 14, fontWeight: 600, cursor: draft.trim() ? 'pointer' : 'default', transition: 'background 0.15s',
+                  <button onClick={sendMessage} disabled={(!draft.trim() && !pendingFile) || sending} style={{
+                    background: (draft.trim() || pendingFile) ? colors.accent : colors.bgElevated,
+                    color: (draft.trim() || pendingFile) ? '#fff' : colors.textSecondary,
+                    border: 'none', borderRadius: 24, padding: '0 20px', height: 38, flexShrink: 0,
+                    fontSize: 14, fontWeight: 600, cursor: (draft.trim() || pendingFile) ? 'pointer' : 'default', transition: 'background 0.15s',
                   }}>
                     {sending ? '…' : '↑'}
                   </button>
+                </div>
                 </div>
               </>
             )

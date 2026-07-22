@@ -18,6 +18,21 @@ module.exports = {
   // merespons (error/timeout) atau key ini kosong, LIA otomatis jatuh ke
   // Claude (ANTHROPIC_API_KEY) sebagai cadangan — lihat modules/lia/llm.js.
   GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+  // Cloudinary — penyimpanan foto/file lampiran chat. WAJIB pakai storage
+  // eksternal seperti ini (bukan disk lokal server) karena banyak host
+  // gratis (Railway dst.) punya filesystem EPHEMERAL — file lokal hilang
+  // tiap redeploy/restart. Daftar gratis di https://cloudinary.com (tanpa
+  // kartu), ambil 3 nilai ini dari Dashboard.
+  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME,
+  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY,
+  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET,
+  // TURN server — dibutuhkan supaya panggilan audio/video tetap nyambung
+  // walau salah satu pihak di jaringan NAT/firewall "rewel" (WiFi
+  // kantor/kampus dsb). Daftar gratis (500MB/bulan tanpa kartu) di
+  // https://www.metered.ca/tools/openrelay — ambil dari dashboard mereka.
+  TURN_URL: process.env.TURN_URL,
+  TURN_USERNAME: process.env.TURN_USERNAME,
+  TURN_CREDENTIAL: process.env.TURN_CREDENTIAL,
 }
 
 
