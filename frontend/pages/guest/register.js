@@ -35,8 +35,12 @@ export default function Register() {
       return
     }
 
-    if (password.length < 6) {
-      setError('Password minimal 6 karakter')
+    if (Array.from(password).length < 12) {
+      setError('Password minimal 12 karakter')
+      return
+    }
+    if (new TextEncoder().encode(password).length > 72) {
+      setError('Password maksimal 72 byte UTF-8')
       return
     }
 
@@ -302,7 +306,7 @@ export default function Register() {
               <label style={labelStyle}>Password</label>
               <input
                 type="password"
-                placeholder="Min. 6 karakter"
+                placeholder="Min. 12 karakter"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onFocus={() => setPasswordFocused(true)}
