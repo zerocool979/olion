@@ -1,19 +1,73 @@
+'use strict'
 const prisma = require('../../config/prisma')
 const multer = require('multer')
 const { cloudinary, isConfigured: cloudinaryConfigured } = require('../../config/cloudinary')
-const { TURN_URL, TURN_USERNAME, TURN_CREDENTIAL } = require('../../config/env')
+const { CLOUDINARY_CLOUD_NAME, TURN_URL, TURN_USERNAME, TURN_CREDENTIAL } = require('../../config/env')
 
 const PARTICIPANT_SELECT = {
   user: { select: { id: true, profile: { select: { username: true, avatarUrl: true, avatarBorder: true } } } },
 }
 
-// Memory storage (bukan disk) — file lewat langsung ke Cloudinary tanpa
-// pernah disimpan sementara di server, jadi tidak ada masalah "hilang saat
-// redeploy" atau file sisa yang perlu dibersihkan.
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024
+const MAX_MESSAGE_LENGTH = 5000
+const MAX_ATTACHMENT_NAME_LENGTH = 255
+const ALLOWED_UPLOAD_MIME_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+  'application/pdf',
+  'text/plain',
+])
+
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 15 * 1024 * 1024 }, // 15MB
+  limits: { fileSize: MAX_UPLOAD_BYTES, files: 1, fields: 10 },
 })
+
+function hasValidFileSignature(file) {
+  const buffer = file?.buffer
+  if (!Buffer.isBuffer(buffer) || buffer.length === 0) return false
+
+  switch (file.mimetype) {
+    case 'image/jpeg':
+      return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff
+    case 'image/png':
+      return buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+    case 'image/webp':
+      return buffer.length >= 12 && buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP'
+    case 'image/gif':
+      return buffer.length >= 6 && ['GIF87a', 'GIF89a'].includes(buffer.toString('ascii', 0, 6))
+    case 'application/pdf':
+      return buffer.length >= 5 && buffer.subarray(0, 5).toString('ascii') === '%PDF-'
+    case 'text/plain': {
+      // Reject binary/control-byte payloads masquerading as plain text.
+      if (buffer.includes(0)) return false
+      const decoded = buffer.toString('utf8')
+      return Buffer.from(decoded, 'utf8').equals(buffer)
+    }
+    default:
+      return false
+  }
+}
+
+function isTrustedCloudinaryUrl(rawUrl, resourceType) {
+  if (typeof rawUrl !== 'string' || !CLOUDINARY_CLOUD_NAME) return false
+  try {
+    const url = new URL(rawUrl)
+    const prefix = `/${CLOUDINARY_CLOUD_NAME}/${resourceType}/upload/`
+    return url.protocol === 'https:' &&
+      url.hostname === 'res.cloudinary.com' &&
+      !url.port &&
+      !url.username &&
+      !url.password &&
+      !url.search &&
+      !url.hash &&
+      url.pathname.startsWith(prefix)
+  } catch {
+    return false
+  }
+}
 
 function uploadBufferToCloudinary(buffer, resourceType) {
   return new Promise((resolve, reject) => {
@@ -25,47 +79,54 @@ function uploadBufferToCloudinary(buffer, resourceType) {
   })
 }
 
+function getSafeAttachmentName(value) {
+  if (typeof value !== 'string') return null
+  const cleaned = value.replace(/[\u0000-\u001f\u007f]/g, '').trim()
+  return cleaned ? cleaned.slice(0, MAX_ATTACHMENT_NAME_LENGTH) : null
+}
+
 module.exports = {
-  // Dibungkus supaya error multer (file kepenuhan dst.) jadi 400 yang jelas,
-  // bukan jatuh ke 500 generik di error handler global.
   uploadMiddleware: (req, res, next) => {
     upload.single('file')(req, res, (err) => {
       if (err) {
         err.statusCode = 400
         if (err.code === 'LIMIT_FILE_SIZE') err.message = 'Ukuran file maksimal 15MB'
+        if (err.code === 'LIMIT_FILE_COUNT') err.message = 'Hanya satu file yang dapat diupload'
         return next(err)
       }
       next()
     })
   },
 
-  // POST /chat/upload — upload lampiran (foto/file) ke Cloudinary, kembalikan
-  // URL-nya. Dipanggil TERPISAH sebelum kirim pesan (bukan digabung jadi satu
-  // request) — lebih sederhana dan memudahkan preview sebelum benar-benar terkirim.
+  // POST /chat/upload — only supported raster images, PDF, and plain text.
   uploadAttachment: async (req, res, next) => {
     try {
       if (!cloudinaryConfigured) {
-        return res.status(503).json({ message: 'Fitur kirim foto/file belum dikonfigurasi di server (Cloudinary belum diisi admin).' })
+        return res.status(503).json({ message: 'Fitur kirim foto/file belum dikonfigurasi di server.' })
       }
       if (!req.file) return res.status(400).json({ message: 'File wajib diupload (field "file")' })
+      if (!ALLOWED_UPLOAD_MIME_TYPES.has(req.file.mimetype) || !hasValidFileSignature(req.file)) {
+        return res.status(415).json({ message: 'Format file tidak didukung atau isi file tidak sesuai tipe yang diklaim.' })
+      }
 
       const isImage = req.file.mimetype.startsWith('image/')
-      const result = await uploadBufferToCloudinary(req.file.buffer, isImage ? 'image' : 'raw')
+      const resourceType = isImage ? 'image' : 'raw'
+      const result = await uploadBufferToCloudinary(req.file.buffer, resourceType)
+      if (!result?.secure_url || !isTrustedCloudinaryUrl(result.secure_url, resourceType)) {
+        return res.status(502).json({ message: 'Penyimpanan file mengembalikan URL yang tidak valid.' })
+      }
 
       res.status(201).json({
         url: result.secure_url,
         type: isImage ? 'image' : 'file',
-        name: req.file.originalname,
+        name: getSafeAttachmentName(req.file.originalname),
       })
     } catch (err) { next(err) }
   },
 
-  // GET /chat/ice-servers — konfigurasi STUN/TURN untuk RTCPeerConnection di
-  // frontend. Dilindungi `auth` (bukan endpoint publik) supaya kredensial
-  // TURN (kuota gratis terbatas) tidak dipakai sembarang orang di luar app ini.
   getIceServers: (req, res) => {
     const iceServers = [
-      { urls: 'stun:stun.l.google.com:19302' }, // STUN publik Google, gratis tanpa batas
+      { urls: 'stun:stun.l.google.com:19302' },
     ]
     if (TURN_URL && TURN_USERNAME && TURN_CREDENTIAL) {
       iceServers.push({ urls: TURN_URL, username: TURN_USERNAME, credential: TURN_CREDENTIAL })
@@ -73,7 +134,6 @@ module.exports = {
     res.json({ iceServers, turnConfigured: !!(TURN_URL && TURN_USERNAME && TURN_CREDENTIAL) })
   },
 
-  // GET /chat/conversations
   listConversations: async (req, res, next) => {
     try {
       const conversations = await prisma.conversation.findMany({
@@ -90,27 +150,19 @@ module.exports = {
     }
   },
 
-  // POST /chat/conversations  { userId }
   startConversation: async (req, res, next) => {
     try {
-      const { userId: otherId } = req.body
+      const { userId: otherId } = req.body || {}
       if (!otherId) return res.status(400).json({ message: 'userId harus diisi' })
       if (otherId === req.userId) return res.status(400).json({ message: 'Tidak bisa chat dengan diri sendiri' })
 
       const otherExists = await prisma.user.findUnique({ where: { id: otherId }, select: { id: true } })
       if (!otherExists) return res.status(404).json({ message: 'Pengguna tidak ditemukan' })
 
-      // FIX: sebelumnya "cek dulu baru buat" (findFirst lalu create) — antara
-      // dua langkah itu ada celah race condition (dua klik "Chat" nyaris
-      // bersamaan bisa lolos jadi 2 conversation berbeda untuk pasangan
-      // orang yang sama). pairKey + upsert menjamin atomik di level database:
-      // walau dua request datang bersamaan, cuma satu yang akan berhasil
-      // "create", yang satunya otomatis dapat conversation yang sama.
       const pairKey = [req.userId, otherId].sort().join(':')
-
       const conversation = await prisma.conversation.upsert({
         where: { pairKey },
-        update: {}, // sudah ada — tidak perlu ubah apa pun, tinggal dipakai
+        update: {},
         create: {
           pairKey,
           participants: {
@@ -126,7 +178,6 @@ module.exports = {
     }
   },
 
-  // GET /chat/conversations/:id/messages
   listMessages: async (req, res, next) => {
     try {
       const participant = await prisma.conversationParticipant.findUnique({
@@ -134,30 +185,49 @@ module.exports = {
       })
       if (!participant) return res.status(403).json({ message: 'Bukan bagian dari percakapan ini' })
 
+      // Bound response size and return the most recent messages in chronological order.
       const messages = await prisma.message.findMany({
         where: { conversationId: req.params.id },
-        orderBy: { createdAt: 'asc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: 100,
         include: { sender: { select: { id: true, profile: { select: { username: true, avatarUrl: true, avatarBorder: true } } } } },
       })
 
-      return res.status(200).json({ data: messages })
+      return res.status(200).json({ data: messages.reverse() })
     } catch (err) {
       next(err)
     }
   },
 
-  // POST /chat/conversations/:id/messages  { content?, attachmentUrl?, attachmentType?, attachmentName? }
   sendMessage: async (req, res, next) => {
     try {
-      const { content, attachmentUrl, attachmentType, attachmentName } = req.body
-      const trimmedContent = content?.trim() || null
+      const { content, attachmentUrl, attachmentType, attachmentName } = req.body || {}
+      if (content !== undefined && typeof content !== 'string') {
+        return res.status(400).json({ message: 'Konten pesan harus berupa teks' })
+      }
+      if (attachmentUrl !== undefined && typeof attachmentUrl !== 'string') {
+        return res.status(400).json({ message: 'URL lampiran tidak valid' })
+      }
 
-      // Pesan valid kalau ADA teks ATAU ADA lampiran (tidak wajib dua-duanya)
+      const trimmedContent = typeof content === 'string' ? content.trim() : null
+      if (trimmedContent && trimmedContent.length > MAX_MESSAGE_LENGTH) {
+        return res.status(400).json({ message: `Pesan maksimal ${MAX_MESSAGE_LENGTH} karakter` })
+      }
+
       if (!trimmedContent && !attachmentUrl) {
         return res.status(400).json({ message: 'Pesan tidak boleh kosong' })
       }
-      if (attachmentUrl && !['image', 'file'].includes(attachmentType)) {
-        return res.status(400).json({ message: 'attachmentType harus "image" atau "file"' })
+      if (attachmentUrl) {
+        if (!['image', 'file'].includes(attachmentType)) {
+          return res.status(400).json({ message: 'attachmentType harus "image" atau "file"' })
+        }
+        const resourceType = attachmentType === 'image' ? 'image' : 'raw'
+        if (!isTrustedCloudinaryUrl(attachmentUrl, resourceType)) {
+          return res.status(400).json({ message: 'Lampiran harus berasal dari penyimpanan Cloudinary OLION yang valid.' })
+        }
+        if (attachmentName !== undefined && typeof attachmentName !== 'string') {
+          return res.status(400).json({ message: 'Nama lampiran tidak valid' })
+        }
       }
 
       const participant = await prisma.conversationParticipant.findUnique({
@@ -170,7 +240,7 @@ module.exports = {
           content: trimmedContent,
           attachmentUrl: attachmentUrl || null,
           attachmentType: attachmentUrl ? attachmentType : null,
-          attachmentName: attachmentUrl ? (attachmentName || null) : null,
+          attachmentName: attachmentUrl ? getSafeAttachmentName(attachmentName) : null,
           conversationId: req.params.id,
           senderId: req.userId,
         },
@@ -188,6 +258,3 @@ module.exports = {
     }
   },
 }
-
-
-
