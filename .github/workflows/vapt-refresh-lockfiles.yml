@@ -1,0 +1,94 @@
+name: VAPT dependency lockfile refresh
+
+on:
+  push:
+    branches:
+      - security/vapt-remediation-2026-11
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: olion-vapt-lockfile-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh-lockfiles:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout remediation branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: true
+          ref: security/vapt-remediation-2026-11
+
+      - name: Configure Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 20
+
+      - name: Update backend manifest and lockfile
+        working-directory: backend
+        run: |
+          npm pkg set 'dependencies.express=^4.22.3'
+          npm pkg set 'overrides.qs=^6.17.1'
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm audit fix --package-lock-only --omit=dev --no-fund || true
+
+      - name: Update frontend manifest and lockfile
+        working-directory: frontend
+        run: |
+          npm pkg set 'dependencies.next=15.5.29'
+          npm pkg set 'overrides.postcss=$postcss'
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm audit fix --package-lock-only --no-fund
+
+      - name: Verify clean installs
+        run: |
+          npm --prefix backend ci --no-audit --no-fund
+          npm --prefix frontend ci --no-audit --no-fund
+
+      - name: Validate Prisma schema
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://vapt:vapt@127.0.0.1:5432/vapt
+        run: npx prisma validate
+
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_URL: https://olion-api.vercel.app/api
+          NEXT_PUBLIC_SOCKET_URL: https://olion-api.vercel.app
+        run: npm run build
+
+      - name: Record dependency audit results
+        shell: bash
+        run: |
+          npm --prefix backend audit --omit=dev --json > /tmp/backend-audit.json || true
+          npm --prefix frontend audit --json > /tmp/frontend-audit.json || true
+          node - <<'NODE'
+          const fs = require('fs')
+          for (const [name, file] of [['backend', '/tmp/backend-audit.json'], ['frontend', '/tmp/frontend-audit.json']]) {
+            const report = JSON.parse(fs.readFileSync(file, 'utf8'))
+            const counts = report.metadata?.vulnerabilities || {}
+            const line = `${name}: ${counts.total || 0} total (${counts.critical || 0} critical, ${counts.high || 0} high, ${counts.moderate || 0} moderate, ${counts.low || 0} low)`
+            console.log(line)
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, line + '\n')
+          }
+          NODE
+
+      - name: Commit dependency manifests and lockfiles
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add backend/package.json backend/package-lock.json frontend/package.json frontend/package-lock.json
+          if git diff --cached --quiet; then
+            echo 'No dependency changes to commit.'
+          else
+            git commit -m 'security: patch production dependency vulnerabilities'
+            git push origin HEAD:security/vapt-remediation-2026-11
+          fi

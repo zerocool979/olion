@@ -93,8 +93,12 @@ export default function Settings() {
       setPwError('Password lama harus diisi')
       return
     }
-    if (!newPassword || newPassword.length < 6) {
-      setPwError('Password baru minimal 6 karakter')
+    if (!newPassword || Array.from(newPassword).length < 12) {
+      setPwError('Password baru minimal 12 karakter')
+      return
+    }
+    if (new TextEncoder().encode(newPassword).length > 72) {
+      setPwError('Password baru maksimal 72 byte UTF-8')
       return
     }
     if (newPassword !== confirmPassword) {
@@ -187,7 +191,7 @@ export default function Settings() {
                 )}
                 <input
                   type="password"
-                  placeholder="Password baru (minimal 6 karakter)"
+                  placeholder="Password baru (minimal 12 karakter)"
                   value={newPassword}
                   onChange={e => setNewPassword(e.target.value)}
                   disabled={pwSaving}
