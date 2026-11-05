@@ -58,42 +58,46 @@ function computeScore(votes, comments, createdAt, windowStart) {
   return Math.round(boosted)
 }
 
-// ── Trend direction ───────────────────────────────────────────────────────────
-// Compare score in first half of window vs second half.
-// Returns '+X%' or '-X%' string.
-async function computeTrend(discussionId, windowStart) {
-  const windowMs  = Date.now() - windowStart.getTime()
-  const midpoint  = new Date(Date.now() - windowMs / 2)
+// ── Trend direction (batched) ──────────────────────────────────────────────────
+// Fetch activity buckets for all candidate discussions in two grouped queries,
+// avoiding four COUNT queries per discussion (N+1 query amplification).
+async function computeTrends(discussionIds, windowStart) {
+  if (discussionIds.length === 0) return new Map()
 
-  const [firstHalf, secondHalf] = await Promise.all([
-    // votes + comments in older half of window
-    Promise.all([
-      prisma.vote.count({
-        where: { discussionId, createdAt: { gte: windowStart, lt: midpoint } },
-      }),
-      prisma.comment.count({
-        where: { discussionId, createdAt: { gte: windowStart, lt: midpoint } },
-      }),
-    ]),
-    // votes + comments in recent half
-    Promise.all([
-      prisma.vote.count({
-        where: { discussionId, createdAt: { gte: midpoint } },
-      }),
-      prisma.comment.count({
-        where: { discussionId, createdAt: { gte: midpoint } },
-      }),
-    ]),
+  const midpoint = new Date((Date.now() + windowStart.getTime()) / 2)
+  const where = { discussionId: { in: discussionIds }, createdAt: { gte: windowStart } }
+  const [votes, comments] = await Promise.all([
+    prisma.vote.groupBy({
+      by: ['discussionId', 'createdAt'],
+      where,
+      _count: { _all: true },
+    }),
+    prisma.comment.groupBy({
+      by: ['discussionId', 'createdAt'],
+      where,
+      _count: { _all: true },
+    }),
   ])
 
-  const oldActivity  = firstHalf[0]  + firstHalf[1]
-  const newActivity  = secondHalf[0] + secondHalf[1]
+  const activity = new Map(discussionIds.map(id => [id, { old: 0, recent: 0 }]))
+  for (const row of [...votes, ...comments]) {
+    const bucket = activity.get(row.discussionId)
+    if (!bucket) continue
+    if (new Date(row.createdAt) < midpoint) bucket.old += row._count._all
+    else bucket.recent += row._count._all
+  }
 
-  if (oldActivity === 0 && newActivity === 0) return null
-  if (oldActivity === 0) return `+${(newActivity * 100)}%`
-
-  const pct = Math.round(((newActivity - oldActivity) / oldActivity) * 100)
-  return pct >= 0 ? `+${pct}%` : `${pct}%`
+  const trends = new Map()
+  for (const [id, counts] of activity) {
+    const { old, recent } = counts
+    if (old === 0 && recent === 0) trends.set(id, null)
+    else if (old === 0) trends.set(id, `+${recent * 100}%`)
+    else {
+      const pct = Math.round(((recent - old) / old) * 100)
+      trends.set(id, pct >= 0 ? `+${pct}%` : `${pct}%`)
+    }
+  }
+  return trends
 }
 
 // ── Main export ───────────────────────────────────────────────────────────────
@@ -103,7 +107,10 @@ async function getTrending({ period = '24h', limit = 20 } = {}) {
 
   // Fetch discussions that have had any activity in the window,
   // OR were created within the window.
+  // Bound candidate work so a public request cannot load the full discussion table.
   const discussions = await prisma.discussion.findMany({
+    take: 200,
+    orderBy: { createdAt: 'desc' },
     where: {
       isHidden: false,
       OR: [
@@ -129,10 +136,10 @@ async function getTrending({ period = '24h', limit = 20 } = {}) {
   scored.sort((a, b) => b.score - a.score)
   const top = scored.slice(0, limit)
 
-  // Attach rank + trend (parallelised per item)
-  const ranked = await Promise.all(
-    top.map(async (d, idx) => {
-      const trend = await computeTrend(d.id, windowStart)
+  // Attach rank + trend using batched activity aggregation.
+  const trends = await computeTrends(top.map(d => d.id), windowStart)
+  const ranked = top.map((d, idx) => {
+      const trend = trends.get(d.id)
       const isHot = d.score > (top[0]?.score ?? 0) * 0.7 // top 70% of leader score = hot
       return {
         id:        d.id,
@@ -149,7 +156,6 @@ async function getTrending({ period = '24h', limit = 20 } = {}) {
         _count:    d._count,
       }
     })
-  )
 
   return ranked
 }
