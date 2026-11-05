@@ -2,6 +2,23 @@
 const prisma = require('../../config/prisma')
 const badgeSvc = require('../badge/service')
 
+// Public-facing user fields only. Never expose email, password hash, or
+// Google account identifiers in comment responses.
+const PUBLIC_USER_SELECT = {
+  id: true,
+  role: true,
+  isVerifiedExpert: true,
+  createdAt: true,
+  profile: {
+    select: {
+      username: true,
+      bio: true,
+      avatarUrl: true,
+      avatarBorder: true,
+    },
+  },
+}
+
 exports.create = async ({ content, discussionId, parentId }, userId) => {
   // Validasi konten
   if (!content || !content.trim()) {
@@ -43,7 +60,7 @@ exports.create = async ({ content, discussionId, parentId }, userId) => {
       parentId: parentId || null,
     },
     include: {
-      user: { include: { profile: true } },
+      user: { select: PUBLIC_USER_SELECT },
       replies: true,
     },
   })
@@ -62,7 +79,7 @@ exports.getByDiscussion = (discussionId) => {
     where: { discussionId, isHidden: false, parentId: null },
     orderBy: { createdAt: 'asc' },
     include: {
-      user: { include: { profile: true } },
+      user: { select: PUBLIC_USER_SELECT },
       replies: {
         where: { isHidden: false },
         include: { user: { include: { profile: true } } },
