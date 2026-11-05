@@ -30,7 +30,7 @@ module.exports = {
 
   detail: async (req, res, next) => {
     try {
-      const discussion = await discussionService.detail(req.params.id, req.userId)
+      const discussion = await discussionService.detail(req.params.id, req.userId, req.userRole)
       if (!discussion) return res.status(404).json({ message: 'Diskusi tidak ditemukan' })
       res.json({ data: discussion })
     } catch (err) { next(err) }
@@ -115,14 +115,23 @@ module.exports = {
 
   incrementView: async (req, res, next) => {
     try {
-      const discussion = await prisma.discussion.update({
+      // Do not let guests or ordinary users interact with hidden discussions
+      // by calling the view endpoint directly with a known UUID.
+      const isStaff = ['ADMIN', 'MODERATOR'].includes(req.userRole)
+      const where = { id: req.params.id, ...(isStaff ? {} : { isHidden: false }) }
+      const result = await prisma.discussion.updateMany({
+        where,
+        data: { viewCount: { increment: 1 } },
+      })
+      if (result.count === 0) {
+        return res.status(404).json({ message: 'Diskusi tidak ditemukan' })
+      }
+      const discussion = await prisma.discussion.findUnique({
         where: { id: req.params.id },
-        data:  { viewCount: { increment: 1 } },
         select: { id: true, viewCount: true },
       })
       res.status(200).json({ viewCount: discussion.viewCount })
     } catch (err) {
-      if (err.code === 'P2025') return res.status(404).json({ message: 'Diskusi tidak ditemukan' })
       next(err)
     }
   },
