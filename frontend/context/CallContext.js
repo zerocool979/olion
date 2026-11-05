@@ -5,7 +5,11 @@ import api from '../lib/api'
 
 export const CallContext = createContext(null)
 
-const SOCKET_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api').replace(/\/api\/?$/, '')
+// REST API dan Socket.IO dapat berada di host berbeda setelah migrasi.
+const SOCKET_URL = (
+  process.env.NEXT_PUBLIC_SOCKET_URL ||
+  (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api').replace(/\/api\/?$/, '')
+)
 
 export function CallProvider({ children }) {
   const { token, user } = useContext(AuthContext)
