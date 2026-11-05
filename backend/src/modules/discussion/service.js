@@ -2,9 +2,26 @@
 const prisma = require('../../config/prisma')
 const bookmarkService = require('../bookmark/service')
 
+// Public-facing user fields only. Never serialize email, password hash, googleId,
+// or private account flags through discussion responses.
+const PUBLIC_USER_SELECT = {
+  id: true,
+  role: true,
+  isVerifiedExpert: true,
+  createdAt: true,
+  profile: {
+    select: {
+      username: true,
+      bio: true,
+      avatarUrl: true,
+      avatarBorder: true,
+    },
+  },
+}
+
 const DISCUSSION_INCLUDE = {
   user: {
-    include: { profile: true },
+    select: PUBLIC_USER_SELECT,
   },
   category: {
     include: { parent: true },
@@ -61,7 +78,7 @@ async function detail(id, currentUserId) {
   const discussion = await prisma.discussion.findUnique({
     where: { id },
     include: {
-      user: { include: { profile: true } },
+      user: { select: PUBLIC_USER_SELECT },
       category: { include: { parent: true } },
       votes: currentUserId ? { where: { userId: currentUserId }, select: { value: true } } : false,
       _count: {
@@ -82,7 +99,7 @@ async function detail(id, currentUserId) {
     where: { discussionId: id, isHidden: false },
     orderBy: { createdAt: 'asc' },
     include: {
-      user: { include: { profile: true } },
+      user: { select: PUBLIC_USER_SELECT },
       votes: currentUserId ? { where: { userId: currentUserId }, select: { value: true } } : false,
       _count: { select: { votes: true } },
     },
