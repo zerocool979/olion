@@ -8,7 +8,8 @@ module.exports.list = async (req, res, next) => {
       ? req.query.period
       : '24h'
 
-    const limit = Math.min(parseInt(req.query.limit) || 20, 50)
+    const parsedLimit = Number.parseInt(req.query.limit, 10)
+    const limit = Number.isSafeInteger(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 50) : 20
 
     const data = await getTrending({ period, limit })
 

@@ -77,7 +77,8 @@ exports.unvote = async (userId, discussionId, commentId) => {
 
 // ── GET /votes?userId=&limit= ─────────────────────────────────────────────────
 exports.listByUser = async (userId, limit) => {
-  const take = Math.min(parseInt(limit, 10) || 20, 50)
+  const parsedLimit = Number.parseInt(limit, 10)
+  const take = Number.isSafeInteger(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 50) : 20
 
   return prisma.vote.findMany({
     where: { userId, value: { gt: 0 }, discussionId: { not: null } },

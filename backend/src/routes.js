@@ -36,6 +36,10 @@ const writeLimiter = rateLimit({
 })
 // LIA (chatbot RAG) publik/boleh guest — limit lebih ketat karena tiap
 // pertanyaan memicu panggilan model embedding + Claude API (biaya nyata).
+const trendingLimiter = rateLimit({
+  windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false,
+  message: { message: 'Terlalu banyak permintaan trending. Coba lagi sebentar.' },
+})
 const liaLimiter = rateLimit({
   windowMs: 60 * 1000, max: 12, standardHeaders: true, legacyHeaders: false,
   message: { message: 'Terlalu banyak pertanyaan ke LIA. Coba lagi sebentar.' },
@@ -91,13 +95,13 @@ router.delete('/bookmarks/:id',              auth,               bookmarkCtrl.re
 
 // ── Search / Trending / Leaderboard ──────────────────────────────────────────
 router.get('/search',      discussionCtrl.search)
-router.get('/trending',    trendingCtrl.list)
+router.get('/trending',    trendingLimiter, trendingCtrl.list)
 router.get('/leaderboard', leaderboardCtrl.list)
 
 // ── Comments ──────────────────────────────────────────────────────────────────
 router.get   ('/discussions/:id/comments', commentCtrl.listByDiscussion)
 router.post  ('/discussions/:id/comments', auth, writeLimiter, commentCtrl.create)
-router.get   ('/comments',                 commentCtrl.listByUser)
+router.get   ('/comments',                 auth, commentCtrl.listByUser)
 router.patch ('/comments/:id',             auth,               commentCtrl.update)
 router.delete('/comments/:id',             auth,               commentCtrl.remove)
 router.post  ('/comments/:id/votes',       auth, writeLimiter, commentCtrl.vote)
@@ -105,7 +109,7 @@ router.post  ('/comments/:id/votes',       auth, writeLimiter, commentCtrl.vote)
 // ── Votes ─────────────────────────────────────────────────────────────────────
 router.post  ('/votes', auth, writeLimiter, voteCtrl.vote)
 router.delete('/votes', auth,               voteCtrl.unvote)
-router.get   ('/votes',                     voteCtrl.listByUser)
+router.get   ('/votes',                     auth, voteCtrl.listByUser)
 
 // ── Notifications ─────────────────────────────────────────────────────────────
 router.get   ('/notifications',              auth, notifCtrl.list)

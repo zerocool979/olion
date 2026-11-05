@@ -3,7 +3,7 @@ const prisma = require('../../config/prisma')
 const reputationSvc = require('../reputation/service')
 
 const PUBLIC_USER_SELECT = {
-  id: true, role: true, isVerifiedExpert: true, isBanned: true, createdAt: true,
+  id: true, role: true, isVerifiedExpert: true, createdAt: true,
   profile: { select: { username: true, bio: true, avatarUrl: true, avatarBorder: true } },
   _count:  { select: { discussions: true, comments: true, followers: true, following: true } },
 }
@@ -55,7 +55,8 @@ module.exports = {
   list: async (req, res, next) => {
     try {
       const { role, sort, limit, username } = req.query
-      const take = Math.min(parseInt(limit, 10) || 20, 50)
+      const parsedLimit = Number.parseInt(limit, 10)
+      const take = Number.isSafeInteger(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 50) : 20
       const where = { isBanned: false }
 
       if (username) {
@@ -65,11 +66,13 @@ module.exports = {
 
       let users = await prisma.user.findMany({
         where, select: PUBLIC_USER_SELECT,
-        take: sort === 'reputation' ? undefined : take,
+        take,
+        orderBy: { createdAt: 'desc' },
       })
 
       if (sort === 'reputation') {
-        // Batched aggregate untuk sort reputasi — satu query per batch, bukan per user
+        // Reputasi diurutkan pada halaman terbaru yang dibatasi (maks. 50 user),
+        // agar endpoint publik tidak memuat seluruh tabel user ke memori.
         const userIds = users.map(u => u.id)
         const logs = await prisma.reputationLog.groupBy({
           by: ['userId'],
