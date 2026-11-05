@@ -95,6 +95,11 @@ export function CallProvider({ children }) {
       cleanupCall()
     })
 
+    socket.on('call:error', ({ message } = {}) => {
+      setCallError(message || 'Permintaan panggilan tidak dapat diproses.')
+      cleanupCall()
+    })
+
     socket.on('call:ended', () => {
       cleanupCall()
     })
