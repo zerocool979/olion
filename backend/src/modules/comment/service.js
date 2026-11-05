@@ -61,7 +61,9 @@ exports.create = async ({ content, discussionId, parentId }, userId) => {
     },
     include: {
       user: { select: PUBLIC_USER_SELECT },
-      replies: true,
+      replies: {
+        include: { user: { select: PUBLIC_USER_SELECT } },
+      },
     },
   })
 
@@ -82,7 +84,7 @@ exports.getByDiscussion = (discussionId) => {
       user: { select: PUBLIC_USER_SELECT },
       replies: {
         where: { isHidden: false },
-        include: { user: { include: { profile: true } } },
+        include: { user: { select: PUBLIC_USER_SELECT } },
         orderBy: { createdAt: 'asc' },
       },
       _count: { select: { votes: true } },
