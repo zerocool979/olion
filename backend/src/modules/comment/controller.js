@@ -43,7 +43,8 @@ module.exports = {
 
       notifyMentions({ text: content, actorId: req.userId, discussionId, commentId: comment.id })
 
-      res.status(201).json({ data: comment })
+      const { _discussionOwnerId, _discussionTitle, _parentOwnerId, ...publicComment } = comment
+      res.status(201).json({ data: publicComment })
     } catch (e) { next(e) }
   },
 
@@ -60,8 +61,11 @@ module.exports = {
     try {
       const { userId, limit } = req.query
       if (!userId) return res.status(400).json({ message: 'userId harus diisi' })
+      if (userId !== req.userId && !['ADMIN', 'MODERATOR'].includes(req.userRole))
+        return res.status(403).json({ message: 'Tidak diizinkan melihat aktivitas pengguna lain' })
 
-      const take = Math.min(parseInt(limit, 10) || 20, 50)
+      const parsedLimit = Number.parseInt(limit, 10)
+      const take = Number.isSafeInteger(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 50) : 20
       const comments = await prisma.comment.findMany({
         where: { userId, isHidden: false },
         include: {
