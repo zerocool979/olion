@@ -51,7 +51,8 @@ module.exports = {
   // GET /discussions/:id/comments
   listByDiscussion: async (req, res, next) => {
     try {
-      const comments = await service.getByDiscussion(req.params.id)
+      const comments = await service.getByDiscussion(req.params.id, req.userRole)
+      if (!comments) return res.status(404).json({ message: 'Diskusi tidak ditemukan' })
       res.json({ data: comments })
     } catch (e) { next(e) }
   },
