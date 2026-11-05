@@ -1,13 +1,14 @@
 'use strict'
 const fs = require('fs')
 const path = require('path')
+const os = require('os')
 const multer = require('multer')
 const service = require('./service')
 
 // ── Upload sementara ke disk lalu dibaca & dihapus lagi (bukan penyimpanan
 // permanen — file aslinya tidak perlu disimpan, cukup teksnya yang di-ingest) ──
-const UPLOAD_DIR = path.join(__dirname, '../../../uploads')
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true })
+const UPLOAD_DIR = path.join(os.tmpdir(), 'olion-uploads')
+fs.mkdirSync(UPLOAD_DIR, { recursive: true })
 
 const upload = multer({
   dest: UPLOAD_DIR,
