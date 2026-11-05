@@ -10,8 +10,10 @@ const REP_CREATE_DISCUSSION = 5
 module.exports = {
   list: async (req, res, next) => {
     try {
-      const skip = parseInt(req.query.skip) || 0
-      const take = Math.min(parseInt(req.query.take ?? req.query.limit) || 20, 50)
+      const parsedSkip = Number.parseInt(req.query.skip, 10)
+      const parsedTake = Number.parseInt(req.query.take ?? req.query.limit, 10)
+      const skip = Number.isSafeInteger(parsedSkip) && parsedSkip >= 0 ? Math.min(parsedSkip, 100000) : 0
+      const take = Number.isSafeInteger(parsedTake) && parsedTake > 0 ? Math.min(parsedTake, 50) : 20
       const { userId, categoryId, sort, feed, role } = req.query
 
       // Hanya staff (moderator/admin) yang boleh melihat konten tersembunyi —
@@ -128,8 +130,10 @@ module.exports = {
   search: async (req, res, next) => {
     try {
       const { q = '', category = '', subcategory = '', sort = 'latest' } = req.query
-      const skip = parseInt(req.query.skip) || 0
-      const take = Math.min(parseInt(req.query.take) || 20, 50)
+      const parsedSkip = Number.parseInt(req.query.skip, 10)
+      const parsedTake = Number.parseInt(req.query.take, 10)
+      const skip = Number.isSafeInteger(parsedSkip) && parsedSkip >= 0 ? Math.min(parsedSkip, 100000) : 0
+      const take = Number.isSafeInteger(parsedTake) && parsedTake > 0 ? Math.min(parsedTake, 50) : 20
       const result = await discussionService.search({ q, category, subcategory, sort, skip, take })
       res.json({ data: result.data, meta: { total: result.total, skip, take } })
     } catch (err) { next(err) }
