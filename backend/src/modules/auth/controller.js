@@ -13,7 +13,7 @@ const validateNewPassword = (password) =>
 module.exports = {
   register: async (req, res, next) => {
     try {
-      const { email, password } = req.body || {} || {}
+      const { email, password } = req.body || {}
 
       // ─── FIX: validasi di backend, jangan percaya frontend saja
       if (typeof email !== 'string' || !email.trim() || typeof password !== 'string' || !password) {
@@ -46,7 +46,7 @@ module.exports = {
 
   login: async (req, res, next) => {
     try {
-      const { email, password } = req.body
+      const { email, password } = req.body || {}
 
       if (typeof email !== 'string' || !email.trim() || typeof password !== 'string' || !password) {
         return res.status(400).json({ message: 'Email dan password harus diisi' })
