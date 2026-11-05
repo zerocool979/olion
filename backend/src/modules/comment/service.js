@@ -76,7 +76,14 @@ exports.create = async ({ content, discussionId, parentId }, userId) => {
   return comment
 }
 
-exports.getByDiscussion = (discussionId) => {
+exports.getByDiscussion = async (discussionId, viewerRole) => {
+  const isStaff = ['ADMIN', 'MODERATOR'].includes(viewerRole)
+  const discussion = await prisma.discussion.findFirst({
+    where: { id: discussionId, ...(isStaff ? {} : { isHidden: false }) },
+    select: { id: true },
+  })
+  if (!discussion) return null
+
   return prisma.comment.findMany({
     where: { discussionId, isHidden: false, parentId: null },
     orderBy: { createdAt: 'asc' },
