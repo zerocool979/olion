@@ -53,6 +53,16 @@ const searchLimiter = makeLimiter({
   max: 30,
   message: { message: 'Terlalu banyak pencarian. Coba lagi sebentar.' },
 })
+const uploadLimiter = makeLimiter({
+  windowMs: 60 * 1000,
+  max: 6,
+  message: { message: 'Terlalu banyak upload. Coba lagi sebentar.' },
+})
+const ingestFileLimiter = makeLimiter({
+  windowMs: 5 * 60 * 1000,
+  max: 3,
+  message: { message: 'Terlalu banyak proses ingest file. Coba lagi nanti.' },
+})
 const trendingLimiter = makeLimiter({
   windowMs: 60 * 1000,
   max: 60,
@@ -144,7 +154,7 @@ router.get('/chat/ice-servers', auth, chatCtrl.getIceServers)
 router.post('/chat/conversations', auth, writeLimiter, chatCtrl.startConversation)
 router.get('/chat/conversations/:id/messages', auth, chatCtrl.listMessages)
 router.post('/chat/conversations/:id/messages', auth, writeLimiter, chatCtrl.sendMessage)
-router.post('/chat/upload', auth, writeLimiter, chatCtrl.uploadMiddleware, chatCtrl.uploadAttachment)
+router.post('/chat/upload', auth, uploadLimiter, chatCtrl.uploadMiddleware, chatCtrl.uploadAttachment)
 
 // ── Reports ───────────────────────────────────────────────────────────────────
 router.post('/reports', auth, writeLimiter, reportCtrl.report)
@@ -162,7 +172,7 @@ router.get('/moderator/comments/hidden', auth, modRole, moderatorCtrl.hiddenComm
 // ── LIA ───────────────────────────────────────────────────────────────────────
 // Ingest/knowledge-base management is admin-only.
 router.post('/ingest/text', auth, role('ADMIN'), writeLimiter, liaCtrl.ingestText)
-router.post('/ingest/file', auth, role('ADMIN'), writeLimiter, liaCtrl.uploadMiddleware, liaCtrl.ingestFile)
+router.post('/ingest/file', auth, role('ADMIN'), ingestFileLimiter, liaCtrl.uploadMiddleware, liaCtrl.ingestFile)
 router.get('/ingest/documents', auth, role('ADMIN'), liaCtrl.listDocuments)
 router.delete('/ingest/documents/:id', auth, role('ADMIN'), liaCtrl.deleteDocument)
 router.post('/lia', optionalAuth, liaLimiter, liaCtrl.ask)
