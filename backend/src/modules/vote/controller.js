@@ -104,6 +104,8 @@ exports.listByUser = async (req, res, next) => {
   try {
     const { userId, limit } = req.query
     if (!userId) return res.status(400).json({ message: 'userId harus diisi' })
+    if (userId !== req.userId && !['ADMIN', 'MODERATOR'].includes(req.userRole))
+      return res.status(403).json({ message: 'Tidak diizinkan melihat aktivitas pengguna lain' })
     const votes = await service.listByUser(userId, limit)
     res.json({ data: votes })
   } catch (e) { next(e) }
