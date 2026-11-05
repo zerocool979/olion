@@ -1,10 +1,26 @@
 'use strict'
 const prisma = require('../../config/prisma')
 
+// Public-facing author fields only; never return account credentials or email.
+const PUBLIC_USER_SELECT = {
+  id: true,
+  role: true,
+  isVerifiedExpert: true,
+  createdAt: true,
+  profile: {
+    select: {
+      username: true,
+      bio: true,
+      avatarUrl: true,
+      avatarBorder: true,
+    },
+  },
+}
+
 const BOOKMARK_INCLUDE = {
   discussion: {
     include: {
-      user: { include: { profile: true } },
+      user: { select: PUBLIC_USER_SELECT },
       category: { include: { parent: true } },
       _count: { select: { votes: true, comments: true } },
     },
