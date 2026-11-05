@@ -2,15 +2,21 @@ const authService = require('./service')
 
 // ─── Minimal inline validator (tanpa library tambahan)
 // Untuk production, ganti dengan Zod: npm install zod
-const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+const validateEmail = (email) => typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+const PASSWORD_MIN_LENGTH = 12
+const PASSWORD_MAX_BYTES = 72
+const validateNewPassword = (password) =>
+  typeof password === 'string' &&
+  Array.from(password).length >= PASSWORD_MIN_LENGTH &&
+  Buffer.byteLength(password, 'utf8') <= PASSWORD_MAX_BYTES
 
 module.exports = {
   register: async (req, res, next) => {
     try {
-      const { email, password } = req.body
+      const { email, password } = req.body || {} || {}
 
       // ─── FIX: validasi di backend, jangan percaya frontend saja
-      if (!email || !password) {
+      if (typeof email !== 'string' || !email.trim() || typeof password !== 'string' || !password) {
         return res.status(400).json({ message: 'Email dan password harus diisi' })
       }
 
@@ -18,8 +24,10 @@ module.exports = {
         return res.status(400).json({ message: 'Format email tidak valid' })
       }
 
-      if (password.length < 6) {
-        return res.status(400).json({ message: 'Password minimal 6 karakter' })
+      if (!validateNewPassword(password)) {
+        return res.status(400).json({
+          message: `Password baru minimal ${PASSWORD_MIN_LENGTH} karakter dan maksimal ${PASSWORD_MAX_BYTES} byte UTF-8.`
+        })
       }
 
       // ─── FIX: hapus username dari parameter — di-generate otomatis di service
@@ -40,7 +48,7 @@ module.exports = {
     try {
       const { email, password } = req.body
 
-      if (!email || !password) {
+      if (typeof email !== 'string' || !email.trim() || typeof password !== 'string' || !password) {
         return res.status(400).json({ message: 'Email dan password harus diisi' })
       }
 
@@ -59,7 +67,7 @@ module.exports = {
   // ─── POST /auth/google  { idToken }
   google: async (req, res, next) => {
     try {
-      const { idToken, credential } = req.body
+      const { idToken, credential } = req.body || {}
       // Google Identity Services mengirim field "credential" pada onSuccess
       // callback; terima juga "idToken" untuk fleksibilitas nama field.
       const token = idToken || credential
@@ -110,12 +118,14 @@ module.exports = {
   // ─── ADDED: PATCH /auth/password
   changePassword: async (req, res, next) => {
     try {
-      const { oldPassword, newPassword } = req.body
+      const { oldPassword, newPassword } = req.body || {}
       if (!newPassword) {
         return res.status(400).json({ message: 'Password baru harus diisi' })
       }
-      if (newPassword.length < 6) {
-        return res.status(400).json({ message: 'Password baru minimal 6 karakter' })
+      if (!validateNewPassword(newPassword)) {
+        return res.status(400).json({
+          message: `Password baru minimal ${PASSWORD_MIN_LENGTH} karakter dan maksimal ${PASSWORD_MAX_BYTES} byte UTF-8.`
+        })
       }
 
       // oldPassword hanya wajib kalau akun ini SUDAH punya password.
