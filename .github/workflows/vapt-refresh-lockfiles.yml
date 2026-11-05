@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - security/vapt-remediation-2026-11
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
@@ -24,7 +27,7 @@ jobs:
           ref: security/vapt-remediation-2026-11
 
       - name: Configure Node.js
-        uses: actions/setup-node@1e60f620b9541d1a4f7fa32b7fc5a7a9d5b7f3d3
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 20
 
@@ -44,12 +47,23 @@ jobs:
           npm install --package-lock-only --ignore-scripts --no-audit --no-fund
           npm audit fix --package-lock-only --no-fund
 
-      - name: Verify clean installs and frontend build
+      - name: Verify clean installs
         run: |
           npm --prefix backend ci --no-audit --no-fund
           npm --prefix frontend ci --no-audit --no-fund
-          DATABASE_URL='postgresql://vapt:vapt@127.0.0.1:5432/vapt' npm --prefix backend exec -- prisma validate
-          NEXT_PUBLIC_API_URL='https://olion-api.vercel.app/api' NEXT_PUBLIC_SOCKET_URL='https://olion-api.vercel.app' npm --prefix frontend run build
+
+      - name: Validate Prisma schema
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://vapt:vapt@127.0.0.1:5432/vapt
+        run: npx prisma validate
+
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          NEXT_PUBLIC_API_URL: https://olion-api.vercel.app/api
+          NEXT_PUBLIC_SOCKET_URL: https://olion-api.vercel.app
+        run: npm run build
 
       - name: Record dependency audit results
         shell: bash
