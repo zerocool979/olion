@@ -8,7 +8,9 @@
     "postinstall": "prisma generate",
     "prisma": "prisma",
     "migrate": "prisma migrate dev",
-    "seed": "node prisma/seed.js"
+    "seed": "node prisma/seed.js",
+    "postinstall": "prisma generate",
+    "vercel-build": "prisma generate"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.112.3",
