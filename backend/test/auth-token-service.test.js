@@ -17,6 +17,7 @@ function createHarness({ configured = true, sendFails = false } = {}) {
   ])
   const deliveries = []
   let randomCounter = 0
+  let passwordHashCalls = 0
 
   function matches(record, where) {
     if (where.id && record.id !== where.id) return false
@@ -79,10 +80,10 @@ function createHarness({ configured = true, sendFails = false } = {}) {
     mailerClient,
     nowFn: () => new Date(now.value),
     randomBytesFn: () => Buffer.alloc(32, ++randomCounter),
-    passwordHashFn: async value => 'bcrypt-hash:' + value,
+    passwordHashFn: async value => { passwordHashCalls++; return 'bcrypt-hash:' + value },
   })
 
-  return { service, tokens, users, deliveries, now }
+  return { service, tokens, users, deliveries, now, passwordHashCalls: () => passwordHashCalls }
 }
 
 test('email verification token is SHA-256 stored, expires in 24 hours, and is single-use', async () => {
@@ -161,4 +162,31 @@ test('malformed tokens are rejected before database access', async () => {
   const h = createHarness()
   await assert.rejects(() => h.service.verifyEmail('not-a-token'), /Token tidak valid/)
   assert.equal(h.tokens.length, 0)
+})
+
+
+test('concurrent consumers cannot use the same verification token twice', async () => {
+  const h = createHarness()
+  await h.service.issueVerification('user-1', 'person@example.com')
+  const token = h.deliveries[0].token
+
+  const results = await Promise.allSettled([
+    h.service.verifyEmail(token),
+    h.service.verifyEmail(token),
+  ])
+
+  assert.equal(results.filter(result => result.status === 'fulfilled').length, 1)
+  assert.equal(results.filter(result => result.status === 'rejected').length, 1)
+  assert.ok(h.users.get('user-1').emailVerifiedAt instanceof Date)
+})
+
+test('invalid password-reset tokens are rejected before bcrypt hashing', async () => {
+  const h = createHarness()
+
+  await assert.rejects(
+    () => h.service.resetPassword('a'.repeat(64), 'a-strong-password'),
+    /Token tidak valid/
+  )
+
+  assert.equal(h.passwordHashCalls(), 0)
 })
