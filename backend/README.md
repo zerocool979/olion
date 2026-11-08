@@ -30,6 +30,8 @@ npx prisma migrate dev --name init
 
 # 5. Seed data awal (badge, kategori, user dev, sample diskusi)
 ALLOW_OLION_SEED=true npm run seed
+# PowerShell: $env:ALLOW_OLION_SEED="true"; npm run seed
+# Seed hanya untuk database development/test; production selalu ditolak.
 
 # 6. Generate Prisma Client
 npx prisma generate
