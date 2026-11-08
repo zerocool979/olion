@@ -28,11 +28,14 @@ module.exports = async (req, res, next) => {
     // Verifikasi user masih eksis & tidak dibanned
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
-      select: { id: true, role: true, isBanned: true }
+      select: { id: true, role: true, isBanned: true, tokenVersion: true }
     })
 
     if (!user) return res.status(401).json({ message: 'Akun tidak ditemukan' })
     if (user.isBanned) return res.status(403).json({ message: 'Akun kamu telah dinonaktifkan' })
+    if ((decoded.tokenVersion ?? 0) !== (user.tokenVersion ?? 0)) {
+      return res.status(401).json({ message: 'Sesi telah berakhir. Silakan masuk kembali.' })
+    }
 
     req.userId   = user.id
     req.userRole = user.role
