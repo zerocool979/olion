@@ -85,6 +85,11 @@ export function CallProvider({ children }) {
       cleanupCall()
     })
 
+    socket.on('call:timeout', () => {
+      setCallError('Panggilan tidak dijawab dalam batas waktu.')
+      cleanupCall()
+    })
+
     socket.on('call:busy', () => {
       setCallError('Lawan bicara sedang dalam panggilan lain.')
       cleanupCall()
