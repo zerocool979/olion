@@ -23,6 +23,7 @@ const ids = {
   banned: '55555555-5555-4555-8555-555555555555',
   owner: '66666666-6666-4666-8666-666666666666',
   other: '77777777-7777-4777-8777-777777777777',
+  revoked: '99999999-9999-4999-8999-999999999999',
 }
 const hiddenDiscussionId = 'hidden-discussion-fixture'
 const hiddenCommentId = 'hidden-comment-fixture'
@@ -39,6 +40,7 @@ const users = new Map([
   [ids.banned, { id: ids.banned, role: 'USER', isBanned: true }],
   [ids.owner, { id: ids.owner, role: 'USER', isBanned: false }],
   [ids.other, { id: ids.other, role: 'USER', isBanned: false }],
+  [ids.revoked, { id: ids.revoked, role: 'USER', isBanned: false, tokenVersion: 4 }],
 ])
 
 const ownedDiscussion = {
@@ -78,13 +80,13 @@ function signToken(userId) {
   return jwt.sign({ id: userId }, SECRET, { expiresIn: '5m' })
 }
 
-function bearer(userId) {
-  return { Authorization: 'Bearer ' + signToken(userId) }
+function bearer(userId, tokenVersion = 0) {
+  return { Authorization: 'Bearer ' + jwt.sign({ id: userId, tokenVersion }, SECRET, { expiresIn: '5m' }) }
 }
 
-async function request(baseUrl, path, { method = 'GET', userId, token, body } = {}) {
+async function request(baseUrl, path, { method = 'GET', userId, token, tokenVersion = 0, body } = {}) {
   const headers = {}
-  if (userId) Object.assign(headers, bearer(userId))
+  if (userId) Object.assign(headers, bearer(userId, tokenVersion))
   if (token) headers.Authorization = 'Bearer ' + token
   if (body !== undefined) headers['Content-Type'] = 'application/json'
   const response = await fetch(baseUrl + path, {
@@ -127,8 +129,14 @@ test('HTTP access-control routes enforce hidden-content and cross-user boundarie
     messageCreate: 0,
     participantFindUnique: [],
   }
+  const authService = require('../src/modules/auth/service')
+  const authCalls = { verifyRequest: 0, verifyConfirm: [], resetRequest: 0, reset: [] }
 
   patchMethod(prisma.user, 'findUnique', async ({ where }) => users.get(where.id) || null, restore)
+  patchMethod(authService, 'requestEmailVerification', async email => { authCalls.verifyRequest++; authCalls.lastVerificationEmail = email }, restore)
+  patchMethod(authService, 'verifyEmail', async token => { authCalls.verifyConfirm.push(token) }, restore)
+  patchMethod(authService, 'requestPasswordReset', async email => { authCalls.resetRequest++; authCalls.lastResetEmail = email }, restore)
+  patchMethod(authService, 'resetPassword', async (token, password) => { authCalls.reset.push({ token, password }) }, restore)
 
   patchMethod(prisma.discussion, 'findFirst', async ({ where }) => {
     calls.discussionFindFirst.push(where)
@@ -245,10 +253,12 @@ test('HTTP access-control routes enforce hidden-content and cross-user boundarie
     })
     const baseUrl = 'http://127.0.0.1:' + server.address().port
 
-    await t.test('invalid and banned credentials are rejected on protected routes', async () => {
+    await t.test('invalid, banned and revoked-session credentials are rejected on protected routes', async () => {
       assert.equal((await request(baseUrl, '/api/bookmarks')).status, 401)
       assert.equal((await request(baseUrl, '/api/bookmarks', { token: 'not-a-jwt' })).status, 401)
       assert.equal((await request(baseUrl, '/api/bookmarks', { userId: ids.banned })).status, 403)
+      assert.equal((await request(baseUrl, '/api/bookmarks', { userId: ids.revoked, tokenVersion: 3 })).status, 401)
+      assert.equal((await request(baseUrl, '/api/bookmarks', { userId: ids.revoked, tokenVersion: 4 })).status, 200)
     })
 
     await t.test('guest, USER and EXPERT cannot fetch a hidden discussion by direct ID', async () => {
@@ -432,6 +442,27 @@ test('HTTP access-control routes enforce hidden-content and cross-user boundarie
       })
       assert.equal(result.status, 403)
       assert.equal(calls.messageCreate, 0)
+    })
+
+    await t.test('email verification and password recovery routes validate inputs and return generic request responses', async () => {
+      const resend = await request(baseUrl, '/api/auth/verify-email/request', { method: 'POST', body: { email: 'person@example.com' } })
+      assert.equal(resend.status, 202)
+      assert.equal(authCalls.verifyRequest, 1)
+      assert.equal(authCalls.lastVerificationEmail, 'person@example.com')
+
+      const confirm = await request(baseUrl, '/api/auth/verify-email/confirm', { method: 'POST', body: { token: 'synthetic-token' } })
+      assert.equal(confirm.status, 200)
+      assert.deepEqual(authCalls.verifyConfirm, ['synthetic-token'])
+
+      const forgot = await request(baseUrl, '/api/auth/password/forgot', { method: 'POST', body: { email: 'person@example.com' } })
+      assert.equal(forgot.status, 202)
+      assert.equal(authCalls.resetRequest, 1)
+
+      const reset = await request(baseUrl, '/api/auth/password/reset', { method: 'POST', body: { token: 'synthetic-token', newPassword: 'long-enough-password' } })
+      assert.equal(reset.status, 200)
+      assert.deepEqual(authCalls.reset, [{ token: 'synthetic-token', password: 'long-enough-password' }])
+
+      assert.equal((await request(baseUrl, '/api/auth/password/reset', { method: 'POST', body: { token: 'x', newPassword: 'short' } })).status, 400)
     })
 
     await t.test('admin-only endpoints reject USER, EXPERT and MODERATOR', async () => {
