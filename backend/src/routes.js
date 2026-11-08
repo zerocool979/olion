@@ -43,6 +43,12 @@ const authLimiter = makeLimiter({
   max: 10,
   message: { message: 'Terlalu banyak percobaan. Coba lagi dalam 15 menit.' },
 })
+
+const emailActionLimiter = makeLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: { message: 'Terlalu banyak permintaan email. Coba lagi dalam 15 menit.' },
+})
 const writeLimiter = makeLimiter({
   windowMs: 60 * 1000,
   max: 30,
@@ -82,6 +88,10 @@ router.use('/stats', statsRoutes)
 router.post('/auth/register', authLimiter, authCtrl.register)
 router.post('/auth/login', authLimiter, authCtrl.login)
 router.post('/auth/google', authLimiter, authCtrl.google)
+router.post('/auth/verify-email/request', emailActionLimiter, authCtrl.requestEmailVerification)
+router.post('/auth/verify-email/confirm', emailActionLimiter, authCtrl.verifyEmail)
+router.post('/auth/password/forgot', emailActionLimiter, authCtrl.requestPasswordReset)
+router.post('/auth/password/reset', emailActionLimiter, authCtrl.resetPassword)
 router.post('/auth/google/link', auth, authLimiter, authCtrl.linkGoogle)
 router.get('/auth/me', auth, authCtrl.me)
 router.patch('/auth/password', auth, authCtrl.changePassword)
