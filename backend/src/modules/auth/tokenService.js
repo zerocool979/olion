@@ -131,9 +131,13 @@ function createAuthTokenService({
       })
     }),
 
-    resetPassword: async (rawToken, newPassword) => {
-      const password = await passwordHashFn(newPassword)
-      await consume(rawToken, PURPOSE.PASSWORD_RESET, async (tx, userId) => {
+    resetPassword: async (rawToken, newPassword) => consume(
+      rawToken,
+      PURPOSE.PASSWORD_RESET,
+      async (tx, userId, now) => {
+        // Validate and atomically claim the one-time token before performing
+        // the expensive password hash. Invalid-token requests stay inexpensive.
+        const password = await passwordHashFn(newPassword)
         // Increment tokenVersion so all previously issued JWTs become invalid.
         await tx.user.update({
           where: { id: userId },
@@ -141,10 +145,10 @@ function createAuthTokenService({
         })
         await tx.authToken.updateMany({
           where: { userId, purpose: PURPOSE.PASSWORD_RESET, consumedAt: null },
-          data: { consumedAt: nowFn() },
+          data: { consumedAt: now },
         })
-      })
-    },
+      }
+    ),
   }
 }
 
