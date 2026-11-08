@@ -454,7 +454,7 @@ module.exports = {
     const payload = await verifyGoogleCredential(idToken)
     const account = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, googleId: true },
+      select: { id: true, email: true, googleId: true, emailVerifiedAt: true },
     })
 
     if (!account) {
