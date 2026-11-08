@@ -107,8 +107,36 @@ backend/
 | POST | `/api/auth/login` | Public | Login, dapat JWT |
 | POST | `/api/auth/google` | Public | Login Google untuk identitas yang sudah tertaut |
 | POST | `/api/auth/google/link` | Auth | Hubungkan Google dengan email terverifikasi yang sama |
+| POST | `/api/auth/verify-email/request` | Public + rate limit | Kirim ulang link verifikasi |
+| POST | `/api/auth/verify-email/confirm` | Public + rate limit | Verifikasi email memakai token sekali pakai |
+| POST | `/api/auth/password/forgot` | Public + rate limit | Minta link reset password |
+| POST | `/api/auth/password/reset` | Public + rate limit | Atur password dan cabut sesi JWT lama |
 | GET | `/api/auth/me` | Auth | Info user saat ini |
 | PATCH | `/api/auth/password` | Auth | Ganti password |
+
+### Verifikasi Email & Pemulihan Akun
+
+Alur email menggunakan SMTP. Isi environment berikut sebelum mengaktifkan verifikasi wajib:
+
+```env
+FRONTEND_URL=https://domain-frontend-olion.example
+SMTP_HOST=smtp.example
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=...
+SMTP_PASS=...
+SMTP_FROM=OLION <no-reply@example>
+REQUIRE_EMAIL_VERIFICATION=false
+```
+
+- `POST /api/auth/verify-email/request`: minta link verifikasi; respons tidak mengungkap apakah email terdaftar.
+- `POST /api/auth/verify-email/confirm`: konsumsi token verifikasi sekali pakai.
+- `POST /api/auth/password/forgot`: minta link reset dengan respons generik.
+- `POST /api/auth/password/reset`: atur password baru; token lama dan JWT yang sudah diterbitkan dicabut melalui `tokenVersion`.
+- Token verifikasi berlaku 24 jam; token reset berlaku 1 jam. Database hanya menyimpan SHA-256 hash token.
+- `REQUIRE_EMAIL_VERIFICATION=true` menolak login password untuk email yang belum diverifikasi. Flag ini default `false`; aktifkan hanya setelah SMTP dan migrasi schema sudah tervalidasi. Akun Google menggunakan klaim `email_verified` dari Google.
+
+Migrasi `20261108030000_auth_tokens_email_verification` bersifat *additive* dan mengharapkan tabel `"User"` OLION yang sudah ada. Buat backup dan pastikan baseline schema database target cocok sebelum menjalankannya. Status migrasi terhadap database production belum diverifikasi dalam PR ini. Untuk database development baru, gunakan `npx prisma db push` untuk membuat schema dari awal sampai baseline migrasi OLION direkonsiliasi.
 
 ### Diskusi
 | Method | Path | Akses | Keterangan |
