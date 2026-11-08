@@ -87,6 +87,25 @@ module.exports = {
     }
   },
 
+  // Link a verified Google identity to the currently authenticated account.
+  linkGoogle: async (req, res, next) => {
+    try {
+      const { idToken, credential } = req.body || {}
+      const token = idToken || credential
+      if (typeof token !== 'string' || !token.trim()) {
+        return res.status(400).json({ message: 'idToken harus diisi' })
+      }
+
+      const result = await authService.linkGoogle(req.userId, token)
+      return res.status(200).json({
+        message: 'Akun Google berhasil dihubungkan.',
+        user: result.user,
+      })
+    } catch (err) {
+      next(err)
+    }
+  },
+
   // ─── ADDED: /auth/me untuk server-side token validation
   me: async (req, res, next) => {
     try {
