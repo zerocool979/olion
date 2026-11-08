@@ -38,7 +38,7 @@ function assertSafePreviewDatabase(env = process.env) {
   }
 
   const host = parsed.hostname.toLowerCase()
-  const normalizedHost = host.replace(/^\\[|\\]$/g, '')
+  const normalizedHost = host.replace(/^\[|\]$/g, '')
   const isLoopback = normalizedHost === 'localhost'
     || normalizedHost.endsWith('.localhost')
     || normalizedHost === '::1'
