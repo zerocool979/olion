@@ -216,8 +216,11 @@ module.exports = {
       // oldPassword hanya wajib kalau akun ini SUDAH punya password.
       // Akun Google-only boleh set password pertama kali tanpa oldPassword —
       // authService.changePassword yang menentukan mana yang berlaku.
-      await authService.changePassword(req.userId, oldPassword, newPassword)
-      return res.status(200).json({ message: 'Password berhasil disimpan' })
+      const token = await authService.changePassword(req.userId, oldPassword, newPassword)
+      return res.status(200).json({
+        message: 'Password berhasil disimpan. Sesi lain telah dicabut.',
+        token,
+      })
     } catch (err) {
       next(err)
     }
