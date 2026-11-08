@@ -30,7 +30,13 @@ cd olion
 ### Backend
 
 ```bash
-cd backend && npm install && cp .env.example .env && npm run migrate && npm run seed && npm run dev
+cd backend
+npm install
+cp .env.example .env
+# Isi DATABASE_URL dan JWT_SECRET pada .env
+npm run migrate
+ALLOW_OLION_SEED=true npm run seed
+npm run dev
 ```
 > _"Backend running on http://localhost:4000"_
 
