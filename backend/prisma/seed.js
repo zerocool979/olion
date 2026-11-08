@@ -20,6 +20,17 @@
 const { PrismaClient } = require('@prisma/client')
 const bcrypt = require('bcryptjs')
 
+// This fixture dataset contains predictable development-only accounts.
+// Require an explicit opt-in and refuse to run against production.
+if (process.env.ALLOW_OLION_SEED !== 'true') {
+  console.error('Seeding diblokir. Set ALLOW_OLION_SEED=true hanya untuk database development/test.')
+  process.exit(1)
+}
+if (process.env.NODE_ENV === 'production') {
+  console.error('Seeding tidak diizinkan saat NODE_ENV=production.')
+  process.exit(1)
+}
+
 const db  = new PrismaClient()
 const ARG = process.argv.slice(2)
 
