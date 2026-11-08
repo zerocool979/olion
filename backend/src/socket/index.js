@@ -96,8 +96,12 @@ function isValidSignal(signal) {
   return false
 }
 
-function initSocket(httpServer) {
-  const io = new Server(httpServer, {
+function initSocket(httpServer, options = {}) {
+  // Optional dependencies keep the real event handlers testable without a live database.
+  const ServerImpl = options.ServerImpl || Server
+  const database = options.prismaClient || prisma
+  const verify = options.verifyTokenFn || verifyToken
+  const io = new ServerImpl(httpServer, {
     maxHttpBufferSize: 64 * 1024,
     cors: {
       origin: (origin, cb) => {
@@ -116,8 +120,8 @@ function initSocket(httpServer) {
       const token = socket.handshake.auth?.token
       if (!token) return next(new Error('Token tidak ditemukan'))
 
-      const decoded = verifyToken(token)
-      const user = await prisma.user.findUnique({
+      const decoded = verify(token)
+      const user = await database.user.findUnique({
         where: { id: decoded.id },
         select: { id: true, isBanned: true, profile: { select: { username: true } } },
       })
@@ -160,7 +164,7 @@ function initSocket(httpServer) {
       }
 
       try {
-        const participants = await prisma.conversationParticipant.findMany({
+        const participants = await database.conversationParticipant.findMany({
           where: {
             conversationId,
             userId: { in: [socket.userId, toUserId] },
