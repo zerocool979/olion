@@ -82,6 +82,7 @@ router.use('/stats', statsRoutes)
 router.post('/auth/register', authLimiter, authCtrl.register)
 router.post('/auth/login', authLimiter, authCtrl.login)
 router.post('/auth/google', authLimiter, authCtrl.google)
+router.post('/auth/google/link', auth, authLimiter, authCtrl.linkGoogle)
 router.get('/auth/me', auth, authCtrl.me)
 router.patch('/auth/password', auth, authCtrl.changePassword)
 
