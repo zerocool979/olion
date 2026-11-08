@@ -1,7 +1,7 @@
 'use strict'
 const prisma = require('../../config/prisma')
 const badgeSvc = require('../badge/service')
-const { canViewHiddenContent, contentVisibilityFilter, discussionLookupWhere } = require('../../security/contentAccess')
+const { contentVisibilityFilter, discussionLookupWhere } = require('../../security/contentAccess')
 
 // Public-facing user fields only. Never expose email, password hash, or
 // Google account identifiers in comment responses.
