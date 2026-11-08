@@ -2,7 +2,8 @@ const prisma = require('../../config/prisma')
 const bcrypt = require('bcryptjs')
 const { OAuth2Client } = require('google-auth-library')
 const { generateToken } = require('../../utils/jwt')
-const { GOOGLE_CLIENT_ID } = require('../../config/env')
+const { GOOGLE_CLIENT_ID, REQUIRE_EMAIL_VERIFICATION } = require('../../config/env')
+const authTokens = require('./tokenService')
 const { resolveGoogleLogin } = require('./googlePolicy')
 
 const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null
@@ -87,6 +88,11 @@ const SAFE_USER_SELECT = {
 module.exports = {
   register: async (email, password) => {
     const normalizedEmail = normalizeEmail(email)
+    if (REQUIRE_EMAIL_VERIFICATION && !authTokens.isConfigured()) {
+      const err = new Error('Verifikasi email diwajibkan, tetapi SMTP belum dikonfigurasi.')
+      err.statusCode = 503
+      throw err
+    }
     // Prevent duplicate accounts that differ only by email letter casing.
     const existingUser = await prisma.user.findFirst({
       where: { email: { equals: normalizedEmail, mode: 'insensitive' } },
@@ -128,8 +134,19 @@ module.exports = {
       select: SAFE_USER_SELECT  // ─── FIX: tidak return password
     })
 
-    const token = generateToken(user.id)
-    return { user, token }
+    if (REQUIRE_EMAIL_VERIFICATION) {
+      let emailSent = false
+      try {
+        await authTokens.issueVerification(user.id, normalizedEmail)
+        emailSent = true
+      } catch (err) {
+        console.error('[auth] initial verification email delivery failed:', err.code || err.message)
+      }
+      return { user, token: null, verificationRequired: true, emailSent }
+    }
+
+    const token = generateToken(user.id, 0)
+    return { user, token, verificationRequired: false }
   },
 
   login: async (email, password) => {
@@ -141,6 +158,8 @@ module.exports = {
         id: true,
         email: true,
         password: true,  // perlu untuk bcrypt compare
+        emailVerifiedAt: true,
+        tokenVersion: true,
         role: true,
         isVerifiedExpert: true,
         createdAt: true,
@@ -182,10 +201,17 @@ module.exports = {
       throw err
     }
 
-    // ─── FIX: buang password dari object sebelum return
-    const { password: _removed, ...safeUser } = user
+    if (REQUIRE_EMAIL_VERIFICATION && !user.emailVerifiedAt) {
+      const err = new Error('Email belum terverifikasi. Kirim ulang link verifikasi melalui halaman verifikasi email.')
+      err.statusCode = 403
+      err.code = 'EMAIL_NOT_VERIFIED'
+      throw err
+    }
 
-    const token = generateToken(user.id)
+    // Do not expose internal token/version or credential fields to the client.
+    const { password: _removed, emailVerifiedAt: _emailVerifiedAt, tokenVersion: _tokenVersion, ...safeUser } = user
+
+    const token = generateToken(user.id, user.tokenVersion ?? 0)
     return { user: safeUser, token }
   },
 
@@ -325,7 +351,7 @@ module.exports = {
 
     const linkedUser = await prisma.user.findUnique({
       where: { googleId },
-      select: SAFE_USER_SELECT,
+      select: { ...SAFE_USER_SELECT, emailVerifiedAt: true, tokenVersion: true },
     })
 
     const existingEmailUser = linkedUser ? null : await prisma.user.findFirst({
@@ -343,8 +369,15 @@ module.exports = {
     }
 
     if (resolution === 'LOGIN_LINKED') {
-      const token = generateToken(linkedUser.id)
-      return { user: linkedUser, token }
+      if (!linkedUser.emailVerifiedAt) {
+        await prisma.user.update({
+          where: { id: linkedUser.id },
+          data: { emailVerifiedAt: new Date() },
+        })
+      }
+      const { emailVerifiedAt: _emailVerifiedAt, tokenVersion: _tokenVersion, ...safeLinkedUser } = linkedUser
+      const token = generateToken(linkedUser.id, linkedUser.tokenVersion ?? 0)
+      return { user: safeLinkedUser, token }
     }
 
     let username
@@ -362,14 +395,58 @@ module.exports = {
         email,
         googleId,
         password: null,
+        emailVerifiedAt: new Date(),
         profile: { create: { username } },
       },
-      select: SAFE_USER_SELECT,
+      select: { ...SAFE_USER_SELECT, tokenVersion: true },
     })
 
-    const token = generateToken(user.id)
-    return { user, token }
+    const { tokenVersion: _tokenVersion, ...safeUser } = user
+    const token = generateToken(user.id, user.tokenVersion ?? 0)
+    return { user: safeUser, token }
   },
+
+  requestEmailVerification: async (email) => {
+    if (!authTokens.isConfigured()) {
+      const err = new Error('Pengiriman email belum dikonfigurasi.')
+      err.statusCode = 503
+      throw err
+    }
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: normalizeEmail(email), mode: 'insensitive' } },
+      select: { id: true, email: true, emailVerifiedAt: true },
+    })
+    if (!user || user.emailVerifiedAt) return
+    try {
+      await authTokens.issueVerification(user.id, user.email)
+    } catch (err) {
+      // Public response stays generic to prevent account enumeration.
+      console.error('[auth] verification email delivery failed:', err.code || err.message)
+    }
+  },
+
+  verifyEmail: async (rawToken) => authTokens.verifyEmail(rawToken),
+
+  requestPasswordReset: async (email) => {
+    if (!authTokens.isConfigured()) {
+      const err = new Error('Pengiriman email belum dikonfigurasi.')
+      err.statusCode = 503
+      throw err
+    }
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: normalizeEmail(email), mode: 'insensitive' } },
+      select: { id: true, email: true },
+    })
+    if (!user) return
+    try {
+      await authTokens.issuePasswordReset(user.id, user.email)
+    } catch (err) {
+      // Public response stays generic to prevent account enumeration.
+      console.error('[auth] password reset email delivery failed:', err.code || err.message)
+    }
+  },
+
+  resetPassword: async (rawToken, newPassword) => authTokens.resetPassword(rawToken, newPassword),
 
   // Link Google only from an authenticated OLION session. The verified
   // Google email must exactly match the email of the current OLION account.
@@ -409,7 +486,7 @@ module.exports = {
     try {
       const user = await prisma.user.update({
         where: { id: userId },
-        data: { googleId: payload.sub },
+        data: { googleId: payload.sub, emailVerifiedAt: account.emailVerifiedAt || new Date() },
         select: SAFE_USER_SELECT,
       })
       return { user }
