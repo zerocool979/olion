@@ -77,7 +77,7 @@ backend/
     ├── utils/
     │   └── jwt.js       # sign & verify token
     └── modules/         # Satu folder per domain
-        ├── auth/        # Register, login, ganti password
+        ├── auth/        # Register, login, Google OAuth, email verification, password recovery
         ├── user/        # Profil, follow/unfollow, list user
         ├── discussion/  # CRUD diskusi, search, view count
         ├── comment/     # CRUD komentar, reply, vote komentar
