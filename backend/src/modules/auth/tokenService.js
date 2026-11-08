@@ -54,9 +54,11 @@ function createAuthTokenService({
       await mailerClient.sendAuthLink({ to: email, token: rawToken, purpose })
     } catch {
       // A failed delivery must never leave a usable token behind.
-      await prismaClient.authToken.updateMany({
-        where: { tokenHash, consumedAt: null },
-        data: { consumedAt: nowFn() },
+      await prismaClient.$transaction(async tx => {
+        await tx.authToken.updateMany({
+          where: { tokenHash, consumedAt: null },
+          data: { consumedAt: nowFn() },
+        })
       }).catch(() => {})
       const err = new Error('Email tidak dapat dikirim saat ini. Silakan coba lagi nanti.')
       err.statusCode = 503
