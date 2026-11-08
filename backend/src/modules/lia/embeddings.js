@@ -1,12 +1,12 @@
 'use strict'
 
 /**
- * Embedding lokal pakai @xenova/transformers (model all-MiniLM-L6-v2, 384
+ * Embedding lokal pakai @huggingface/transformers v4 (model all-MiniLM-L6-v2, 384
  * dimensi). Jalan di CPU, tanpa API key eksternal — cocok untuk knowledge
  * base skala kecil-menengah. Model di-load sekali (singleton) lalu dipakai
  * ulang untuk semua request berikutnya di proses yang sama.
  *
- * CATATAN: @xenova/transformers adalah paket ESM-only, makanya di-load lewat
+ * CATATAN: @huggingface/transformers adalah paket ESM, makanya di-load lewat
  * dynamic import() walau file ini sendiri CommonJS (module.exports biasa) —
  * ini pola resmi yang direkomendasikan paketnya untuk dipakai dari kode CJS.
  */
@@ -14,7 +14,7 @@ let embedderPromise = null
 
 async function getEmbedder() {
   if (!embedderPromise) {
-    embedderPromise = import('@xenova/transformers').then(({ pipeline }) =>
+    embedderPromise = import('@huggingface/transformers').then(({ pipeline }) =>
       pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2')
     )
   }
