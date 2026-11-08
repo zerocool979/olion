@@ -3,8 +3,48 @@ const bcrypt = require('bcryptjs')
 const { OAuth2Client } = require('google-auth-library')
 const { generateToken } = require('../../utils/jwt')
 const { GOOGLE_CLIENT_ID } = require('../../config/env')
+const { resolveGoogleLogin } = require('./googlePolicy')
 
 const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null
+
+const normalizeEmail = (email) => email.trim().toLowerCase()
+
+async function verifyGoogleCredential(idToken) {
+  if (!googleClient) {
+    const err = new Error('Login Google belum dikonfigurasi di server (GOOGLE_CLIENT_ID kosong).')
+    err.statusCode = 503
+    throw err
+  }
+  if (typeof idToken !== 'string' || !idToken.trim()) {
+    const err = new Error('idToken harus diisi')
+    err.statusCode = 400
+    throw err
+  }
+
+  let payload
+  try {
+    const ticket = await googleClient.verifyIdToken({ idToken, audience: GOOGLE_CLIENT_ID })
+    payload = ticket.getPayload()
+  } catch {
+    const err = new Error('Token Google tidak valid atau sudah kedaluwarsa')
+    err.statusCode = 401
+    throw err
+  }
+
+  if (!payload?.sub || typeof payload.email !== 'string' || !payload.email.trim()) {
+    const err = new Error('Google tidak mengembalikan identitas akun yang lengkap')
+    err.statusCode = 401
+    throw err
+  }
+  // Do not trust an unverified Google email as proof of ownership.
+  if (payload.email_verified !== true) {
+    const err = new Error('Email Google harus terverifikasi sebelum digunakan.')
+    err.statusCode = 403
+    throw err
+  }
+
+  return { ...payload, email: normalizeEmail(payload.email) }
+}
 
 // ─── Pseudonym generator untuk anonymous username
 // Format: adjective + noun + random number (e.g. "SwiftFalcon#4821")
@@ -46,8 +86,12 @@ const SAFE_USER_SELECT = {
 
 module.exports = {
   register: async (email, password) => {
-    // ─── FIX: cek email duplikat dengan pesan yang ramah
-    const existingUser = await prisma.user.findUnique({ where: { email }, select: { id: true } })
+    const normalizedEmail = normalizeEmail(email)
+    // Prevent duplicate accounts that differ only by email letter casing.
+    const existingUser = await prisma.user.findFirst({
+      where: { email: { equals: normalizedEmail, mode: 'insensitive' } },
+      select: { id: true },
+    })
     if (existingUser) {
       const err = new Error('Email sudah terdaftar')
       err.statusCode = 409
@@ -75,7 +119,7 @@ module.exports = {
 
     const user = await prisma.user.create({
       data: {
-        email,
+        email: normalizedEmail,
         password: hashedPassword,
         profile: {
           create: { username }
@@ -90,8 +134,9 @@ module.exports = {
 
   login: async (email, password) => {
     // ─── FIX: query dengan select minimal, ambil password hanya untuk compare
-    const user = await prisma.user.findUnique({
-      where: { email },
+    const normalizedEmail = normalizeEmail(email)
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: normalizedEmail, mode: 'insensitive' } },
       select: {
         id: true,
         email: true,
@@ -271,90 +316,111 @@ module.exports = {
     })
   },
 
-  // ─── ADDED: POST /auth/google  { idToken }
-  // Login/register via Google Identity Services. Alur:
-  //  1. Verifikasi idToken ke server Google (memastikan token asli & untuk app ini)
-  //  2. Jika googleId sudah tertaut ke user → login user itu
-  //  3. Jika belum, tapi email sudah terdaftar (akun password) → tautkan googleId
-  //     ke akun yang sudah ada (supaya orang tidak punya 2 akun dengan email sama)
-  //  4. Jika email juga belum ada → buat akun baru tanpa password
+  // Google sign-in only logs into an identity that is already linked.
+  // Existing password accounts must be authenticated before linking Google.
   loginWithGoogle: async (idToken) => {
-    if (!googleClient) {
-      const err = new Error('Login Google belum dikonfigurasi di server (GOOGLE_CLIENT_ID kosong).')
-      err.statusCode = 503
-      throw err
-    }
-    if (!idToken) {
-      const err = new Error('idToken harus diisi')
-      err.statusCode = 400
-      throw err
-    }
-
-    let payload
-    try {
-      const ticket = await googleClient.verifyIdToken({ idToken, audience: GOOGLE_CLIENT_ID })
-      payload = ticket.getPayload()
-    } catch {
-      const err = new Error('Token Google tidak valid atau sudah kedaluwarsa')
-      err.statusCode = 401
-      throw err
-    }
-
-    if (!payload?.email) {
-      const err = new Error('Google tidak mengembalikan email untuk akun ini')
-      err.statusCode = 400
-      throw err
-    }
-    if (payload.email_verified === false) {
-      const err = new Error('Email Google kamu belum terverifikasi')
-      err.statusCode = 400
-      throw err
-    }
-
+    const payload = await verifyGoogleCredential(idToken)
     const googleId = payload.sub
     const email = payload.email
 
-    // 1) Sudah pernah login Google sebelumnya di akun ini
-    let user = await prisma.user.findUnique({ where: { googleId }, select: SAFE_USER_SELECT })
+    const linkedUser = await prisma.user.findUnique({
+      where: { googleId },
+      select: SAFE_USER_SELECT,
+    })
 
-    if (!user) {
-      // 2) Email sudah terdaftar (mungkin dari signup password) → tautkan
-      const existing = await prisma.user.findUnique({ where: { email } })
-      if (existing) {
-        user = await prisma.user.update({
-          where: { id: existing.id },
-          data: { googleId },
-          select: SAFE_USER_SELECT,
-        })
-      } else {
-        // 3) Akun baru — generate username pseudonim seperti registrasi biasa,
-        // supaya konsisten dengan identitas anonim platform ini.
-        let username
-        let attempts = 0
-        while (attempts < 5) {
-          const candidate = generatePseudonym()
-          const exists = await prisma.profile.findUnique({ where: { username: candidate } })
-          if (!exists) { username = candidate; break }
-          attempts++
-        }
-        if (!username) throw new Error('Gagal generate username, silakan coba lagi')
+    const existingEmailUser = linkedUser ? null : await prisma.user.findFirst({
+      where: { email: { equals: email, mode: 'insensitive' } },
+      select: { id: true },
+    })
 
-        user = await prisma.user.create({
-          data: {
-            email,
-            googleId,
-            password: null,
-            profile: { create: { username } },
-          },
-          select: SAFE_USER_SELECT,
-        })
-      }
+    const resolution = resolveGoogleLogin({ linkedUser, existingEmailUser })
+    if (resolution === 'REQUIRE_EXISTING_ACCOUNT_AUTH') {
+      const err = new Error(
+        'Email ini sudah memiliki akun OLION. Masuk dengan email dan password terlebih dahulu, lalu hubungkan Google melalui Pengaturan Akun.'
+      )
+      err.statusCode = 409
+      throw err
     }
+
+    if (resolution === 'LOGIN_LINKED') {
+      const token = generateToken(linkedUser.id)
+      return { user: linkedUser, token }
+    }
+
+    let username
+    let attempts = 0
+    while (attempts < 5) {
+      const candidate = generatePseudonym()
+      const exists = await prisma.profile.findUnique({ where: { username: candidate } })
+      if (!exists) { username = candidate; break }
+      attempts++
+    }
+    if (!username) throw new Error('Gagal generate username, silakan coba lagi')
+
+    const user = await prisma.user.create({
+      data: {
+        email,
+        googleId,
+        password: null,
+        profile: { create: { username } },
+      },
+      select: SAFE_USER_SELECT,
+    })
 
     const token = generateToken(user.id)
     return { user, token }
   },
+
+  // Link Google only from an authenticated OLION session. The verified
+  // Google email must exactly match the email of the current OLION account.
+  linkGoogle: async (userId, idToken) => {
+    const payload = await verifyGoogleCredential(idToken)
+    const account = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, email: true, googleId: true },
+    })
+
+    if (!account) {
+      const err = new Error('Akun OLION tidak ditemukan')
+      err.statusCode = 404
+      throw err
+    }
+    if (normalizeEmail(account.email) !== payload.email) {
+      const err = new Error('Email Google harus sama dengan email akun OLION yang sedang digunakan.')
+      err.statusCode = 403
+      throw err
+    }
+    if (account.googleId && account.googleId !== payload.sub) {
+      const err = new Error('Akun OLION ini sudah terhubung ke akun Google lain.')
+      err.statusCode = 409
+      throw err
+    }
+
+    const googleOwner = await prisma.user.findUnique({
+      where: { googleId: payload.sub },
+      select: { id: true },
+    })
+    if (googleOwner && googleOwner.id !== userId) {
+      const err = new Error('Akun Google tersebut sudah terhubung ke akun OLION lain.')
+      err.statusCode = 409
+      throw err
+    }
+
+    try {
+      const user = await prisma.user.update({
+        where: { id: userId },
+        data: { googleId: payload.sub },
+        select: SAFE_USER_SELECT,
+      })
+      return { user }
+    } catch (err) {
+      if (err.code === 'P2002') {
+        const conflict = new Error('Akun Google tersebut sudah digunakan oleh akun OLION lain.')
+        conflict.statusCode = 409
+        throw conflict
+      }
+      throw err
+    }
+  },
 }
-
-
-
+}
