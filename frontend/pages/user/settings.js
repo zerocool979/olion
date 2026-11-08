@@ -14,6 +14,7 @@ import Link from 'next/link'
 import { AuthContext } from '../../context/AuthContext'
 import api from '../../lib/api'
 import { colors } from '../../components/dashboard'
+import GoogleAuthButton from '../../components/auth/GoogleAuthButton'
 import UserLayout from './_layout'
 
 function fullDate(d) {
@@ -72,6 +73,10 @@ export default function Settings() {
   const [pwError, setPwError] = useState('')
   const [pwSuccess, setPwSuccess] = useState('')
 
+  const [googleLinking, setGoogleLinking] = useState(false)
+  const [googleLinkError, setGoogleLinkError] = useState('')
+  const [googleLinkSuccess, setGoogleLinkSuccess] = useState('')
+
   const [loggingOut, setLoggingOut] = useState(false)
 
   useEffect(() => {
@@ -124,6 +129,23 @@ export default function Settings() {
     }
   }
 
+  const handleGoogleLinkCredential = async (idToken) => {
+    setGoogleLinkError('')
+    setGoogleLinkSuccess('')
+    setGoogleLinking(true)
+    try {
+      await api.post('/auth/google/link', { idToken })
+      const fresh = await api.get('/auth/me')
+      setAccount(fresh.data?.user ?? fresh.data)
+      refreshUser?.()
+      setGoogleLinkSuccess('Akun Google berhasil dihubungkan.')
+    } catch (err) {
+      setGoogleLinkError(err.response?.data?.message ?? 'Gagal menghubungkan akun Google.')
+    } finally {
+      setGoogleLinking(false)
+    }
+  }
+
   const handleLogout = () => {
     setLoggingOut(true)
     logout()
@@ -166,6 +188,25 @@ export default function Settings() {
                   ? <span style={{ color: '#34a853' }}>✓ Terhubung</span>
                   : <span style={{ color: colors.textSecondary }}>Belum terhubung</span>}
               />
+              {!hasGoogle && (
+                <div style={{ marginTop: 14 }}>
+                  <p style={{ fontSize: 12.5, color: colors.textSecondary, lineHeight: 1.5, marginBottom: 10 }}>
+                    Hubungkan Google dengan alamat email yang sama seperti akun OLION ini. OLION akan memverifikasi identitas Google sebelum menyimpan tautan.
+                  </p>
+                  <GoogleAuthButton
+                    onCredential={handleGoogleLinkCredential}
+                    onError={setGoogleLinkError}
+                    disabled={googleLinking}
+                    label={googleLinking ? 'Menghubungkan…' : 'Hubungkan Akun Google'}
+                  />
+                  {googleLinkError && (
+                    <p role="alert" style={{ fontSize: 12.5, color: '#f87171', marginTop: 10 }}>{googleLinkError}</p>
+                  )}
+                  {googleLinkSuccess && (
+                    <p role="status" style={{ fontSize: 12.5, color: '#34a853', marginTop: 10 }}>{googleLinkSuccess}</p>
+                  )}
+                </div>
+              )}
             </Card>
 
             {/* ── Password ── */}
