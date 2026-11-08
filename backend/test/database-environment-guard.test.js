@@ -63,6 +63,18 @@ test('Preview rejects loopback database hosts', () => {
   )
 })
 
+test('Preview rejects IPv6 and localhost-subdomain loopback hosts', () => {
+  for (const host of ['[::1]', 'api.localhost']) {
+    assert.throws(
+      () => assertSafePreviewDatabase({
+        ...validStagingEnv,
+        DATABASE_URL: `postgresql://user:pass@${host}:5432/olion`,
+      }),
+      /remote isolated database/
+    )
+  }
+})
+
 test('Preview accepts an explicitly isolated remote PostgreSQL database', () => {
   assert.equal(assertSafePreviewDatabase(validStagingEnv), true)
 })
