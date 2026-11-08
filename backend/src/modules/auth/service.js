@@ -423,4 +423,3 @@ module.exports = {
     }
   },
 }
-}
