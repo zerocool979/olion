@@ -6,13 +6,13 @@ backend & frontend OLION yang sudah ada (bukan project terpisah).
 ## Arsitektur singkat
 
 ```
-User bertanya → embed pertanyaan (lokal, @xenova/transformers)
+User bertanya → embed pertanyaan (lokal, @huggingface/transformers)
              → cari chunk paling mirip (cosine similarity, brute-force di JS)
              → kirim [pertanyaan + chunk relevan] ke Claude API
              → Claude jawab HANYA dari konteks itu → jawaban + sumber
 ```
 
-- **Embedding**: `@xenova/transformers`, model `Xenova/all-MiniLM-L6-v2` (384 dimensi).
+- **Embedding**: `@huggingface/transformers` v4, model `Xenova/all-MiniLM-L6-v2` (384 dimensi).
   Jalan 100% lokal di server, **tidak butuh API key apa pun**, tapi model
   (~90MB) di-download otomatis dari Hugging Face saat pertama kali dipakai
   (butuh koneksi internet server saat itu saja, lalu ter-cache).
@@ -62,20 +62,10 @@ cd backend
 npm install
 ```
 
-Paket baru yang ditambahkan: `@anthropic-ai/sdk`, `@xenova/transformers`,
-`multer`, `pdf-parse`.
+Paket yang digunakan LIA: `@anthropic-ai/sdk`, `@huggingface/transformers` v4, `multer`, dan `pdf-parse`.
 
-> ⚠️ **Catatan jujur soal `npm audit`**: `@xenova/transformers` membawa
-> dependency `onnxruntime-web` yang punya beberapa advisory (termasuk
-> "critical") di rantai dependency-nya (`protobufjs`). Ini isu yang sudah
-> lama dikenal di ekosistem transformers.js dan `npm audit fix --force` akan
-> **menurunkan versi `@xenova/transformers` ke 2.0.1** (jauh lebih lama, API
-> berbeda) — jadi TIDAK saya jalankan otomatis. Risikonya rendah untuk kasus
-> pakai ini karena paket ini cuma dipakai untuk meng-embed teks dari admin
-> (bukan memproses file model/protobuf dari sumber tidak terpercaya). Kalau
-> tim keamanan Anda perlu ini bersih total, alternatifnya adalah pindah ke
-> layanan embedding API eksternal — tapi itu melanggar syarat "tanpa API key
-> eksternal" yang diminta, jadi saya pertahankan sesuai spesifikasi.
+> Transformers.js v4 adalah paket penerus resmi untuk penggunaan Transformers.js. Dependency transitive tetap dipantau melalui `npm audit` di CI; jangan menggunakan `npm audit fix --force` tanpa memeriksa kompatibilitas runtime dan model.
+
 
 ## 4. Ingest dokumen pertama kali
 

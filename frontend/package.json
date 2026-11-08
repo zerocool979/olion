@@ -9,7 +9,7 @@
   "dependencies": {
     "axios": "^1.6.5",
     "jwt-decode": "^4.0.0",
-    "next": "^14.1.0",
+    "next": "15.5.29",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "socket.io-client": "^4.8.3"
@@ -19,5 +19,8 @@
     "autoprefixer": "^10.4.23",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18"
+  },
+  "overrides": {
+    "postcss": "$postcss"
   }
 }

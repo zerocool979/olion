@@ -1,6 +1,7 @@
 'use strict'
 const prisma = require('../../config/prisma')
 const badgeSvc = require('../badge/service')
+const { contentVisibilityFilter, discussionLookupWhere } = require('../../security/contentAccess')
 
 // Public-facing user fields only. Never expose email, password hash, or
 // Google account identifiers in comment responses.
@@ -19,17 +20,17 @@ const PUBLIC_USER_SELECT = {
   },
 }
 
-exports.create = async ({ content, discussionId, parentId }, userId) => {
+exports.create = async ({ content, discussionId, parentId }, userId, userRole) => {
   // Validasi konten
-  if (!content || !content.trim()) {
+  if (typeof content !== 'string' || !content.trim()) {
     const err = new Error('Konten komentar tidak boleh kosong')
     err.statusCode = 400
     throw err
   }
 
-  // Pastikan diskusi ada
-  const discussion = await prisma.discussion.findUnique({
-    where: { id: discussionId },
+  // Jangan izinkan pengguna biasa membuat komentar pada diskusi tersembunyi.
+  const discussion = await prisma.discussion.findFirst({
+    where: discussionLookupWhere(discussionId, userRole),
     select: { id: true, userId: true, title: true }
   })
   if (!discussion) {
@@ -41,8 +42,14 @@ exports.create = async ({ content, discussionId, parentId }, userId) => {
   // Validasi parentId jika ada (thread reply)
   let parent = null
   if (parentId) {
-    parent = await prisma.comment.findUnique({ where: { id: parentId } })
-    if (!parent || parent.discussionId !== discussionId) {
+    parent = await prisma.comment.findFirst({
+      where: {
+        id: parentId,
+        discussionId,
+        ...contentVisibilityFilter(userRole),
+      },
+    })
+    if (!parent) {
       const err = new Error('Komentar induk tidak valid')
       err.statusCode = 400
       throw err
@@ -76,7 +83,13 @@ exports.create = async ({ content, discussionId, parentId }, userId) => {
   return comment
 }
 
-exports.getByDiscussion = (discussionId) => {
+exports.getByDiscussion = async (discussionId, viewerRole) => {
+  const discussion = await prisma.discussion.findFirst({
+    where: discussionLookupWhere(discussionId, viewerRole),
+    select: { id: true },
+  })
+  if (!discussion) return null
+
   return prisma.comment.findMany({
     where: { discussionId, isHidden: false, parentId: null },
     orderBy: { createdAt: 'asc' },

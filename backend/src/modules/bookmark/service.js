@@ -30,7 +30,8 @@ const BOOKMARK_INCLUDE = {
 // GET /bookmarks — daftar bookmark milik user, diurut terbaru disimpan
 exports.list = async (userId) => {
   const rows = await prisma.bookmark.findMany({
-    where: { userId },
+    // A discussion hidden after bookmarking must no longer leak through this list.
+    where: { userId, discussion: { is: { isHidden: false } } },
     include: BOOKMARK_INCLUDE,
     orderBy: { createdAt: 'desc' },
   })
@@ -45,8 +46,8 @@ exports.list = async (userId) => {
 
 // POST /discussions/:id/bookmark — toggle simpan
 exports.add = async (userId, discussionId) => {
-  const discussion = await prisma.discussion.findUnique({
-    where: { id: discussionId },
+  const discussion = await prisma.discussion.findFirst({
+    where: { id: discussionId, isHidden: false },
     select: { id: true },
   })
   if (!discussion) {

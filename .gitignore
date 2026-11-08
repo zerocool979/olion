@@ -8,6 +8,7 @@ yarn.lock
 # Environment
 .env
 .env.*
+!.env.example
 .env.local
 .env.*.local
 
@@ -26,7 +27,6 @@ logs/
 
 # Prisma
 .prisma
-backend/prisma/migrations/
 *.db
 *.db-journal
 

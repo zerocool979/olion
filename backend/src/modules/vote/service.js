@@ -39,10 +39,20 @@ exports.vote = async (userId, discussionId, commentId, value) => {
 
   // Pastikan target ada sebelum upsert
   if (discussionId) {
-    const d = await prisma.discussion.findUnique({ where: { id: discussionId }, select: { id: true } })
+    const d = await prisma.discussion.findFirst({
+      where: { id: discussionId, isHidden: false },
+      select: { id: true },
+    })
     if (!d) { const e = new Error('Diskusi tidak ditemukan'); e.statusCode = 404; throw e }
   } else {
-    const c = await prisma.comment.findUnique({ where: { id: commentId }, select: { id: true } })
+    const c = await prisma.comment.findFirst({
+      where: {
+        id: commentId,
+        isHidden: false,
+        discussion: { is: { isHidden: false } },
+      },
+      select: { id: true },
+    })
     if (!c) { const e = new Error('Komentar tidak ditemukan'); e.statusCode = 404; throw e }
   }
 
@@ -81,7 +91,12 @@ exports.listByUser = async (userId, limit) => {
   const take = Number.isSafeInteger(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 50) : 20
 
   return prisma.vote.findMany({
-    where: { userId, value: { gt: 0 }, discussionId: { not: null } },
+    where: {
+      userId,
+      value: { gt: 0 },
+      discussionId: { not: null },
+      discussion: { is: { isHidden: false } },
+    },
     include: {
       discussion: {
         select: {

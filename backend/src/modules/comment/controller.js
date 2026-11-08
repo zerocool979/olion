@@ -13,7 +13,8 @@ module.exports = {
 
       const comment = await service.create(
         { content, discussionId, parentId },
-        req.userId
+        req.userId,
+        req.userRole
       )
 
       // ── Notifikasi: balasan ke komentar (prioritas) atau komentar baru di diskusi ──
@@ -51,7 +52,8 @@ module.exports = {
   // GET /discussions/:id/comments
   listByDiscussion: async (req, res, next) => {
     try {
-      const comments = await service.getByDiscussion(req.params.id)
+      const comments = await service.getByDiscussion(req.params.id, req.userRole)
+      if (!comments) return res.status(404).json({ message: 'Diskusi tidak ditemukan' })
       res.json({ data: comments })
     } catch (e) { next(e) }
   },
@@ -67,7 +69,11 @@ module.exports = {
       const parsedLimit = Number.parseInt(limit, 10)
       const take = Number.isSafeInteger(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 50) : 20
       const comments = await prisma.comment.findMany({
-        where: { userId, isHidden: false },
+        where: {
+          userId,
+          isHidden: false,
+          discussion: { is: { isHidden: false } },
+        },
         include: {
           discussion: { select: { id: true, title: true } },
           user: { select: { id: true, profile: { select: { username: true } } } },

@@ -16,13 +16,7 @@
 ---
 Akses di [https://olion.vercel.app](https://olion.vercel.app)
 
-| email          | password     |
-| -------------- | ------------ |
-| user1@olion.id | Password123! |
-| user1 sd 12    | Password123! |
-| mod@olion.id   | -----        |
-| pakar@olion.id | -----        |
-| admin@olion.id |              |
+Akun demo hanya tersedia untuk database development lokal. Jangan gunakan atau seed akun demo pada deployment production.
 
 ---
 
@@ -36,7 +30,13 @@ cd olion
 ### Backend
 
 ```bash
-cd backend && npm install && cp .env.example .env && npm run migrate && npm run seed && npm run dev
+cd backend
+npm install
+cp .env.example .env
+# Isi DATABASE_URL dan JWT_SECRET pada .env
+npm run migrate
+ALLOW_OLION_SEED=true npm run seed
+npm run dev
 ```
 > _"Backend running on http://localhost:4000"_
 

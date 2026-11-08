@@ -170,6 +170,14 @@ export default function Chat() {
       setError('Ukuran file maksimal 15MB')
       return
     }
+    const allowedTypes = new Set([
+      'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+      'application/pdf', 'text/plain',
+    ])
+    if (!allowedTypes.has(file.type)) {
+      setError('Format yang didukung: JPG, PNG, WEBP, GIF, PDF, dan TXT.')
+      return
+    }
     const isImage = file.type.startsWith('image/')
     setPendingFile({
       file,
@@ -423,7 +431,7 @@ export default function Chat() {
 
                 {/* Input */}
                 <div style={{ padding: '10px 16px', display: 'flex', gap: 8, alignItems: 'center', position: 'relative' }}>
-                  <input ref={fileInputRef} type="file" onChange={handlePickFile} style={{ display: 'none' }} />
+                  <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,text/plain" onChange={handlePickFile} style={{ display: 'none' }} />
 
                   <button
                     onClick={() => fileInputRef.current?.click()}

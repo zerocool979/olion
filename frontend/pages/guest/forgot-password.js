@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { colors } from '../../components/dashboard'
+import api from '../../lib/api'
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
@@ -19,13 +20,11 @@ export default function ForgotPassword() {
     }
 
     setLoading(true)
-    // Simulasi pengiriman – ganti dengan panggilan API sebenarnya jika sudah tersedia
     try {
-      // await api.post('/auth/forgot-password', { email })
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      await api.post('/auth/password/forgot', { email })
       setSuccess(true)
     } catch (err) {
-      setError('Terjadi kesalahan. Silakan coba lagi.')
+      setError(err.response?.data?.message || 'Terjadi kesalahan. Silakan coba lagi.')
     } finally {
       setLoading(false)
     }

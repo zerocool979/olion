@@ -2,15 +2,21 @@ const authService = require('./service')
 
 // ─── Minimal inline validator (tanpa library tambahan)
 // Untuk production, ganti dengan Zod: npm install zod
-const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+const validateEmail = (email) => typeof email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+const PASSWORD_MIN_LENGTH = 12
+const PASSWORD_MAX_BYTES = 72
+const validateNewPassword = (password) =>
+  typeof password === 'string' &&
+  Array.from(password).length >= PASSWORD_MIN_LENGTH &&
+  Buffer.byteLength(password, 'utf8') <= PASSWORD_MAX_BYTES
 
 module.exports = {
   register: async (req, res, next) => {
     try {
-      const { email, password } = req.body
+      const { email, password } = req.body || {}
 
       // ─── FIX: validasi di backend, jangan percaya frontend saja
-      if (!email || !password) {
+      if (typeof email !== 'string' || !email.trim() || typeof password !== 'string' || !password) {
         return res.status(400).json({ message: 'Email dan password harus diisi' })
       }
 
@@ -18,8 +24,10 @@ module.exports = {
         return res.status(400).json({ message: 'Format email tidak valid' })
       }
 
-      if (password.length < 6) {
-        return res.status(400).json({ message: 'Password minimal 6 karakter' })
+      if (!validateNewPassword(password)) {
+        return res.status(400).json({
+          message: `Password baru minimal ${PASSWORD_MIN_LENGTH} karakter dan maksimal ${PASSWORD_MAX_BYTES} byte UTF-8.`
+        })
       }
 
       // ─── FIX: hapus username dari parameter — di-generate otomatis di service
@@ -27,9 +35,11 @@ module.exports = {
 
       // ─── FIX: response dengan status 201 untuk resource creation
       return res.status(201).json({
-        message: 'Registrasi berhasil',
+        message: result.verificationRequired ? 'Registrasi berhasil. Verifikasi email untuk melanjutkan.' : 'Registrasi berhasil',
         user: result.user,
-        token: result.token
+        token: result.token,
+        verificationRequired: result.verificationRequired,
+        emailSent: result.emailSent,
       })
     } catch (err) {
       next(err)
@@ -38,9 +48,9 @@ module.exports = {
 
   login: async (req, res, next) => {
     try {
-      const { email, password } = req.body
+      const { email, password } = req.body || {}
 
-      if (!email || !password) {
+      if (typeof email !== 'string' || !email.trim() || typeof password !== 'string' || !password) {
         return res.status(400).json({ message: 'Email dan password harus diisi' })
       }
 
@@ -56,10 +66,74 @@ module.exports = {
     }
   },
 
+  // Public response is intentionally identical whether an account exists or not.
+  requestEmailVerification: async (req, res, next) => {
+    try {
+      const { email } = req.body || {}
+      if (typeof email !== 'string' || !validateEmail(email)) {
+        return res.status(400).json({ message: 'Format email tidak valid' })
+      }
+      await authService.requestEmailVerification(email)
+      return res.status(202).json({
+        message: 'Jika akun tersebut perlu diverifikasi, link akan dikirim ke alamat email terkait.',
+      })
+    } catch (err) {
+      next(err)
+    }
+  },
+
+  verifyEmail: async (req, res, next) => {
+    try {
+      const { token } = req.body || {}
+      if (typeof token !== 'string' || !token.trim()) {
+        return res.status(400).json({ message: 'Token verifikasi harus diisi' })
+      }
+      await authService.verifyEmail(token)
+      return res.status(200).json({ message: 'Email berhasil diverifikasi. Silakan masuk ke OLION.' })
+    } catch (err) {
+      next(err)
+    }
+  },
+
+  requestPasswordReset: async (req, res, next) => {
+    try {
+      const { email } = req.body || {}
+      if (typeof email !== 'string' || !validateEmail(email)) {
+        return res.status(400).json({ message: 'Format email tidak valid' })
+      }
+      await authService.requestPasswordReset(email)
+      return res.status(202).json({
+        message: 'Jika email terdaftar, link reset password akan dikirim.',
+      })
+    } catch (err) {
+      next(err)
+    }
+  },
+
+  resetPassword: async (req, res, next) => {
+    try {
+      const { token, newPassword } = req.body || {}
+      if (typeof token !== 'string' || !token.trim()) {
+        return res.status(400).json({ message: 'Token reset harus diisi' })
+      }
+      if (!validateNewPassword(newPassword)) {
+        return res.status(400).json({
+          message: 'Password baru minimal ' + PASSWORD_MIN_LENGTH + ' karakter dan maksimal ' + PASSWORD_MAX_BYTES + ' byte UTF-8.'
+        })
+      }
+      await authService.resetPassword(token, newPassword)
+      return res.status(200).json({
+        message: 'Password berhasil diatur ulang. Semua sesi lama telah dicabut; silakan masuk kembali.',
+      })
+    } catch (err) {
+      next(err)
+    }
+  },
+
   // ─── POST /auth/google  { idToken }
   google: async (req, res, next) => {
     try {
-      const { idToken, credential } = req.body
+      const { idToken, credential } = req.body || {}
       // Google Identity Services mengirim field "credential" pada onSuccess
       // callback; terima juga "idToken" untuk fleksibilitas nama field.
       const token = idToken || credential
@@ -73,6 +147,25 @@ module.exports = {
         message: 'Login Google berhasil',
         user: result.user,
         token: result.token
+      })
+    } catch (err) {
+      next(err)
+    }
+  },
+
+  // Link a verified Google identity to the currently authenticated account.
+  linkGoogle: async (req, res, next) => {
+    try {
+      const { idToken, credential } = req.body || {}
+      const token = idToken || credential
+      if (typeof token !== 'string' || !token.trim()) {
+        return res.status(400).json({ message: 'idToken harus diisi' })
+      }
+
+      const result = await authService.linkGoogle(req.userId, token)
+      return res.status(200).json({
+        message: 'Akun Google berhasil dihubungkan.',
+        user: result.user,
       })
     } catch (err) {
       next(err)
@@ -110,19 +203,24 @@ module.exports = {
   // ─── ADDED: PATCH /auth/password
   changePassword: async (req, res, next) => {
     try {
-      const { oldPassword, newPassword } = req.body
+      const { oldPassword, newPassword } = req.body || {}
       if (!newPassword) {
         return res.status(400).json({ message: 'Password baru harus diisi' })
       }
-      if (newPassword.length < 6) {
-        return res.status(400).json({ message: 'Password baru minimal 6 karakter' })
+      if (!validateNewPassword(newPassword)) {
+        return res.status(400).json({
+          message: `Password baru minimal ${PASSWORD_MIN_LENGTH} karakter dan maksimal ${PASSWORD_MAX_BYTES} byte UTF-8.`
+        })
       }
 
       // oldPassword hanya wajib kalau akun ini SUDAH punya password.
       // Akun Google-only boleh set password pertama kali tanpa oldPassword —
       // authService.changePassword yang menentukan mana yang berlaku.
-      await authService.changePassword(req.userId, oldPassword, newPassword)
-      return res.status(200).json({ message: 'Password berhasil disimpan' })
+      const token = await authService.changePassword(req.userId, oldPassword, newPassword)
+      return res.status(200).json({
+        message: 'Password berhasil disimpan. Sesi lain telah dicabut.',
+        token,
+      })
     } catch (err) {
       next(err)
     }

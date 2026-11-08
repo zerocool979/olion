@@ -85,6 +85,11 @@ export function CallProvider({ children }) {
       cleanupCall()
     })
 
+    socket.on('call:timeout', () => {
+      setCallError('Panggilan tidak dijawab dalam batas waktu.')
+      cleanupCall()
+    })
+
     socket.on('call:busy', () => {
       setCallError('Lawan bicara sedang dalam panggilan lain.')
       cleanupCall()
@@ -92,6 +97,11 @@ export function CallProvider({ children }) {
 
     socket.on('call:offline', () => {
       setCallError('Pengguna sedang tidak online.')
+      cleanupCall()
+    })
+
+    socket.on('call:error', ({ message } = {}) => {
+      setCallError(message || 'Permintaan panggilan tidak dapat diproses.')
       cleanupCall()
     })
 
