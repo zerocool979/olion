@@ -35,9 +35,11 @@ module.exports = {
 
       // ─── FIX: response dengan status 201 untuk resource creation
       return res.status(201).json({
-        message: 'Registrasi berhasil',
+        message: result.verificationRequired ? 'Registrasi berhasil. Verifikasi email untuk melanjutkan.' : 'Registrasi berhasil',
         user: result.user,
-        token: result.token
+        token: result.token,
+        verificationRequired: result.verificationRequired,
+        emailSent: result.emailSent,
       })
     } catch (err) {
       next(err)
@@ -58,6 +60,70 @@ module.exports = {
         message: 'Login berhasil',
         user: result.user,
         token: result.token
+      })
+    } catch (err) {
+      next(err)
+    }
+  },
+
+  // Public response is intentionally identical whether an account exists or not.
+  requestEmailVerification: async (req, res, next) => {
+    try {
+      const { email } = req.body || {}
+      if (typeof email !== 'string' || !validateEmail(email)) {
+        return res.status(400).json({ message: 'Format email tidak valid' })
+      }
+      await authService.requestEmailVerification(email)
+      return res.status(202).json({
+        message: 'Jika akun tersebut perlu diverifikasi, link akan dikirim ke alamat email terkait.',
+      })
+    } catch (err) {
+      next(err)
+    }
+  },
+
+  verifyEmail: async (req, res, next) => {
+    try {
+      const { token } = req.body || {}
+      if (typeof token !== 'string' || !token.trim()) {
+        return res.status(400).json({ message: 'Token verifikasi harus diisi' })
+      }
+      await authService.verifyEmail(token)
+      return res.status(200).json({ message: 'Email berhasil diverifikasi. Silakan masuk ke OLION.' })
+    } catch (err) {
+      next(err)
+    }
+  },
+
+  requestPasswordReset: async (req, res, next) => {
+    try {
+      const { email } = req.body || {}
+      if (typeof email !== 'string' || !validateEmail(email)) {
+        return res.status(400).json({ message: 'Format email tidak valid' })
+      }
+      await authService.requestPasswordReset(email)
+      return res.status(202).json({
+        message: 'Jika email terdaftar, link reset password akan dikirim.',
+      })
+    } catch (err) {
+      next(err)
+    }
+  },
+
+  resetPassword: async (req, res, next) => {
+    try {
+      const { token, newPassword } = req.body || {}
+      if (typeof token !== 'string' || !token.trim()) {
+        return res.status(400).json({ message: 'Token reset harus diisi' })
+      }
+      if (!validateNewPassword(newPassword)) {
+        return res.status(400).json({
+          message: 'Password baru minimal ' + PASSWORD_MIN_LENGTH + ' karakter dan maksimal ' + PASSWORD_MAX_BYTES + ' byte UTF-8.'
+        })
+      }
+      await authService.resetPassword(token, newPassword)
+      return res.status(200).json({
+        message: 'Password berhasil diatur ulang. Semua sesi lama telah dicabut; silakan masuk kembali.',
       })
     } catch (err) {
       next(err)
