@@ -52,6 +52,7 @@ jobs:
           npm --prefix backend ci --no-audit --no-fund
           npm --prefix frontend ci --no-audit --no-fund
           npm --prefix backend test
+          npm --prefix backend run test:embeddings
 
       - name: Validate Prisma schema
         working-directory: backend
