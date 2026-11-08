@@ -16,6 +16,7 @@ const onlineSockets = new Map()
 // userId -> { partnerId, conversationId, callType, role }
 // Both participants receive an entry while a call is pending.
 const pendingCallByUser = new Map()
+const pendingCallTimeouts = new Map()
 // Active calls are stored only after the callee accepts a matching pending invite.
 const activeCallPartner = new Map()
 const activeCallConversation = new Map()
@@ -45,11 +46,17 @@ function hasCallState(userId) {
   return pendingCallByUser.has(userId) || activeCallPartner.has(userId)
 }
 
-function clearPendingCall(userId, partnerId) {
+function clearPendingCall(userId, partnerId, clearTimer = clearTimeout) {
   const pending = pendingCallByUser.get(userId)
   if (!pending || pending.partnerId !== partnerId) return null
 
   pendingCallByUser.delete(userId)
+  const timer = pendingCallTimeouts.get(userId)
+  if (timer !== undefined) {
+    clearTimer(timer)
+    pendingCallTimeouts.delete(userId)
+  }
+
   const partnerPending = pendingCallByUser.get(partnerId)
   if (
     partnerPending &&
@@ -57,6 +64,11 @@ function clearPendingCall(userId, partnerId) {
     partnerPending.conversationId === pending.conversationId
   ) {
     pendingCallByUser.delete(partnerId)
+    const partnerTimer = pendingCallTimeouts.get(partnerId)
+    if (partnerTimer !== undefined) {
+      clearTimer(partnerTimer)
+      pendingCallTimeouts.delete(partnerId)
+    }
   }
   return pending
 }
@@ -78,6 +90,7 @@ function isValidSignal(signal) {
   if (signal.type === 'offer' || signal.type === 'answer') {
     return Boolean(
       signal.sdp &&
+      signal.sdp.type === signal.type &&
       typeof signal.sdp.sdp === 'string' &&
       signal.sdp.sdp.length > 0 &&
       signal.sdp.sdp.length <= MAX_SIGNAL_BYTES
@@ -101,6 +114,11 @@ function initSocket(httpServer, options = {}) {
   const ServerImpl = options.ServerImpl || Server
   const database = options.prismaClient || prisma
   const verify = options.verifyTokenFn || verifyToken
+  const scheduleTimeout = options.setTimeoutFn || setTimeout
+  const cancelTimer = options.clearTimeoutFn || clearTimeout
+  const pendingCallTimeoutMs = Number.isInteger(options.pendingCallTimeoutMs) && options.pendingCallTimeoutMs > 0
+    ? options.pendingCallTimeoutMs
+    : 60_000
   const io = new ServerImpl(httpServer, {
     maxHttpBufferSize: 64 * 1024,
     cors: {
@@ -200,6 +218,17 @@ function initSocket(httpServer, options = {}) {
           role: 'callee',
         })
 
+        // Pending invitations must expire even when neither side closes its tab.
+        const pendingTimer = scheduleTimeout(() => {
+          const expired = clearPendingCall(socket.userId, toUserId, cancelTimer)
+          if (!expired) return
+          emitToUser(io, socket.userId, 'call:timeout', { fromUserId: toUserId })
+          emitToUser(io, toUserId, 'call:timeout', { fromUserId: socket.userId })
+        }, pendingCallTimeoutMs)
+        pendingCallTimeouts.set(socket.userId, pendingTimer)
+        pendingCallTimeouts.set(toUserId, pendingTimer)
+        pendingTimer?.unref?.()
+
         emitToUser(io, toUserId, 'call:incoming', {
           fromUserId: socket.userId,
           fromUsername: socket.username,
@@ -230,7 +259,7 @@ function initSocket(httpServer, options = {}) {
         return callError()
       }
 
-      clearPendingCall(socket.userId, toUserId)
+      clearPendingCall(socket.userId, toUserId, cancelTimer)
       if (!isOnline(toUserId)) {
         socket.emit('call:offline', { toUserId })
         return
@@ -249,7 +278,7 @@ function initSocket(httpServer, options = {}) {
       const pending = pendingCallByUser.get(socket.userId)
       if (!pending || pending.role !== 'callee' || pending.partnerId !== toUserId) return
 
-      const cleared = clearPendingCall(socket.userId, toUserId)
+      const cleared = clearPendingCall(socket.userId, toUserId, cancelTimer)
       if (cleared) emitToUser(io, toUserId, 'call:rejected', { fromUserId: socket.userId })
     })
 
@@ -259,7 +288,7 @@ function initSocket(httpServer, options = {}) {
       const pending = pendingCallByUser.get(socket.userId)
       if (!pending || pending.role !== 'caller' || pending.partnerId !== toUserId) return
 
-      const cleared = clearPendingCall(socket.userId, toUserId)
+      const cleared = clearPendingCall(socket.userId, toUserId, cancelTimer)
       if (cleared) emitToUser(io, toUserId, 'call:cancelled', { fromUserId: socket.userId })
     })
 
@@ -300,7 +329,7 @@ function initSocket(httpServer, options = {}) {
       const pending = pendingCallByUser.get(socket.userId)
       if (pending) {
         const partnerId = pending.partnerId
-        clearPendingCall(socket.userId, partnerId)
+        clearPendingCall(socket.userId, partnerId, cancelTimer)
         emitToUser(io, partnerId, 'call:cancelled', { fromUserId: socket.userId })
       }
 
