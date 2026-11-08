@@ -27,10 +27,10 @@ module.exports = async (req, res, next) => {
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.id },
-      select: { id: true, role: true, isBanned: true },
+      select: { id: true, role: true, isBanned: true, tokenVersion: true },
     })
 
-    if (user && !user.isBanned) {
+    if (user && !user.isBanned && (decoded.tokenVersion ?? 0) === (user.tokenVersion ?? 0)) {
       req.userId = user.id
       req.userRole = user.role
     }
