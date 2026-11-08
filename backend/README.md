@@ -25,8 +25,14 @@ npm install
 cp .env.example .env
 # Edit DATABASE_URL dan JWT_SECRET di .env
 
-# 4. Jalankan migrasi database
-npx prisma migrate dev --name init
+# 4. Untuk database development yang benar-benar baru, buat schema dari Prisma
+npx prisma db push
+# Migrasi auth-token di prisma/migrations bersifat additive dan ditujukan
+# untuk database OLION yang sudah memiliki tabel "User"; jangan jalankan
+# migrasi itu pada database kosong.
+
+# Untuk database OLION existing: backup dahulu, validasi schema target,
+# lalu jalankan npx prisma migrate deploy setelah migration baseline direkonsiliasi.
 
 # 5. Seed data awal (badge, kategori, user dev, sample diskusi)
 ALLOW_OLION_SEED=true npm run seed
