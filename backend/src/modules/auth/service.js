@@ -314,7 +314,10 @@ module.exports = {
   // "Set Password" — oldPassword tidak divalidasi/diwajibkan. Kalau akun
   // sudah punya password, oldPassword WAJIB dan diverifikasi seperti biasa.
   changePassword: async (userId, oldPassword, newPassword) => {
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, password: true } })
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, password: true, tokenVersion: true },
+    })
     if (!user) {
       const err = new Error('User tidak ditemukan')
       err.statusCode = 404
@@ -336,10 +339,13 @@ module.exports = {
     }
 
     const hashed = await bcrypt.hash(newPassword, 12)
-    await prisma.user.update({
+    const updated = await prisma.user.update({
       where: { id: userId },
-      data: { password: hashed }
+      data: { password: hashed, tokenVersion: { increment: 1 } },
+      select: { tokenVersion: true },
     })
+    // Rotate the current browser session while invalidating all other sessions.
+    return generateToken(userId, updated.tokenVersion)
   },
 
   // Google sign-in only logs into an identity that is already linked.
