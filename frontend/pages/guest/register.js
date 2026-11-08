@@ -52,6 +52,10 @@ export default function Register() {
     setLoading(true)
     try {
       const res = await api.post('/auth/register', { email, password })
+      if (res.data.verificationRequired) {
+        router.push({ pathname: '/guest/verify-email', query: { email } })
+        return
+      }
       login(res.data.token, res.data.user)
       router.push('/dashboard')
     } catch (err) {
