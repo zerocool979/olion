@@ -16,13 +16,7 @@
 ---
 Akses di [https://olion.vercel.app](https://olion.vercel.app)
 
-| email          | password     |
-| -------------- | ------------ |
-| user1@olion.id | Password123! |
-| user1 sd 12    | Password123! |
-| mod@olion.id   | -----        |
-| pakar@olion.id | -----        |
-| admin@olion.id |              |
+Akun demo hanya tersedia untuk database development lokal. Jangan gunakan atau seed akun demo pada deployment production.
 
 ---
 
