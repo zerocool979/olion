@@ -9,14 +9,35 @@ const {
   SMTP_USER,
   SMTP_PASS,
   SMTP_FROM,
+  NODE_ENV,
 } = require('../../config/env')
 
-const isConfigured = () => Boolean(SMTP_HOST && Number.isInteger(SMTP_PORT) && SMTP_PORT > 0 && SMTP_FROM)
+function hasValidFrontendUrl() {
+  try {
+    const url = new URL(FRONTEND_URL)
+    const validProtocol = url.protocol === 'https:' || (NODE_ENV !== 'production' && url.protocol === 'http:')
+    return validProtocol && !url.username && !url.password && !url.search && !url.hash
+  } catch {
+    return false
+  }
+}
+
+const hasCompleteSmtpAuth = Boolean(SMTP_USER) === Boolean(SMTP_PASS)
+const isConfigured = () => Boolean(
+  typeof SMTP_HOST === 'string' &&
+  SMTP_HOST.trim() &&
+  Number.isInteger(SMTP_PORT) &&
+  SMTP_PORT > 0 &&
+  typeof SMTP_FROM === 'string' &&
+  SMTP_FROM.trim() &&
+  hasCompleteSmtpAuth &&
+  hasValidFrontendUrl()
+)
 let transporter
 
 function getTransporter() {
   if (!isConfigured()) {
-    const err = new Error('Pengiriman email belum dikonfigurasi.')
+    const err = new Error('Pengiriman email belum dikonfigurasi dengan benar.')
     err.statusCode = 503
     err.code = 'MAIL_NOT_CONFIGURED'
     throw err
@@ -35,6 +56,15 @@ function getTransporter() {
 }
 
 function buildAuthLink(purpose, token) {
+  if (!['EMAIL_VERIFICATION', 'PASSWORD_RESET'].includes(purpose)) {
+    throw new TypeError('Tujuan token email tidak valid.')
+  }
+  if (!hasValidFrontendUrl()) {
+    const err = new Error('FRONTEND_URL harus berupa URL valid dan HTTPS di production.')
+    err.statusCode = 503
+    err.code = 'MAIL_NOT_CONFIGURED'
+    throw err
+  }
   const pathname = purpose === 'EMAIL_VERIFICATION'
     ? '/guest/verify-email'
     : '/guest/reset-password'
@@ -83,4 +113,4 @@ async function sendAuthLink({ to, token, purpose }) {
   return getTransporter().sendMail({ from: SMTP_FROM, to, subject, text, html })
 }
 
-module.exports = { isConfigured, sendAuthLink, buildAuthLink }
+module.exports = { isConfigured, sendAuthLink, buildAuthLink, hasValidFrontendUrl }
