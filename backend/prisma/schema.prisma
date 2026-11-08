@@ -15,6 +15,8 @@ model User {
   role                  Role                      @default(USER)
   isVerifiedExpert      Boolean                   @default(false)
   isBanned              Boolean                   @default(false)
+  emailVerifiedAt       DateTime?
+  tokenVersion          Int                       @default(0)
   createdAt             DateTime                  @default(now())
   updatedAt             DateTime                  @updatedAt
   comments              Comment[]
@@ -35,10 +37,25 @@ model User {
   bookmarks             Bookmark[]
   liaDocuments          Document[]
   liaChatLogs           ChatLog[]
+  authTokens            AuthToken[]
 
   @@index([role])
   @@index([isBanned])
   @@index([createdAt(sort: Desc)])
+}
+
+model AuthToken {
+  id          String   @id @default(uuid())
+  tokenHash   String   @unique
+  purpose     String
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime @default(now())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose, consumedAt])
+  @@index([expiresAt])
 }
 
 model Profile {
