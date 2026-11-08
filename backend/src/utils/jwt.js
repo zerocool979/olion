@@ -10,9 +10,9 @@ if (!JWT_SECRET) {
 const DEFAULT_EXPIRE = '7d'
 
 module.exports = {
-  generateToken: (userId) => {
+  generateToken: (userId, tokenVersion = 0) => {
     return jwt.sign(
-      { id: userId },
+      { id: userId, tokenVersion },
       JWT_SECRET,
       // ─── FIX: fallback ke '7d' jika JWT_EXPIRE tidak di-set
       { expiresIn: JWT_EXPIRE || DEFAULT_EXPIRE }
