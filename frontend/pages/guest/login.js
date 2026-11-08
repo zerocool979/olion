@@ -17,6 +17,7 @@ export default function Login() {
   const [emailFocused, setEmailFocused] = useState(false)
   const [passwordFocused, setPasswordFocused] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
+  const [needsVerification, setNeedsVerification] = useState(false)
 
   const handleGoogleCredential = async (idToken) => {
     setError('')
@@ -49,7 +50,9 @@ export default function Login() {
       login(res.data.token, res.data.user)
       router.push('/dashboard')
     } catch (err) {
-      setError(err.response?.data?.message || 'Login gagal. Silakan coba lagi.')
+      const message = err.response?.data?.message || 'Login gagal. Silakan coba lagi.'
+      setError(message)
+      setNeedsVerification(err.response?.status === 403 && message.toLowerCase().includes('email belum terverifikasi'))
     } finally {
       setLoading(false)
     }
@@ -230,6 +233,12 @@ export default function Login() {
                 </svg>
                 {error}
               </div>
+            )}
+
+            {needsVerification && (
+              <Link href={{ pathname: '/guest/verify-email', query: { email } }} style={{ color: colors.accent, fontSize: '0.82rem', textDecoration: 'none' }}>
+                Kirim ulang link verifikasi email
+              </Link>
             )}
 
             {/* Email */}
