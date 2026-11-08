@@ -29,7 +29,7 @@ cp .env.example .env
 npx prisma migrate dev --name init
 
 # 5. Seed data awal (badge, kategori, user dev, sample diskusi)
-npm run seed
+ALLOW_OLION_SEED=true npm run seed
 
 # 6. Generate Prisma Client
 npx prisma generate
@@ -47,7 +47,8 @@ npm run dev
 |---|---|
 | `npm run dev` | Server development dengan hot-reload (nodemon) |
 | `npm start` | Server production |
-| `npm run seed` | Isi database dengan data awal |
+| `npm test` | Jalankan security regression tests (Node.js built-in test runner) |
+| `ALLOW_OLION_SEED=true npm run seed` | Isi database development dengan data awal (production ditolak) |
 | `npx prisma migrate dev` | Jalankan migrasi database |
 | `npx prisma studio` | GUI browser untuk inspeksi database |
 
@@ -102,6 +103,8 @@ backend/
 |---|---|---|---|
 | POST | `/api/auth/register` | Public | Daftar akun baru |
 | POST | `/api/auth/login` | Public | Login, dapat JWT |
+| POST | `/api/auth/google` | Public | Login Google untuk identitas yang sudah tertaut |
+| POST | `/api/auth/google/link` | Auth | Hubungkan Google dengan email terverifikasi yang sama |
 | GET | `/api/auth/me` | Auth | Info user saat ini |
 | PATCH | `/api/auth/password` | Auth | Ganti password |
 
@@ -136,14 +139,9 @@ backend/
 
 ---
 
-## Akun Development (setelah seed)
+## Data Development
 
-| Email | Password | Role |
-|---|---|---|
-| admin@olion.id | Password123! | ADMIN |
-| mod@olion.id | Password123! | MODERATOR |
-| pakar@olion.id | Password123! | EXPERT |
-| user1@olion.id | Password123! | USER |
+Seed menyiapkan akun dan konten demo untuk database lokal. Kredensial demo tidak boleh digunakan pada staging atau production. Script seed menolak berjalan tanpa `ALLOW_OLION_SEED=true` dan menolak `NODE_ENV=production`.
 
 ---
 
