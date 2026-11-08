@@ -2,7 +2,7 @@
 const { Server } = require('socket.io')
 const { verifyToken } = require('../utils/jwt')
 const prisma = require('../config/prisma')
-const { NODE_ENV } = require('../config/env')
+const { NODE_ENV, REQUIRE_EMAIL_VERIFICATION } = require('../config/env')
 
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)
@@ -114,6 +114,7 @@ function initSocket(httpServer, options = {}) {
   const ServerImpl = options.ServerImpl || Server
   const database = options.prismaClient || prisma
   const verify = options.verifyTokenFn || verifyToken
+  const requireEmailVerification = options.requireEmailVerification ?? REQUIRE_EMAIL_VERIFICATION
   const scheduleTimeout = options.setTimeoutFn || setTimeout
   const cancelTimer = options.clearTimeoutFn || clearTimeout
   const pendingCallTimeoutMs = Number.isInteger(options.pendingCallTimeoutMs) && options.pendingCallTimeoutMs > 0
@@ -141,9 +142,12 @@ function initSocket(httpServer, options = {}) {
       const decoded = verify(token)
       const user = await database.user.findUnique({
         where: { id: decoded.id },
-        select: { id: true, isBanned: true, tokenVersion: true, profile: { select: { username: true } } },
+        select: { id: true, isBanned: true, tokenVersion: true, emailVerifiedAt: true, profile: { select: { username: true } } },
       })
       if (!user || user.isBanned) return next(new Error('Akun tidak valid'))
+      if (requireEmailVerification && !user.emailVerifiedAt) {
+        return next(new Error('Email belum terverifikasi. Verifikasi email untuk melanjutkan.'))
+      }
       if ((decoded.tokenVersion ?? 0) !== (user.tokenVersion ?? 0)) {
         return next(new Error('Sesi telah berakhir. Silakan masuk kembali.'))
       }
