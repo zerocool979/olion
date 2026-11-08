@@ -178,18 +178,12 @@ module.exports = {
     // Ini mencegah user enumeration attack
     const GENERIC_AUTH_ERROR = 'Email atau password salah'
 
-    if (!user) {
-      // ─── FIX: tetap jalankan bcrypt compare palsu untuk mencegah timing attack
-      await bcrypt.compare(password, '$2a$12$invalidhashfortimingprotection00000000000000000000000')
+    if (!user || !user.password) {
+      // Do equivalent bcrypt work with a fixed probe. A valid hash is created
+      // so the missing-account and Google-only paths do not fail fast on a
+      // malformed placeholder hash or reveal account type through the message.
+      await bcrypt.hash('olion-invalid-login-probe-v1', 12)
       const err = new Error(GENERIC_AUTH_ERROR)
-      err.statusCode = 401
-      throw err
-    }
-
-    if (!user.password) {
-      // Akun ini dibuat/ditautkan lewat Google, tidak pernah punya password.
-      await bcrypt.compare(password, '$2a$12$invalidhashfortimingprotection00000000000000000000000')
-      const err = new Error('Akun ini terdaftar lewat Google. Silakan masuk dengan tombol "Masuk dengan Google".')
       err.statusCode = 401
       throw err
     }
