@@ -10,13 +10,13 @@
     "migrate": "prisma migrate dev",
     "seed": "node prisma/seed.js",
     "vercel-build": "prisma generate",
-    "test": "node --test"
+    "test": "node --test",
+    "test:embeddings": "node scripts/embedding-smoke.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.112.3",
     "@google/genai": "^2.12.0",
     "@prisma/client": "^5.22.0",
-    "@xenova/transformers": "^2.17.2",
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.10.0",
     "cors": "^2.8.6",
@@ -28,7 +28,8 @@
     "multer": "^2.2.0",
     "p-limit": "^7.3.0",
     "pdf-parse": "^2.4.5",
-    "socket.io": "^4.8.3"
+    "socket.io": "^4.8.3",
+    "@huggingface/transformers": "^4.3.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.14",
