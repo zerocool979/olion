@@ -133,6 +133,34 @@ Automated tests use a local Express/Socket.IO server and synthetic fixtures; the
 - Confirm sender-domain SPF, DKIM, and DMARC at the mail provider before production rollout to reduce delivery and spoofing problems.
 
 
+### PostgreSQL provisioning through Vercel Marketplace (no Neon)
+
+OLION requires PostgreSQL for Prisma. The selected Vercel-managed workflow is **Prisma Postgres**, installed from the Vercel Marketplace. This is a Vercel Native Marketplace integration; the database is operated by Prisma and its usage is billed through Vercel. It is not a PostgreSQL process hosted inside a Vercel Function. Do not provision or connect Neon for this staging setup.
+
+1. In the Vercel team dashboard, open Marketplace and install [Prisma Postgres](https://vercel.com/marketplace/prisma/prisma-postgres).
+2. Create a new database resource named `olion-staging`. Do not reuse the existing Production database and do not import Production user data.
+3. Connect that resource only to the `olion-api` Vercel project and select **Preview only**. Do not connect it to Production or Development. The frontend project does not need a database connection.
+4. The integration supplies a direct `DATABASE_URL` and a pooled `DATABASE_URL_POOLED`. Prisma CLI migration commands use the direct URL. The API's Prisma Client prefers the pooled URL and falls back to `DATABASE_URL` for other PostgreSQL providers.
+5. On `olion-api`, create `OLION_PREVIEW_DATABASE_ISOLATED=true` for Preview branch `security/vapt-remediation-2026-11` only. Do not make this a global Preview variable. Other Preview branches remain fail-closed.
+6. Configure branch-specific `ALLOWED_ORIGINS` with only the new frontend Preview origin. On `olion`, configure branch-specific `NEXT_PUBLIC_API_URL` and `NEXT_PUBLIC_SOCKET_URL` to the new API Preview origin. Do not add Production URLs to these Preview values.
+7. Redeploy both projects from the remediation branch after every required environment variable has been saved.
+
+#### Rehearsing the existing-schema migration on the empty staging database
+
+The repository does not contain a complete historical migration baseline. Therefore, a brand-new staging database must first be initialized to the **pre-remediation** OLION schema, then the new additive migration must be applied. On a clean, empty `olion-staging` database only:
+
+```bash
+git fetch origin main
+git show origin/main:backend/prisma/schema.prisma > /tmp/olion-pre-remediation-schema.prisma
+
+cd backend
+DATABASE_URL="$STAGING_DATABASE_URL" npx prisma db push --schema /tmp/olion-pre-remediation-schema.prisma
+DATABASE_URL="$STAGING_DATABASE_URL" npx prisma migrate deploy
+DATABASE_URL="$STAGING_DATABASE_URL" npx prisma migrate status
+```
+
+This sequence is permitted only against the newly created empty staging database. It builds the old schema without Production data, then tests the exact remediation migration against that schema. Do not use this procedure against Production. Afterward, verify `User.emailVerifiedAt`, `User.tokenVersion`, and `AuthToken` plus its indexes and foreign key before enabling the Preview guard marker and deploying the API.
+
 ### Preview database isolation gate
 
 Vercel Preview deployments are deliberately fail-closed. Before the API can initialize Prisma on a Preview deployment, it requires:
