@@ -272,3 +272,38 @@ test('Socket.IO authenticates users and authorizes call signaling against conver
   c.disconnect()
   outsider.disconnect()
 })
+
+
+test('Socket.IO rejects legacy sessions for unverified users when email verification is required', async () => {
+  const users = new Map([
+    [ids.a, {
+      id: ids.a,
+      isBanned: false,
+      tokenVersion: 0,
+      emailVerifiedAt: null,
+      profile: { username: 'unverified' },
+    }],
+    [ids.b, {
+      id: ids.b,
+      isBanned: false,
+      tokenVersion: 0,
+      emailVerifiedAt: new Date('2026-11-08T00:00:00.000Z'),
+      profile: { username: 'verified' },
+    }],
+  ])
+  const io = initSocket(null, {
+    ServerImpl: FakeIoServer,
+    requireEmailVerification: true,
+    prismaClient: { user: { findUnique: async ({ where }) => users.get(where.id) || null } },
+    verifyTokenFn: token => {
+      if (typeof token !== 'string' || !token.startsWith('valid:')) throw new Error('invalid token')
+      return { id: token.slice('valid:'.length) }
+    },
+  })
+
+  const unverified = await io.connect('valid:' + ids.a)
+  assert.match(unverified.error.message, /Email belum terverifikasi/)
+  const verified = await io.connect('valid:' + ids.b)
+  assert.equal(verified.error, null)
+  verified.socket.disconnect()
+})
