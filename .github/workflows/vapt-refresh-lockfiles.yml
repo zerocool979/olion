@@ -80,6 +80,9 @@ jobs:
             const line = `${name}: ${counts.total || 0} total (${counts.critical || 0} critical, ${counts.high || 0} high, ${counts.moderate || 0} moderate, ${counts.low || 0} low)`
             console.log(line)
             fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, line + '\n')
+            if ((counts.critical || 0) > 0 || (counts.high || 0) > 0) {
+              process.exitCode = 1
+            }
           }
           NODE
 
