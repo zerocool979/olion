@@ -141,9 +141,12 @@ function initSocket(httpServer, options = {}) {
       const decoded = verify(token)
       const user = await database.user.findUnique({
         where: { id: decoded.id },
-        select: { id: true, isBanned: true, profile: { select: { username: true } } },
+        select: { id: true, isBanned: true, tokenVersion: true, profile: { select: { username: true } } },
       })
       if (!user || user.isBanned) return next(new Error('Akun tidak valid'))
+      if ((decoded.tokenVersion ?? 0) !== (user.tokenVersion ?? 0)) {
+        return next(new Error('Sesi telah berakhir. Silakan masuk kembali.'))
+      }
 
       socket.userId = user.id
       socket.username = user.profile?.username ?? 'Pengguna'
