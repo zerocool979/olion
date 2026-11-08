@@ -51,6 +51,7 @@ jobs:
         run: |
           npm --prefix backend ci --no-audit --no-fund
           npm --prefix frontend ci --no-audit --no-fund
+          npm --prefix backend test
 
       - name: Validate Prisma schema
         working-directory: backend
