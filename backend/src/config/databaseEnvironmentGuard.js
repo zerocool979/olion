@@ -38,7 +38,12 @@ function assertSafePreviewDatabase(env = process.env) {
   }
 
   const host = parsed.hostname.toLowerCase()
-  if (['localhost', '127.0.0.1', '::1'].includes(host)) {
+  const normalizedHost = host.replace(/^\\[|\\]$/g, '')
+  const isLoopback = normalizedHost === 'localhost'
+    || normalizedHost.endsWith('.localhost')
+    || normalizedHost === '::1'
+    || normalizedHost.startsWith('127.')
+  if (isLoopback) {
     throw new Error(
       'OLION Preview is disabled: staging DATABASE_URL must use a remote isolated database.'
     )
