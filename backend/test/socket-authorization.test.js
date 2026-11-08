@@ -2,6 +2,11 @@
 
 const test = require('node:test')
 const assert = require('node:assert/strict')
+// The socket module imports the application JWT and Prisma singletons at load time.
+// Tests inject their own verifier/database; these placeholders are never used to connect.
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'olion-socket-test-only-secret'
+process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://test:test@127.0.0.1:5432/olion_test'
+
 const { initSocket } = require('../src/socket')
 
 const ids = {
