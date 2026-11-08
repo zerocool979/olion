@@ -26,6 +26,9 @@ const ids = {
 }
 const hiddenDiscussionId = 'hidden-discussion-fixture'
 const hiddenCommentId = 'hidden-comment-fixture'
+const ownedDiscussionId = 'owned-discussion-fixture'
+const ownedCommentId = 'owned-comment-fixture'
+const bookmarkId = 'owned-bookmark-fixture'
 const conversationId = '88888888-8888-4888-8888-888888888888'
 
 const users = new Map([
@@ -37,6 +40,23 @@ const users = new Map([
   [ids.owner, { id: ids.owner, role: 'USER', isBanned: false }],
   [ids.other, { id: ids.other, role: 'USER', isBanned: false }],
 ])
+
+const ownedDiscussion = {
+  id: ownedDiscussionId,
+  title: 'Synthetic owned discussion fixture',
+  content: 'Owner-only update/delete fixture.',
+  mode: 'EKSPLORATIF',
+  discipline: 'BEBAS',
+  isHidden: false,
+  userId: ids.owner,
+}
+const ownedComment = {
+  id: ownedCommentId,
+  content: 'Owner-only comment fixture.',
+  userId: ids.owner,
+  discussionId: ownedDiscussionId,
+  isHidden: false,
+}
 
 const hiddenDiscussion = {
   id: hiddenDiscussionId,
@@ -99,6 +119,12 @@ test('HTTP access-control routes enforce hidden-content and cross-user boundarie
     voteFindFirst: [],
     voteFindMany: [],
     voteUpsert: 0,
+    discussionUpdate: 0,
+    discussionDelete: 0,
+    commentUpdate: 0,
+    commentDelete: 0,
+    bookmarkDelete: 0,
+    messageCreate: 0,
     participantFindUnique: [],
   }
 
@@ -122,12 +148,37 @@ test('HTTP access-control routes enforce hidden-content and cross-user boundarie
 
   patchMethod(prisma.discussion, 'findUnique', async ({ where }) => {
     if (where.id === hiddenDiscussionId) return hiddenDiscussion
+    if (where.id === ownedDiscussionId) return ownedDiscussion
     return null
+  }, restore)
+
+  patchMethod(prisma.discussion, 'update', async ({ where, data }) => {
+    calls.discussionUpdate += 1
+    return { ...ownedDiscussion, ...data, id: where.id }
+  }, restore)
+
+  patchMethod(prisma.discussion, 'delete', async ({ where }) => {
+    calls.discussionDelete += 1
+    return { ...ownedDiscussion, id: where.id }
   }, restore)
 
   patchMethod(prisma.comment, 'findFirst', async args => {
     calls.commentFindFirst.push(args)
     return null
+  }, restore)
+
+  patchMethod(prisma.comment, 'findUnique', async ({ where }) => {
+    return where.id === ownedCommentId ? ownedComment : null
+  }, restore)
+
+  patchMethod(prisma.comment, 'update', async ({ where, data }) => {
+    calls.commentUpdate += 1
+    return { ...ownedComment, ...data, id: where.id }
+  }, restore)
+
+  patchMethod(prisma.comment, 'delete', async ({ where }) => {
+    calls.commentDelete += 1
+    return { ...ownedComment, id: where.id }
   }, restore)
 
   patchMethod(prisma.comment, 'findMany', async args => {
@@ -140,7 +191,14 @@ test('HTTP access-control routes enforce hidden-content and cross-user boundarie
     return { id: 'unexpected-comment', ...args.data }
   }, restore)
 
-  patchMethod(prisma.bookmark, 'findUnique', async () => null, restore)
+  patchMethod(prisma.bookmark, 'findUnique', async ({ where }) => {
+    return where.id === bookmarkId ? { id: bookmarkId, userId: ids.owner } : null
+  }, restore)
+
+  patchMethod(prisma.bookmark, 'delete', async ({ where }) => {
+    calls.bookmarkDelete += 1
+    return { id: where.id, userId: ids.owner }
+  }, restore)
 
   patchMethod(prisma.bookmark, 'findMany', async args => {
     calls.bookmarkFindMany.push(args)
@@ -171,6 +229,13 @@ test('HTTP access-control routes enforce hidden-content and cross-user boundarie
     calls.participantFindUnique.push(args)
     return null
   }, restore)
+
+  patchMethod(prisma.message, 'create', async ({ data }) => {
+    calls.messageCreate += 1
+    return { id: 'unexpected-message', ...data }
+  }, restore)
+
+  patchMethod(prisma.conversation, 'update', async ({ where }) => ({ id: where.id }), restore)
 
   const server = http.createServer(app)
   try {
@@ -295,6 +360,78 @@ test('HTTP access-control routes enforce hidden-content and cross-user boundarie
       })
       assert.equal(result.status, 403)
       assert.equal(calls.participantFindUnique.at(-1).where.conversationId_userId.userId, ids.user)
+    })
+
+    await t.test('non-owners cannot mutate discussions, comments or bookmarks by guessing record IDs', async () => {
+      const discussionPatch = await request(baseUrl, '/api/discussions/' + ownedDiscussionId, {
+        method: 'PATCH',
+        userId: ids.user,
+        body: { title: 'unauthorized change' },
+      })
+      assert.equal(discussionPatch.status, 403)
+
+      const discussionDelete = await request(baseUrl, '/api/discussions/' + ownedDiscussionId, {
+        method: 'DELETE',
+        userId: ids.user,
+      })
+      assert.equal(discussionDelete.status, 403)
+      assert.equal(calls.discussionUpdate, 0)
+      assert.equal(calls.discussionDelete, 0)
+
+      const commentPatch = await request(baseUrl, '/api/comments/' + ownedCommentId, {
+        method: 'PATCH',
+        userId: ids.user,
+        body: { content: 'unauthorized comment change' },
+      })
+      assert.equal(commentPatch.status, 403)
+
+      const commentDelete = await request(baseUrl, '/api/comments/' + ownedCommentId, {
+        method: 'DELETE',
+        userId: ids.user,
+      })
+      assert.equal(commentDelete.status, 403)
+      assert.equal(calls.commentUpdate, 0)
+      assert.equal(calls.commentDelete, 0)
+
+      const bookmarkDelete = await request(baseUrl, '/api/bookmarks/' + bookmarkId, {
+        method: 'DELETE',
+        userId: ids.user,
+      })
+      assert.equal(bookmarkDelete.status, 403)
+      assert.equal(calls.bookmarkDelete, 0)
+
+      // The owner remains able to manage their own records.
+      assert.equal((await request(baseUrl, '/api/discussions/' + ownedDiscussionId, {
+        method: 'PATCH', userId: ids.owner, body: { title: 'owner update' },
+      })).status, 200)
+      assert.equal((await request(baseUrl, '/api/discussions/' + ownedDiscussionId, {
+        method: 'DELETE', userId: ids.owner,
+      })).status, 200)
+      assert.equal((await request(baseUrl, '/api/comments/' + ownedCommentId, {
+        method: 'PATCH', userId: ids.owner, body: { content: 'owner update' },
+      })).status, 200)
+      assert.equal((await request(baseUrl, '/api/comments/' + ownedCommentId, {
+        method: 'DELETE', userId: ids.owner,
+      })).status, 200)
+      assert.equal((await request(baseUrl, '/api/bookmarks/' + bookmarkId, {
+        method: 'DELETE', userId: ids.owner,
+      })).status, 200)
+
+      assert.equal(calls.discussionUpdate, 1)
+      assert.equal(calls.discussionDelete, 1)
+      assert.equal(calls.commentUpdate, 1)
+      assert.equal(calls.commentDelete, 1)
+      assert.equal(calls.bookmarkDelete, 1)
+    })
+
+    await t.test('sending a chat message is denied to a non-participant', async () => {
+      const result = await request(baseUrl, '/api/chat/conversations/' + conversationId + '/messages', {
+        method: 'POST',
+        userId: ids.user,
+        body: { content: 'message to a conversation I do not belong to' },
+      })
+      assert.equal(result.status, 403)
+      assert.equal(calls.messageCreate, 0)
     })
 
     await t.test('admin-only endpoints reject USER, EXPERT and MODERATOR', async () => {
