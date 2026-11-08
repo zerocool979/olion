@@ -1,6 +1,7 @@
 'use strict'
 const prisma = require('../../config/prisma')
 const bookmarkService = require('../bookmark/service')
+const { discussionLookupWhere } = require('../../security/contentAccess')
 
 // Public-facing user fields only. Never serialize email, password hash, googleId,
 // or private account flags through discussion responses.
@@ -77,9 +78,8 @@ async function list({
 async function detail(id, currentUserId, currentUserRole) {
   // Hidden discussions are not addressable through a guessed/direct ID by
   // guests or regular users. Only moderation staff can inspect hidden items.
-  const isStaff = ['ADMIN', 'MODERATOR'].includes(currentUserRole)
   const discussion = await prisma.discussion.findFirst({
-    where: { id, ...(isStaff ? {} : { isHidden: false }) },
+    where: discussionLookupWhere(id, currentUserRole),
     include: {
       user: { select: PUBLIC_USER_SELECT },
       category: { include: { parent: true } },
