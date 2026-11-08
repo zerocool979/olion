@@ -132,6 +132,19 @@ Automated tests use a local Express/Socket.IO server and synthetic fixtures; the
 - Email tokens are stored as SHA-256 hashes; never log or return raw tokens.
 - Confirm sender-domain SPF, DKIM, and DMARC at the mail provider before production rollout to reduce delivery and spoofing problems.
 
+
+### Preview database isolation gate
+
+Vercel Preview deployments are deliberately fail-closed. Before the API can initialize Prisma on a Preview deployment, it requires:
+
+- `OLION_PREVIEW_DATABASE_ISOLATED=true` scoped only to the intended Preview Git branch.
+- A valid remote PostgreSQL `DATABASE_URL` scoped only to that same Preview branch.
+- No Preview-scoped Production database credentials or provider credentials.
+
+The source guard is implemented in `src/config/databaseEnvironmentGuard.js` and runs before `PrismaClient` initialization. Production and local development are unaffected. Do not set the marker until the Neon branch is confirmed to contain schema only and the branch-specific connection URL has been installed. The marker is not a substitute for verifying the actual Neon branch and endpoint.
+
+When the staging API deployment is ready, add a branch-scoped Preview `ALLOWED_ORIGINS` with the exact staging frontend origin. The frontend must receive a branch-scoped Preview `NEXT_PUBLIC_API_URL` that points to that API Preview deployment. Do not use Production origins, API keys, JWT secrets, upload credentials, or AI keys in Preview.
+
 ## 8. Rollback
 
 The schema change is additive. If a rollout must be stopped:
