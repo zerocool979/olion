@@ -60,7 +60,7 @@ const inputStyle = {
 }
 
 export default function Settings() {
-  const { user: me, logout, refreshUser } = useContext(AuthContext)
+  const { user: me, login, logout, refreshUser } = useContext(AuthContext)
   const router = useRouter()
 
   const [account, setAccount] = useState(null)
@@ -113,8 +113,9 @@ export default function Settings() {
 
     setPwSaving(true)
     try {
-      await api.patch('/auth/password', { oldPassword: oldPassword || undefined, newPassword })
-      setPwSuccess(hasPassword ? 'Password berhasil diubah.' : 'Password berhasil dibuat. Sekarang kamu juga bisa login pakai email & password.')
+      const response = await api.patch('/auth/password', { oldPassword: oldPassword || undefined, newPassword })
+      if (response.data?.token) login(response.data.token, me)
+      setPwSuccess(hasPassword ? 'Password berhasil diubah. Sesi lain telah dicabut.' : 'Password berhasil dibuat. Sekarang kamu juga bisa login pakai email & password.')
       setOldPassword('')
       setNewPassword('')
       setConfirmPassword('')
